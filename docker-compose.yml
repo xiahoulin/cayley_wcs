@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: cayleywcs-postgres
+    environment:
+      POSTGRES_DB: ${CAYLEYWCS_DB_NAME:-cayleywcs}
+      POSTGRES_USER: ${CAYLEYWCS_DB_USER:-cayley}
+      POSTGRES_PASSWORD: ${CAYLEYWCS_DB_PASSWORD:-cayley}
+    ports:
+      - "${CAYLEYWCS_DB_PORT:-5433}:5432"
+    volumes:
+      - cayleywcs-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CAYLEYWCS_DB_USER:-cayley} -d ${CAYLEYWCS_DB_NAME:-cayleywcs}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4
+    container_name: cayleywcs-redis
+    ports:
+      - "${CAYLEYWCS_REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    profiles: ["full"]
+    build:
+      context: ./backend
+      args:
+        CAYLEYWCS_BACKEND_PORT: ${CAYLEYWCS_BACKEND_INTERNAL_PORT:-20021}
+    container_name: cayleywcs-backend
+    environment:
+      CAYLEYWCS_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${CAYLEYWCS_DB_NAME:-cayleywcs}?stringtype=unspecified
+      CAYLEYWCS_DB_USER: ${CAYLEYWCS_DB_USER:-cayley}
+      CAYLEYWCS_DB_PASSWORD: ${CAYLEYWCS_DB_PASSWORD:-cayley}
+      CAYLEYWCS_REDIS_HOST: redis
+      CAYLEYWCS_REDIS_PORT: 6379
+      CAYLEYWCS_BACKEND_PORT: ${CAYLEYWCS_BACKEND_INTERNAL_PORT:-20021}
+      CAYLEYWCS_JWT_SECRET: ${CAYLEYWCS_JWT_SECRET:-local-cayleywcs-development-secret-change-me}
+      CAYLEYWCS_ALLOWED_ORIGIN_PATTERNS: ${CAYLEYWCS_ALLOWED_ORIGIN_PATTERNS:-http://127.0.0.1:*,http://localhost:*}
+    ports:
+      - "${CAYLEYWCS_BACKEND_PORT:-20021}:${CAYLEYWCS_BACKEND_INTERNAL_PORT:-20021}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    profiles: ["full"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cayleywcs-frontend
+    environment:
+      CAYLEYWCS_BACKEND_HOST: backend
+      CAYLEYWCS_BACKEND_PORT: ${CAYLEYWCS_BACKEND_INTERNAL_PORT:-20021}
+      CAYLEYWCS_NGINX_PORT: 80
+    ports:
+      - "${CAYLEYWCS_FRONTEND_PORT:-5184}:80"
+    depends_on:
+      - backend
+
+volumes:
+  cayleywcs-postgres-data:

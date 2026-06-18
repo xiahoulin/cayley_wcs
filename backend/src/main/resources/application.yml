@@ -1,0 +1,51 @@
+server:
+  port: ${CAYLEYWCS_BACKEND_PORT:20021}
+
+spring:
+  application:
+    name: cayleywcs-backend
+  datasource:
+    url: ${CAYLEYWCS_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cayleywcs?stringtype=unspecified}
+    username: ${CAYLEYWCS_DB_USER:cayley}
+    password: ${CAYLEYWCS_DB_PASSWORD:cayley}
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: ${CAYLEYWCS_REDIS_HOST:localhost}
+      port: ${CAYLEYWCS_REDIS_PORT:6379}
+  flyway:
+    enabled: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+  global-config:
+    banner: false
+
+cayleywcs:
+  auth:
+    jwt-secret: ${CAYLEYWCS_JWT_SECRET:local-cayleywcs-development-secret-change-me}
+    access-token-minutes: ${CAYLEYWCS_ACCESS_TOKEN_MINUTES:120}
+    refresh-token-minutes: ${CAYLEYWCS_REFRESH_TOKEN_MINUTES:1440}
+  security:
+    allowed-origin-patterns: ${CAYLEYWCS_ALLOWED_ORIGIN_PATTERNS:http://127.0.0.1:*,http://localhost:*}
+  openapi:
+    # 入站开放接口 AppKey 鉴权（外部系统调用 /open/**）
+    appkey-enabled: ${CAYLEYWCS_OPEN_APPKEY_ENABLED:true}
+    signature-max-skew-seconds: ${CAYLEYWCS_OPEN_SIGN_SKEW:300}
+  connection:
+    # 连接治理（需求 4）
+    max-connections: ${CAYLEYWCS_MAX_CONNECTIONS:32}
+    connect-timeout-seconds: ${CAYLEYWCS_CONNECT_TIMEOUT_SECONDS:60}
+    reconnect-max-retry: ${CAYLEYWCS_RECONNECT_MAX_RETRY:5}
+    watchdog-interval-ms: ${CAYLEYWCS_WATCHDOG_INTERVAL_MS:5000}
+    heartbeat-stale-ms: ${CAYLEYWCS_HEARTBEAT_STALE_MS:12000}
+  task:
+    engine-interval-ms: ${CAYLEYWCS_TASK_ENGINE_INTERVAL_MS:1000}
+  monitor:
+    push-interval-ms: ${CAYLEYWCS_MONITOR_PUSH_INTERVAL_MS:1000}
+  gateway:
+    apisix-enabled: ${CAYLEYWCS_APISIX_ENABLED:false}
+  keycloak:
+    enabled: ${CAYLEYWCS_KEYCLOAK_ENABLED:false}
+    issuer-uri: ${CAYLEYWCS_KEYCLOAK_ISSUER_URI:}

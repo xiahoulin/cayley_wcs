@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: ${CAYLEYWCS_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cayleywcs?stringtype=unspecified}
+  data:
+    redis:
+      host: ${CAYLEYWCS_REDIS_HOST:localhost}
+      port: ${CAYLEYWCS_REDIS_PORT:6379}

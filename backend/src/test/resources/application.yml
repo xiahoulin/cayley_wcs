@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:cayleywcs_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+  global-config:
+    banner: false
+
+cayleywcs:
+  auth:
+    jwt-secret: test-cayleywcs-secret-with-enough-length
+    access-token-minutes: 120
+    refresh-token-minutes: 1440
+  openapi:
+    appkey-enabled: true
+    signature-max-skew-seconds: 300
+  security:
+    allowed-origin-patterns: http://127.0.0.1:*,http://localhost:*
+  connection:
+    max-connections: 8
+    connect-timeout-seconds: 60
+  gateway:
+    apisix-enabled: false
+  keycloak:
+    enabled: false

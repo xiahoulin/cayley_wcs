@@ -1,0 +1,81 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --border: #e3e6ea;
+  --text: #20242b;
+  --muted: #6b7280;
+  --primary: #f57c00;       /* 工业橙：主操作 */
+  --primary-hover: #e06f00;
+  --selected: #e8f0fe;      /* 柔和蓝：选中态 */
+  --ok: #1f9d55;
+  --warn: #d97706;
+  --err: #dc2626;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+a { color: var(--primary); text-decoration: none; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+button:hover { background: #f0f1f3; }
+button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+button.primary:hover { background: var(--primary-hover); }
+button.danger { color: var(--err); border-color: #f1b5b5; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+input, select, textarea {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+  width: 100%;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+table { width: 100%; border-collapse: collapse; background: var(--panel); }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { background: #fafbfc; color: var(--muted); font-weight: 600; }
+tr:hover td { background: #fafbfc; }
+
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+.tag.ok { background: #e6f4ec; color: var(--ok); }
+.tag.warn { background: #fdf0db; color: var(--warn); }
+.tag.err { background: #fbe6e6; color: var(--err); }
+.tag.muted { background: #eef0f2; color: var(--muted); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field { margin-bottom: 10px; }
+.field label { display: block; color: var(--muted); margin-bottom: 4px; font-size: 12px; }
+
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal { width: 560px; max-height: 86vh; overflow: auto; padding: 18px; }
+.modal h3 { margin: 0 0 14px; }
