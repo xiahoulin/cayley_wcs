@@ -1,0 +1,134 @@
+{
+  "info": {
+    "name": "CayleyWCS - WMS 下发闭环",
+    "description": "模拟 WMS 经 REST 下发任务给 WCS，WCS 驱动 OPC UA 仿真器执行三段握手，WMS 通过 /open/task/query 对账。/open/** 自动做 AppKey HMAC 签名。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://127.0.0.1:20021"},
+    {"key": "admin_user", "value": "admin"},
+    {"key": "admin_pwd", "value": "1"},
+    {"key": "token", "value": ""},
+    {"key": "appId", "value": ""},
+    {"key": "app_key", "value": ""},
+    {"key": "app_secret", "value": ""},
+    {"key": "taskNo", "value": ""}
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// 仅对 /open/** 开放接口做 AppKey HMAC-SHA256 签名",
+          "const path = pm.request.url.getPath();",
+          "if (path && path.indexOf('/open/') === 0) {",
+          "  const appKey = pm.collectionVariables.get('app_key');",
+          "  const appSecret = pm.collectionVariables.get('app_secret');",
+          "  const ts = Math.floor(Date.now()/1000).toString();",
+          "  const nonce = CryptoJS.lib.WordArray.random(16).toString();",
+          "  const canonical = [appKey, ts, nonce, 'POST', path].join('\n');",
+          "  const sign = CryptoJS.HmacSHA256(canonical, appSecret).toString(CryptoJS.enc.Hex);",
+          "  pm.request.headers.upsert({key:'X-App-Key', value: appKey});",
+          "  pm.request.headers.upsert({key:'X-Timestamp', value: ts});",
+          "  pm.request.headers.upsert({key:'X-Nonce', value: nonce});",
+          "  pm.request.headers.upsert({key:'X-Sign', value: sign});",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 登录 (JWT，仅用于管理端准备)",
+      "event": [{"listen": "test", "script": {"exec": [
+        "pm.test('login ok', () => pm.expect(pm.response.json().isSuccess).to.be.true);",
+        "pm.collectionVariables.set('token', pm.response.json().data.access_token);"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"user_name\": \"{{admin_user}}\",\n  \"password\": \"{{admin_pwd}}\"\n}"},
+        "url": {"raw": "{{base_url}}/login", "host": ["{{base_url}}"], "path": ["login"]}
+      }
+    },
+    {
+      "name": "2. 取应用 PALLET_SIM 的 appId/app_key/app_secret",
+      "event": [{"listen": "test", "script": {"exec": [
+        "const apps = pm.response.json().data;",
+        "const a = apps.find(x => x.app_code === 'PALLET_SIM');",
+        "pm.test('found PALLET_SIM', () => pm.expect(a).to.not.be.undefined);",
+        "if (a) {",
+        "  pm.collectionVariables.set('appId', a.id);",
+        "  pm.collectionVariables.set('app_key', a.app_key);",
+        "  pm.collectionVariables.set('app_secret', a.app_secret);",
+        "  console.log('appId=' + a.id + ' app_key=' + a.app_key);",
+        "}"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{base_url}}/application/all", "host": ["{{base_url}}"], "path": ["application", "all"]}
+      }
+    },
+    {
+      "name": "3. 建立连接 (JWT) -> 期望 RUNNING",
+      "event": [{"listen": "test", "script": {"exec": [
+        "const d = pm.response.json();",
+        "pm.test('connection RUNNING', () => pm.expect(d.data.state).to.eql('RUNNING'));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}],
+        "body": {"mode": "raw", "raw": "{\n  \"id\": {{appId}}\n}"},
+        "url": {"raw": "{{base_url}}/connection/open", "host": ["{{base_url}}"], "path": ["connection", "open"]}
+      }
+    },
+    {
+      "name": "4. [WMS] 下发任务 (AppKey 签名)",
+      "event": [
+        {"listen": "prerequest", "script": {"exec": [
+          "pm.collectionVariables.set('taskNo', 'WMS-' + Date.now());"
+        ]}},
+        {"listen": "test", "script": {"exec": [
+          "const d = pm.response.json();",
+          "pm.test('dispatch ok', () => pm.expect(d.isSuccess).to.be.true);",
+          "console.log('task id=' + d.data.id + ' status=' + d.data.status + ' step=' + d.data.handshake_step);"
+        ]}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"appId\": {{appId}},\n  \"taskNo\": \"{{taskNo}}\",\n  \"taskType\": \"1\",\n  \"takeRow\": 1,\n  \"takeColumn\": 2,\n  \"takeFloor\": 3,\n  \"putRow\": 2,\n  \"putColumn\": 5,\n  \"putFloor\": 6,\n  \"portNum\": 1,\n  \"priority\": 0,\n  \"wmsRef\": \"SO-DEMO\"\n}"},
+        "url": {"raw": "{{base_url}}/open/task/dispatch", "host": ["{{base_url}}"], "path": ["open", "task", "dispatch"]}
+      }
+    },
+    {
+      "name": "5. [WMS] 对账查询 (AppKey 签名，反复点直到 completed)",
+      "event": [{"listen": "test", "script": {"exec": [
+        "const d = pm.response.json().data;",
+        "const no = pm.collectionVariables.get('taskNo');",
+        "const t = (d.rows || []).filter(x => x.task_no === no).pop();",
+        "pm.test('task present', () => pm.expect(t).to.not.be.undefined);",
+        "if (t) console.log('task ' + no + ' -> status=' + t.status + ' step=' + t.handshake_step + ' err=' + t.error_code);",
+        "pm.test('completed (反复点直到通过)', () => pm.expect(t.status).to.eql('completed'));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"appId\": {{appId}},\n  \"sinceMillis\": 0,\n  \"limit\": 20\n}"},
+        "url": {"raw": "{{base_url}}/open/task/query", "host": ["{{base_url}}"], "path": ["open", "task", "query"]}
+      }
+    },
+    {
+      "name": "6. [WMS] 断线重同步 snapshot (AppKey 签名，可选)",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"appId\": {{appId}}\n}"},
+        "url": {"raw": "{{base_url}}/open/snapshot", "host": ["{{base_url}}"], "path": ["open", "snapshot"]}
+      }
+    }
+  ]
+}

@@ -21,6 +21,9 @@ public interface TaskService {
     /** 引擎用：取某应用下一个可推进任务（在飞优先，其次按优先级取待调度）。 */
     TaskEntity findNextForApp(Long appId);
 
+    /** 对账用：返回某应用 last_update_time >= sinceMillis 的任务（sinceMillis=0 即全量），按更新时间升序。 */
+    List<TaskEntity> queryReconcile(Long appId, long sinceMillis, int limit);
+
     void save(TaskEntity entity);
 
     public record DispatchRequest(

@@ -16,6 +16,7 @@ public class OpcUaAdapterProvider implements ProtocolAdapterProvider {
     @Override
     public ProtocolAdapter create(AdapterContext ctx) {
         long timeout = ctx.connParamLong("requestTimeoutMs", 5000);
-        return new Plc4xAdapter("opcua", Plc4xConnectionStrings.build("opcua", ctx), timeout);
+        // OPC UA 适配器带「主动 WCS 心跳」（协议定义了可写心跳点时翻转写入，否则退化为被动心跳）。
+        return new StackerOpcUaAdapter(Plc4xConnectionStrings.build("opcua", ctx), timeout);
     }
 }

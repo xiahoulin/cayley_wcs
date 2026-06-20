@@ -7,6 +7,7 @@ import com.cayleywcs.common.api.PageSupport;
 import com.cayleywcs.common.exception.ErrorCode;
 import com.cayleywcs.common.exception.WcsException;
 import com.cayleywcs.common.support.Audits;
+import com.cayleywcs.common.support.ReconcileSupport;
 import com.cayleywcs.system.CurrentUserProvider;
 import com.cayleywcs.task.HandshakeStep;
 import com.cayleywcs.task.TaskService;
@@ -110,6 +111,20 @@ public class TaskServiceImpl implements TaskService {
                 .eq("\"app_id\"", appId)
                 .in("\"status\"", "pending", "dispatched", "executing")
                 .last("order by case when \"status\" = 'pending' then 1 else 0 end asc, \"priority\" desc, \"id\" asc limit 1"));
+    }
+
+    @Override
+    public List<TaskEntity> queryReconcile(Long appId, long sinceMillis, int limit) {
+        QueryWrapper<TaskEntity> wrapper = new QueryWrapper<TaskEntity>().eq("\"is_valid\"", true);
+        if (appId != null) {
+            wrapper.eq("\"app_id\"", appId);
+        }
+        if (sinceMillis > 0) {
+            wrapper.ge("\"last_update_time\"", ReconcileSupport.toLocalDateTime(sinceMillis));
+        }
+        wrapper.orderByAsc("\"last_update_time\"").orderByAsc("\"id\"")
+                .last("limit " + ReconcileSupport.clampLimit(limit));
+        return taskMapper.selectList(wrapper);
     }
 
     @Override

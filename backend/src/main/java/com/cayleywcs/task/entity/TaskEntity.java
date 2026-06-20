@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.cayleywcs.common.entity.BaseEntity;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /** WCS 任务（wcs_task）。承载 WMS 下发 + 堆垛机三段握手执行态。 */
 @TableName(value = "\"wcs_task\"", autoResultMap = true)
@@ -27,7 +27,7 @@ public class TaskEntity extends BaseEntity {
     private Long error_code;
 
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private JsonNode payload;
+    private Map<String, Object> payload;
 
     private LocalDateTime dispatch_time;
     private LocalDateTime finish_time;
@@ -152,11 +152,11 @@ public class TaskEntity extends BaseEntity {
         this.error_code = error_code;
     }
 
-    public JsonNode getPayload() {
+    public Map<String, Object> getPayload() {
         return payload;
     }
 
-    public void setPayload(JsonNode payload) {
+    public void setPayload(Map<String, Object> payload) {
         this.payload = payload;
     }
 

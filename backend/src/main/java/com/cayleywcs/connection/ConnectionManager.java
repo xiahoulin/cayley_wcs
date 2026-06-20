@@ -14,8 +14,6 @@ import com.cayleywcs.connection.event.FaultDetectedEvent;
 import com.cayleywcs.protocol.ProtocolService;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.Map;
@@ -274,7 +272,7 @@ public class ConnectionManager {
                 return;
             }
             mc.adapter().heartbeat();
-            ObjectNode snap = mc.adapter().readAll(mc.points());
+            Map<String, Object> snap = mc.adapter().readAll(mc.points());
             mc.setLatest(snap);
             mc.markHeartbeat(System.currentTimeMillis());
             detectFaultEdge(mc, snap);
@@ -287,10 +285,10 @@ public class ConnectionManager {
     }
 
     /** 故障码边沿检测：status_ErrorCode 变化即发布事件（报警监听在 M5 联动）。 */
-    private void detectFaultEdge(ManagedConnection mc, ObjectNode snap) {
-        JsonNode err = snap.get("status_ErrorCode");
+    private void detectFaultEdge(ManagedConnection mc, Map<String, Object> snap) {
+        Object err = snap.get("status_ErrorCode");
         // 注：真实协议 status_ErrorCode 为 ARRAY[1..60] OF INT，此处先处理标量(仿真)；数组扫描后续补。
-        int code = (err != null && err.isNumber()) ? err.asInt() : 0;
+        int code = err instanceof Number n ? n.intValue() : 0;
         if (code != mc.lastErrorCode()) {
             mc.setLastErrorCode(code);
             if (eventPublisher != null) {

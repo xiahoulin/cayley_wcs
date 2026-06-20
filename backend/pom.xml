@@ -23,6 +23,7 @@
         <springdoc.version>3.0.3</springdoc.version>
         <plc4x.version>0.12.0</plc4x.version>
         <paho.version>1.2.5</paho.version>
+        <milo.version>0.6.14</milo.version>
     </properties>
 
     <dependencies>
@@ -99,6 +100,18 @@
             <groupId>org.eclipse.paho</groupId>
             <artifactId>org.eclipse.paho.mqttv5.client</artifactId>
             <version>${paho.version}</version>
+        </dependency>
+        <!-- OPC UA 服务端仿真器（Eclipse Milo），仅在 simulator profile 下使用。 -->
+        <dependency>
+            <groupId>org.eclipse.milo</groupId>
+            <artifactId>sdk-server</artifactId>
+            <version>${milo.version}</version>
+        </dependency>
+        <!-- Milo 0.6 依赖 JDK11+ 已移除的 javax.xml.bind.DatatypeConverter，补回旧 JAXB API。 -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
         </dependency>
 
         <dependency>

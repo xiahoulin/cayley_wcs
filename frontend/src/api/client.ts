@@ -29,7 +29,9 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (resp) => resp,
   (error) => {
-    if (error?.response?.status === 401) {
+    const status = error?.response?.status
+    // 401=未认证/令牌过期；403=Spring Security 对未认证也可能返回。两者都视为需重新登录。
+    if (status === 401 || status === 403) {
       auth.logout()
     }
     return Promise.reject(error)

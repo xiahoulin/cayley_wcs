@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.cayleywcs.common.entity.BaseEntity;
-import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 
 /**
  * 应用信息表（需求 3）：可对接的应用/设备。app_key 用于双向鉴权，protocol_id 关联协议表。
@@ -20,7 +20,7 @@ public class ApplicationEntity extends BaseEntity {
     private String direction;
 
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private JsonNode conn_params;
+    private Map<String, Object> conn_params;
 
     private Long max_retry;
     private Long heartbeat_interval_ms;
@@ -76,11 +76,11 @@ public class ApplicationEntity extends BaseEntity {
         this.direction = direction;
     }
 
-    public JsonNode getConn_params() {
+    public Map<String, Object> getConn_params() {
         return conn_params;
     }
 
-    public void setConn_params(JsonNode conn_params) {
+    public void setConn_params(Map<String, Object> conn_params) {
         this.conn_params = conn_params;
     }
 

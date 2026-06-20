@@ -45,6 +45,11 @@
 | `monitor`/`alarm`（M5） | WebSocket 实时推送 + 报警生命周期 |
 | `simulator`（M3） | 堆垛机 OPC UA 仿真服务端（profile `simulator`） |
 
+## 文档
+
+- **《礁盘工业WCS使用功能说明书》**：`docs/礁盘工业WCS使用功能说明书.docx`（参考 WMS 说明书结构，按代码梳理全部模块/接口/数据表 + 业务逻辑图/握手时序/连接状态机）。
+- 生成器（python-docx + PIL，同 WMS 套路）：`docs/manual_assets/build_wcs_manual.py`，运行即重建文档与图（`docs/manual_assets/rendered/*.png`）。
+
 ## 数据库
 
 Flyway 迁移位于 `backend/src/main/resources/db/migration/`：
@@ -54,6 +59,20 @@ Flyway 迁移位于 `backend/src/main/resources/db/migration/`：
 | `V1__wcs_schema.sql` | 全部表：认证、`wcs_dict_*`、`wcs_protocol`/`wcs_protocol_point`、`wcs_application`、`wcs_fault_code`、`wcs_task`、`wcs_alarm`、`wcs_connection_log`、`wcs_message_log` |
 | `V2__seed_dict_and_admin.sql` | 管理员 admin/1 + 协议类型/方向/任务/连接状态等字典种子 |
 | `V3__seed_stacker_protocol.sql` | 堆垛机标准协议(6.18 修订版) + 27 点位(DBW0–182) + 故障码 1–48 种子 |
+| `V4__seed_pallet_opcua_app.sql` | **礁盘工业码垛机** OPC UA 协议(NodeId 寻址 `ns=3;s="WCS_Task"."<组>"."<字段>"`) + 应用 + 点位/故障码(克隆自 6.18)。适配器 `StackerOpcUaAdapter`(PLC4X OPC UA + WCS_Heart 主动心跳) |
+| `V5__seed_opcua_sim_app.sql` | **码垛机OPCUA仿真** 协议+应用(`PALLET_SIM`)，指向内置 Milo 仿真器(`ns=2;s=WCS_Task.<组>.<字段>`)，用于无硬件 OPC UA 联调 |
+
+## 无硬件 OPC UA 联调（Milo 仿真服务端）
+
+```powershell
+docker compose up -d postgres redis
+cd backend
+mvn spring-boot:run "-Dspring-boot.run.profiles=local,simulator"   # 启动 Milo OPC UA Server：opc.tcp://127.0.0.1:4840/cayleywcs/stacker
+```
+
+然后对应用 **码垛机OPCUA仿真(`PALLET_SIM`)** 建连（前端连接监控页或 `POST /connection/open`）——WCS 经 PLC4X 走真·OPC UA 连到仿真器，可读状态/写命令/跑三段握手。注入故障：`POST /simulator/inject-fault {"appId":999001,"code":8}`。
+
+> 注：jsonb 字段(`conn_params`/`data_format`/`payload`)用 `Map<String,Object>`（Spring Boot 4 = Jackson 3，避免与 MyBatis-Plus Jackson 2 的 `JsonNode` 跨版本冲突）；PLC4X 连接非并发安全，读写已在 `Plc4xAdapter` 串行化。
 
 JSON 字段（`data_format`/`conn_params`/`payload` 等）以 text 存储，由 MyBatis-Plus `JacksonTypeHandler` 序列化，PG 与 H2 测试双兼容。
 
@@ -81,7 +100,7 @@ docker compose --profile full up -d --build
 | M0 脚手架 | ✅ 完成 | 认证(JWT,admin/1)、健康、Flyway(V1-V3)、Docker 骨架、全局异常处理；编译+H2 上下文通过 |
 | M1 配置中台 | ✅ 完成 | dict/protocol/protocol_point/application(双向 AppKey)/faultcode CRUD + 故障码解析；堆垛机协议+点位+0-27 故障码种子；`SchemaSeedTest` 通过 |
 | M2 适配器+连接池 | ✅ 完成 | 适配器 SPI(Adapter/Factory/Template/Strategy)+ 连接治理(信号量/线程池/60s 超时回收/看门狗/状态机)；适配器实现：**OPC UA/Modbus TCP/S7(Apache PLC4X)、MQTT(Paho v5)、HTTP(JDK)、TCP(Socket)、loopback**；`ConnectionManagerTest` 通过 |
-| M3 仿真器+审计 | ✅ 完成 | 审计落库(连接事件→`wcs_connection_log`、手动读写→`wcs_message_log`)；**内存堆垛机仿真器**(sim 适配器)跑通**无硬件端到端**(连接→6.18 三段握手→故障注入)，`StackerSimEndToEndTest` 通过。**Milo OPC UA 线上仿真服务端**：可选项，暂缓(in-process 仿真已满足无硬件测试，真机走 PLC4X OPC UA，待 §14#3 NodeId) |
+| M3 仿真器+审计 | ✅ 完成 | 审计落库(连接事件→`wcs_connection_log`、手动读写→`wcs_message_log`)；**内存堆垛机仿真器**(sim 适配器) `StackerSimEndToEndTest` 通过；**Milo OPC UA 线上仿真服务端**(`OpcUaStackerSimulator`，profile `simulator`)已落地——真·OPC UA 端到端联调通过(PLC4X→Milo：连接/心跳/读状态/写命令/三段握手/注故障) |
 | M4 任务调度 | ✅ 完成 | `wcs_task` CRUD + **堆垛机三段握手状态机**(检查→下发→执行确认→等待→完成确认→清零) + 任务引擎(设备级单飞@Scheduled) + `/open/task/dispatch`(AppKey,幂等)；`StackerHandshakeTest`(完成+故障失败)通过 |
 | M5 监控+报警 | ✅ 完成 | 报警生命周期(产生/确认/清除/历史+去重) + **故障码→报警联动**(轮询故障边沿→查故障表→报警,未维护走兜底) + 连接断开/恢复联动 + **WebSocket 实时推送**(`/ws/monitor` 连接快照/槽位/活动报警)；`AlarmFlowTest` 通过 |
 | M6 Vue 前端 | ✅ MVP 完成 | Vue3+Vite+TS 精简脚手架(reefplex 风)：登录 + **协议管理/应用管理(AppKey)/连接监控/实时看板(WebSocket)** 4 页；`npm run build` 通过。其余 4 页(字典/故障码/任务/报警中心)二期补 |
@@ -98,3 +117,15 @@ npm run dev          # http://127.0.0.1:5184 ，/api 与 /ws 代理到后端 200
 ```
 
 页面：实时看板（WebSocket 设备状态/报警）、协议管理（协议+点位）、应用管理（AppKey 生成/重置）、连接监控（建连/断开/重连、60s 超时回收可见）。
+
+## WMS 对账闭环（WS 提示 + REST 权威）
+
+WMS↔WCS 采用「命令走 REST、遥测走 WS、关键事件 REST 对账」。WS 推送不保证不丢，故关键事件以 DB 为真相用 REST 拉权威态。
+
+- **WS 帧**（`/ws/monitor`，每秒）：`{type, seq, ts, connections:[{appId,appCode,state,latest{...}}], slots, alarms:[...]}`。`seq` 单调递增，WMS 据此发现断号。
+- **增量对账**（`/open/**`，AppKey 鉴权）：
+  - `POST /open/task/query  {appId, sinceMillis, limit}` → `{serverTimeMillis, count, rows}`（last_update_time ≥ sinceMillis 的任务）
+  - `POST /open/alarm/query {appId, sinceMillis, limit}` → 同上（报警）
+  - `POST /open/snapshot    {appId}` → `{serverTimeMillis, connection, alarms, tasks}`（断线一把全量重同步）
+
+WMS 算法：稳态读 WS（`seq` 连续即可）；发现断号/重连 → `/open/snapshot` 全量重同步 → 之后增量 `query(sinceMillis=上次 serverTimeMillis)`，**按 id 去重**。这样既享受 WS 实时、又保证任务完成/报警不丢（最终一致）。

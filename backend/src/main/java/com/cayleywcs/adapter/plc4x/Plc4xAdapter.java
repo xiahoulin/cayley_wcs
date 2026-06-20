@@ -21,6 +21,7 @@ public class Plc4xAdapter extends AbstractProtocolAdapter {
     private final String connectionString;
     private final long timeoutMs;
     private final PlcConnectionManager connectionManager = new DefaultPlcDriverManager();
+    private final Object channelLock = new Object();
     private volatile PlcConnection connection;
 
     public Plc4xAdapter(String protocolType, String connectionString, long timeoutMs) {
@@ -36,16 +37,20 @@ public class Plc4xAdapter extends AbstractProtocolAdapter {
 
     @Override
     protected void doConnect(AdapterContext ctx) throws Exception {
-        connection = connectionManager.getConnection(connectionString);
-        connection.connect();
+        synchronized (channelLock) {
+            connection = connectionManager.getConnection(connectionString);
+            connection.connect();
+        }
     }
 
     @Override
     protected void doDisconnect() throws Exception {
-        PlcConnection conn = connection;
-        connection = null;
-        if (conn != null) {
-            conn.close();
+        synchronized (channelLock) {
+            PlcConnection conn = connection;
+            connection = null;
+            if (conn != null) {
+                conn.close();
+            }
         }
     }
 
@@ -62,27 +67,32 @@ public class Plc4xAdapter extends AbstractProtocolAdapter {
 
     @Override
     public Object read(ProtocolPointEntity point) {
-        try {
-            PlcReadRequest request = connection.readRequestBuilder()
-                    .addTagAddress(point.getField_name(), point.getAddress())
-                    .build();
-            PlcReadResponse response = request.execute().get(timeoutMs, TimeUnit.MILLISECONDS);
-            return response.getObject(point.getField_name());
-        } catch (Exception ex) {
-            throw new RuntimeException("PLC4X read failed: " + point.getField_name() + " -> " + ex.getMessage(), ex);
+        // PLC4X 连接非并发安全：worker 轮询与手动读写共用同一通道，须串行化，否则 OPC UA 通道序号错乱。
+        synchronized (channelLock) {
+            try {
+                PlcReadRequest request = connection.readRequestBuilder()
+                        .addTagAddress(point.getField_name(), point.getAddress())
+                        .build();
+                PlcReadResponse response = request.execute().get(timeoutMs, TimeUnit.MILLISECONDS);
+                return response.getObject(point.getField_name());
+            } catch (Exception ex) {
+                throw new RuntimeException("PLC4X read failed: " + point.getField_name() + " -> " + ex.getMessage(), ex);
+            }
         }
     }
 
     @Override
     public void write(ProtocolPointEntity point, Object value) {
-        try {
-            Object encoded = DataCodec.encode(point.getData_type(), value);
-            PlcWriteRequest request = connection.writeRequestBuilder()
-                    .addTagAddress(point.getField_name(), point.getAddress(), encoded)
-                    .build();
-            request.execute().get(timeoutMs, TimeUnit.MILLISECONDS);
-        } catch (Exception ex) {
-            throw new RuntimeException("PLC4X write failed: " + point.getField_name() + " -> " + ex.getMessage(), ex);
+        synchronized (channelLock) {
+            try {
+                Object encoded = DataCodec.encode(point.getData_type(), value);
+                PlcWriteRequest request = connection.writeRequestBuilder()
+                        .addTagAddress(point.getField_name(), point.getAddress(), encoded)
+                        .build();
+                request.execute().get(timeoutMs, TimeUnit.MILLISECONDS);
+            } catch (Exception ex) {
+                throw new RuntimeException("PLC4X write failed: " + point.getField_name() + " -> " + ex.getMessage(), ex);
+            }
         }
     }
 }

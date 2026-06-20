@@ -16,8 +16,8 @@ import com.cayleywcs.protocol.ProtocolService;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -107,9 +107,10 @@ class ConnectionManagerTest {
         lenient().when(protoService.listPoints(100L)).thenReturn(List.of(hb, mode));
     }
 
-    private static ObjectNode parse(String json) {
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> parse(String json) {
         try {
-            return (ObjectNode) MAPPER.readTree(json);
+            return MAPPER.readValue(json, Map.class);
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }

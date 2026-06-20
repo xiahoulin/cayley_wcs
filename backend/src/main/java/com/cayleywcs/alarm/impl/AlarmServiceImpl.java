@@ -9,6 +9,7 @@ import com.cayleywcs.common.api.PageSearch;
 import com.cayleywcs.common.api.PageSupport;
 import com.cayleywcs.common.exception.ErrorCode;
 import com.cayleywcs.common.exception.WcsException;
+import com.cayleywcs.common.support.ReconcileSupport;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -117,6 +118,20 @@ public class AlarmServiceImpl implements AlarmService {
         if (appId != null) {
             wrapper.eq("\"app_id\"", appId);
         }
+        return alarmMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<AlarmEntity> queryReconcile(Long appId, long sinceMillis, int limit) {
+        QueryWrapper<AlarmEntity> wrapper = new QueryWrapper<AlarmEntity>().eq("\"is_valid\"", true);
+        if (appId != null) {
+            wrapper.eq("\"app_id\"", appId);
+        }
+        if (sinceMillis > 0) {
+            wrapper.ge("\"last_update_time\"", ReconcileSupport.toLocalDateTime(sinceMillis));
+        }
+        wrapper.orderByAsc("\"last_update_time\"").orderByAsc("\"id\"")
+                .last("limit " + ReconcileSupport.clampLimit(limit));
         return alarmMapper.selectList(wrapper);
     }
 

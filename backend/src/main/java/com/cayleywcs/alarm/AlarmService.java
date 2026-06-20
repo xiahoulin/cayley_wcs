@@ -23,4 +23,7 @@ public interface AlarmService {
     PageData<AlarmEntity> page(PageSearch pageSearch);
 
     List<AlarmEntity> listActive(Long appId);
+
+    /** 对账用：返回 last_update_time >= sinceMillis 的报警（sinceMillis=0 即全量），按更新时间升序。 */
+    List<AlarmEntity> queryReconcile(Long appId, long sinceMillis, int limit);
 }

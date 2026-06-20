@@ -5,9 +5,9 @@ import com.cayleywcs.adapter.ProtocolAdapter;
 import com.cayleywcs.application.entity.ApplicationEntity;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,7 +25,7 @@ public class ManagedConnection {
     private volatile long lastHeartbeatAt = 0L;
     private volatile int lastErrorCode = 0;
     private final AtomicInteger retryCount = new AtomicInteger(0);
-    private volatile ObjectNode latest = JsonNodeFactory.instance.objectNode();
+    private volatile Map<String, Object> latest = new LinkedHashMap<>();
     private volatile ScheduledFuture<?> workerFuture;
 
     public ManagedConnection(ApplicationEntity application, ProtocolEntity protocol,
@@ -85,11 +85,11 @@ public class ManagedConnection {
         this.lastErrorCode = lastErrorCode;
     }
 
-    public ObjectNode latest() {
+    public Map<String, Object> latest() {
         return latest;
     }
 
-    public void setLatest(ObjectNode latest) {
+    public void setLatest(Map<String, Object> latest) {
         this.latest = latest;
     }
 

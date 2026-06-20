@@ -1,6 +1,6 @@
 package com.cayleywcs.connection;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 
 /** 连接运行态快照（给前端连接监控页 / 实时看板）。 */
 public record ConnectionSnapshot(
@@ -11,6 +11,6 @@ public record ConnectionSnapshot(
         String state,
         long lastHeartbeatAt,
         int retryCount,
-        JsonNode latest
+        Map<String, Object> latest
 ) {
 }

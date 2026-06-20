@@ -44,6 +44,12 @@ cayleywcs:
     engine-interval-ms: ${CAYLEYWCS_TASK_ENGINE_INTERVAL_MS:1000}
   monitor:
     push-interval-ms: ${CAYLEYWCS_MONITOR_PUSH_INTERVAL_MS:1000}
+  simulator:
+    # 仅在 spring.profiles 含 simulator 时启用的 OPC UA 仿真服务端
+    opcua:
+      port: ${CAYLEYWCS_SIM_OPCUA_PORT:4840}
+      host: ${CAYLEYWCS_SIM_OPCUA_HOST:127.0.0.1}
+      path: ${CAYLEYWCS_SIM_OPCUA_PATH:/cayleywcs/stacker}
   gateway:
     apisix-enabled: ${CAYLEYWCS_APISIX_ENABLED:false}
   keycloak:

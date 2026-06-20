@@ -4,6 +4,7 @@ import com.cayleywcs.alarm.AlarmService;
 import com.cayleywcs.connection.ConnectionManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,6 +21,7 @@ public class MonitorPusher {
     private final AlarmService alarmService;
     private final MonitorWebSocketHandler handler;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AtomicLong seq = new AtomicLong(0);
 
     public MonitorPusher(ConnectionManager connectionManager, AlarmService alarmService,
                          MonitorWebSocketHandler handler) {
@@ -36,6 +38,8 @@ public class MonitorPusher {
         try {
             Map<String, Object> payload = Map.of(
                     "type", "monitor",
+                    "seq", seq.incrementAndGet(),          // 单调递增；WMS 断号即可触发 REST 对账
+                    "ts", System.currentTimeMillis(),
                     "connections", connectionManager.snapshots(),
                     "slots", connectionManager.slotUsage(),
                     "alarms", alarmService.listActive(null));

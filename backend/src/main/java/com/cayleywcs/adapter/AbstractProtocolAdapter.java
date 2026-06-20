@@ -1,9 +1,9 @@
 package com.cayleywcs.adapter;
 
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,38 +44,21 @@ public abstract class AbstractProtocolAdapter implements ProtocolAdapter {
     }
 
     @Override
-    public ObjectNode readAll(List<ProtocolPointEntity> points) {
-        ObjectNode node = JsonNodeFactory.instance.objectNode();
+    public Map<String, Object> readAll(List<ProtocolPointEntity> points) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
         for (ProtocolPointEntity point : points) {
             try {
                 Object raw = read(point);
-                Object value = DataCodec.decode(point.getData_type(), raw);
-                putValue(node, point.getField_name(), value);
+                snapshot.put(point.getField_name(), DataCodec.decode(point.getData_type(), raw));
             } catch (Exception ex) {
                 log.debug("[{}] read point {} failed: {}", protocolType(), point.getField_name(), ex.getMessage());
             }
         }
-        return node;
+        return snapshot;
     }
 
     protected void markDisconnected() {
         connected = false;
-    }
-
-    private static void putValue(ObjectNode node, String field, Object value) {
-        if (value == null) {
-            node.putNull(field);
-        } else if (value instanceof Long l) {
-            node.put(field, l);
-        } else if (value instanceof Integer i) {
-            node.put(field, i);
-        } else if (value instanceof Double d) {
-            node.put(field, d);
-        } else if (value instanceof Boolean b) {
-            node.put(field, b);
-        } else {
-            node.put(field, String.valueOf(value));
-        }
     }
 
     protected abstract void doConnect(AdapterContext ctx) throws Exception;

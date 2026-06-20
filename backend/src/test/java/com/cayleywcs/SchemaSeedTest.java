@@ -32,18 +32,32 @@ class SchemaSeedTest {
         Integer stacker = jdbcTemplate.queryForObject(
                 "select count(*) from \"wcs_protocol\" where \"protocol_code\" = 'STACKER_STD'", Integer.class);
         Integer points = jdbcTemplate.queryForObject(
-                "select count(*) from \"wcs_protocol_point\"", Integer.class);
+                "select count(*) from \"wcs_protocol_point\" where \"protocol_id\" = "
+                        + "(select \"id\" from \"wcs_protocol\" where \"protocol_code\"='STACKER_STD')", Integer.class);
         Integer faults = jdbcTemplate.queryForObject(
-                "select count(*) from \"wcs_fault_code\"", Integer.class);
+                "select count(*) from \"wcs_fault_code\" where \"protocol_id\" = "
+                        + "(select \"id\" from \"wcs_protocol\" where \"protocol_code\"='STACKER_STD')", Integer.class);
         Integer demoApp = jdbcTemplate.queryForObject(
                 "select count(*) from \"wcs_application\" where \"app_key\" = 'ak_stacker_demo'", Integer.class);
+        // V4：礁盘工业码垛机 OPC UA 应用 + 协议
+        Integer palletApp = jdbcTemplate.queryForObject(
+                "select count(*) from \"wcs_application\" where \"app_name\" = '礁盘工业码垛机'", Integer.class);
+        Integer opcuaPoints = jdbcTemplate.queryForObject(
+                "select count(*) from \"wcs_protocol_point\" where \"protocol_id\" = "
+                        + "(select \"id\" from \"wcs_protocol\" where \"protocol_code\"='STACKER_OPCUA')", Integer.class);
+        String opcuaAddr = jdbcTemplate.queryForObject(
+                "select \"address\" from \"wcs_protocol_point\" where \"field_name\"='WCS_Heart' and \"protocol_id\" = "
+                        + "(select \"id\" from \"wcs_protocol\" where \"protocol_code\"='STACKER_OPCUA')", String.class);
 
         assertThat(adminUsers).isEqualTo(1);
         assertThat(protocolTypes).isEqualTo(7); // opcua/modbus_tcp/s7/tcp/mqtt/http/sim
         assertThat(stacker).isEqualTo(1);
-        assertThat(points).isEqualTo(27); // 12 命令区 + 15 状态区（6.18 修订版）
-        assertThat(faults).isEqualTo(48); // 1-48（6.18 修订版）
+        assertThat(points).isEqualTo(27); // STACKER_STD：12 命令区 + 15 状态区（6.18 修订版）
+        assertThat(faults).isEqualTo(48); // STACKER_STD 1-48
         assertThat(demoApp).isEqualTo(1);
+        assertThat(palletApp).isEqualTo(1);
+        assertThat(opcuaPoints).isEqualTo(27);          // OPC UA 协议点位克隆自 STACKER_STD
+        assertThat(opcuaAddr).isEqualTo("ns=3;s=\"WCS_Task\".\"From_WCS\".\"WCS_Heart\""); // NodeId 寻址
     }
 
     @Test

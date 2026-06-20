@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.cayleywcs.common.entity.BaseEntity;
-import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Map;
 
 /**
  * 协议表（需求 1）。data_format / transport_template 以 JSON 表示（text 存储 + JacksonTypeHandler）。
@@ -17,10 +17,10 @@ public class ProtocolEntity extends BaseEntity {
     private String protocol_type;
 
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private JsonNode data_format;
+    private Map<String, Object> data_format;
 
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private JsonNode transport_template;
+    private Map<String, Object> transport_template;
 
     private String version;
     private String status;
@@ -58,19 +58,19 @@ public class ProtocolEntity extends BaseEntity {
         this.protocol_type = protocol_type;
     }
 
-    public JsonNode getData_format() {
+    public Map<String, Object> getData_format() {
         return data_format;
     }
 
-    public void setData_format(JsonNode data_format) {
+    public void setData_format(Map<String, Object> data_format) {
         this.data_format = data_format;
     }
 
-    public JsonNode getTransport_template() {
+    public Map<String, Object> getTransport_template() {
         return transport_template;
     }
 
-    public void setTransport_template(JsonNode transport_template) {
+    public void setTransport_template(Map<String, Object> transport_template) {
         this.transport_template = transport_template;
     }
 
