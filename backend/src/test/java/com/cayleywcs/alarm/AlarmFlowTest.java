@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cayleywcs.connection.ConnectionState;
 import com.cayleywcs.connection.event.ConnectionStateChangedEvent;
+import com.cayleywcs.connection.event.FaultClearedEvent;
 import com.cayleywcs.connection.event.FaultDetectedEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,28 @@ class AlarmFlowTest {
 
         // 故障恢复 -> 清除
         publisher.publishEvent(new FaultDetectedEvent(appId, protocolId, 0));
+        assertThat(alarmService.listActive(appId)).isEmpty();
+    }
+
+    @Test
+    void partialRecoveryClearsOnlyResolvedCode() {
+        Long protocolId = jdbcTemplate.queryForObject(
+                "select \"id\" from \"wcs_protocol\" where \"protocol_code\" = 'STACKER_STD'", Long.class);
+        long appId = 90004L;
+
+        // 两个故障码并发
+        publisher.publishEvent(new FaultDetectedEvent(appId, protocolId, 2));
+        publisher.publishEvent(new FaultDetectedEvent(appId, protocolId, 5));
+        assertThat(alarmService.listActive(appId)).hasSize(2);
+
+        // 单码 5 恢复 → 仅清 5，码 2 仍挂（部分恢复不再残留幽灵报警）
+        publisher.publishEvent(new FaultClearedEvent(appId, protocolId, 5));
+        var active = alarmService.listActive(appId);
+        assertThat(active).hasSize(1);
+        assertThat(active.get(0).getFault_code()).isEqualTo(2L);
+
+        // 码 2 也恢复 → 全清
+        publisher.publishEvent(new FaultClearedEvent(appId, protocolId, 2));
         assertThat(alarmService.listActive(appId)).isEmpty();
     }
 

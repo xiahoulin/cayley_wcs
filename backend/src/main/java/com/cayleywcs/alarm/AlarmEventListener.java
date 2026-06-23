@@ -1,6 +1,7 @@
 package com.cayleywcs.alarm;
 
 import com.cayleywcs.connection.event.ConnectionStateChangedEvent;
+import com.cayleywcs.connection.event.FaultClearedEvent;
 import com.cayleywcs.connection.event.FaultDetectedEvent;
 import com.cayleywcs.faultcode.FaultCodeResolver;
 import com.cayleywcs.faultcode.FaultInfo;
@@ -29,6 +30,12 @@ public class AlarmEventListener {
         FaultInfo info = faultCodeResolver.resolve(event.protocolId(), event.code());
         alarmService.raise(event.appId(), event.code(), info.level(),
                 info.name() + "：" + info.message(), info.suggestion());
+    }
+
+    /** 单码恢复：精确解除该故障码的报警（多故障逐个恢复时不残留幽灵报警）。 */
+    @EventListener
+    public void onFaultCleared(FaultClearedEvent event) {
+        alarmService.clearFault(event.appId(), event.code());
     }
 
     @EventListener

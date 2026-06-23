@@ -295,7 +295,7 @@ MODULES = [
     ("监控与报警", "已完成", "WebSocket 实时推送 + 报警生命周期 + 故障码→报警联动"),
     ("审计", "已完成", "连接事件落库 + 报文留存"),
     ("WMS 对账闭环", "已完成", "WS 提示(seq) + REST 增量对账 + snapshot 重同步"),
-    ("仿真器", "已完成", "内存堆垛机仿真(sim)，无硬件端到端 + 故障注入"),
+    ("仿真器", "已完成", "内存 sim + Milo OPC UA 仿真服务端(真·OPC UA 端到端)，无硬件联调 + 故障注入"),
 ]
 
 # (模块, 功能说明, [接口], [数据表], [关键类])
@@ -350,12 +350,15 @@ MODULE_DETAIL = [
      ["—（运行态，不落业务表）"],
      ["ConnectionManager", "ManagedConnection", "ConnectionWatchdog"]),
     ("协议适配",
-     "统一适配器 SPI：到连接阶段，所有协议都用同一套接口处理“连接 + 读写”，读出归一化为统一 JSON 快照。"
-     "设计模式：Adapter(屏蔽差异) + Factory(按协议类型选 Provider) + Template Method(固化生命周期) + Strategy(JSON 编解码 DataCodec)。"
-     "实现：OPC UA / Modbus TCP / S7 由 Apache PLC4X 统一；MQTT 用 Eclipse Paho；HTTP 用 JDK HttpClient；TCP 用 Socket；sim 为内存仿真。",
+     "统一适配器 SPI：到连接阶段，所有协议都用同一套接口处理“连接 + 读写”，读出归一化为统一 JSON 快照（field_name→value）。"
+     "设计模式：Adapter(屏蔽差异) + Factory(按 protocol_type 选 Provider) + Template Method(固化生命周期) + Strategy(JSON 编解码 DataCodec)。"
+     "实现：OPC UA / Modbus TCP / S7 由 Apache PLC4X 统一（连接串由 conn_params.endpoint 拼装，点位 address 直接当 PLC4X tag/NodeId）；MQTT 用 Eclipse Paho；HTTP 用 JDK HttpClient；TCP 用 Socket；loopback/sim 为内存仿真。"
+     "OPC UA 由 StackerOpcUaAdapter（继承 Plc4xAdapter）实现协议特有“主动心跳”：每 5s 翻转写 WCS_Heart(0↔1) 给 PLC；心跳点也从点位表按 field_name 定位、不写死。"
+     "PLC4X 的 OPC UA 通道非并发安全，故 read/write/连接在 channelLock 上串行化（轮询线程与手动/握手读写共用一条会话）。",
      ["—（被连接治理调用，无独立 HTTP 接口）"],
      ["—"],
-     ["ProtocolAdapter", "ProtocolAdapterFactory", "Plc4xAdapter", "MqttAdapter", "HttpAdapter", "TcpAdapter", "SimAdapter"]),
+     ["ProtocolAdapter / ProtocolAdapterFactory / ProtocolAdapterProvider", "Plc4xAdapter（OPC UA/Modbus/S7 共用，channelLock 串行）",
+      "StackerOpcUaAdapter（OPC UA 主动心跳）/ OpcUaAdapterProvider / Plc4xConnectionStrings", "MqttAdapter / HttpAdapter / TcpAdapter / SimAdapter / DataCodec"]),
     ("任务调度",
      "接收 WMS 经 /open/task/dispatch 下发的任务(幂等：同 app+task_no 不重复；并校验调用方对目标设备的绑定授权，越权返回 FORBIDDEN)。任务引擎按设备级单飞推进堆垛机三段握手状态机："
      "检查(模式=联机自动/无故障/无任务) → 下发参数(排/列/层/口/任务号/类型) → 写执行确认 → 等待完成 → 写完成确认 → 清零命令区。"
@@ -381,10 +384,17 @@ MODULE_DETAIL = [
      ["wcs_task", "wcs_alarm"],
      ["OpenReconcileController"]),
     ("仿真器",
-     "内存堆垛机仿真(协议类型 sim)：无硬件即可端到端跑通连接治理/三段握手/报警。可注入/清除故障码、复位设备、查看内部态。",
+     "两种无硬件联调手段："
+     "①【内存仿真】协议类型 sim 的 SimAdapter + StackerDeviceState：进程内假读写，跑通连接治理/三段握手/报警，不开端口。"
+     "②【Milo OPC UA 仿真服务端】OpcUaStackerSimulator（Spring profile simulator）：后端进程内内嵌一个真正的 Eclipse Milo OPC UA Server，"
+     "监听 opc.tcp://127.0.0.1:4840/cayleywcs/stacker（ns=2），按 DB100 字段注册 UaVariableNode，背后挂内存设备状态机每秒 tick（心跳翻转/握手应答/故障注入）。"
+     "WCS 经 PLC4X 当真·OPC UA 客户端连它 → 真·OPC UA 端到端联调（连接/心跳/读状态/写命令/三段握手/注故障）。"
+     "对应种子：协议 PALLET_SIM_OPCUA + 应用 PALLET_SIM(V5)；注故障 POST /simulator/inject-fault {appId:999001}。"
+     "两种仿真都支持注入/清除故障码、复位、查看内部态。",
      ["POST /simulator/inject-fault | /clear-fault | /reset | /snapshot"],
-     ["—（内存态）"],
-     ["StackerDeviceState", "StackerSimulatorRegistry", "SimAdapter"]),
+     ["—（内存态 / OPC UA 服务端）"],
+     ["OpcUaStackerSimulator（Milo OPC UA Server, profile simulator）", "StackerNamespace（NodeId 注册）",
+      "StackerDeviceState / StackerSimulatorRegistry", "SimAdapter（内存 sim 适配器）"]),
 ]
 
 INTERFACES = [
@@ -421,6 +431,172 @@ TABLES = [
     ("审计", "wcs_connection_log / wcs_message_log", "连接事件 + 报文留存"),
 ]
 
+# ===== 全部表完整字段结构（列名 / 类型 / 说明），源自 Flyway V1 + V6 =====
+_STD = [
+    ("creator", "varchar(512)", "创建者"),
+    ("create_time", "timestamp(6)", "创建时间"),
+    ("last_update_time", "timestamp(6)", "最后更新时间"),
+    ("is_valid", "boolean", "软删标志（true=有效）"),
+    ("tenant_id", "bigint", "租户 id（默认 1）"),
+]
+_ID = ("id", "bigint", "主键，自增")
+
+# (表名, 用途, [(列, 类型, 说明)])
+TABLE_SCHEMAS = [
+    ("wcs_userrole", "角色（登录用）", [
+        _ID,
+        ("role_name", "varchar(512)", "角色名"),
+        ("is_valid", "boolean", "软删标志"),
+        ("create_time", "timestamp(6)", "创建时间"),
+        ("last_update_time", "timestamp(6)", "最后更新时间"),
+        ("tenant_id", "bigint", "租户 id"),
+    ]),
+    ("wcs_user", "管理员账号（JWT 登录）", [
+        _ID,
+        ("user_num", "varchar(512)", "登录账号（如 admin）"),
+        ("user_name", "varchar(512)", "姓名"),
+        ("contact_tel", "varchar(512)", "联系电话"),
+        ("user_role", "varchar(512)", "角色"),
+        ("sex", "varchar(512)", "性别"),
+        ("auth_string", "varchar(512)", "口令哈希"),
+        ("email", "varchar(512)", "邮箱"),
+        ("is_valid", "boolean", "软删标志"),
+        ("creator", "varchar(512)", "创建者"),
+        ("create_time", "timestamp(6)", "创建时间"),
+        ("last_update_time", "timestamp(6)", "最后更新时间"),
+        ("tenant_id", "bigint", "租户 id"),
+    ]),
+    ("wcs_dict_type", "字典类型", [
+        _ID,
+        ("type_code", "varchar(128)", "类型编码（如 protocol_type）"),
+        ("type_name", "varchar(256)", "类型名称"),
+        ("remark", "varchar(512)", "备注"),
+        ("sort", "bigint", "排序"),
+    ] + _STD),
+    ("wcs_dict_item", "字典项（枚举值）", [
+        _ID,
+        ("type_code", "varchar(128)", "所属字典类型编码"),
+        ("item_code", "varchar(128)", "项编码"),
+        ("item_name", "varchar(256)", "项名称"),
+        ("item_value", "varchar(512)", "项值"),
+        ("sort", "bigint", "排序"),
+        ("remark", "varchar(512)", "备注"),
+    ] + _STD),
+    ("wcs_protocol", "协议表（对接协议）", [
+        _ID,
+        ("protocol_code", "varchar(128)", "协议编码（业务键）"),
+        ("protocol_name", "varchar(256)", "协议名称"),
+        ("target_system", "varchar(256)", "对接系统"),
+        ("protocol_type", "varchar(64)", "协议类型字典码（opcua/modbus_tcp/s7/tcp/mqtt/http/sim）→ 决定适配器"),
+        ("data_format", "text(JSON)", "数据格式（块/访问/寻址规则）"),
+        ("transport_template", "text(JSON)", "传输模板（如 NodeId 模式）"),
+        ("version", "varchar(64)", "版本"),
+        ("status", "varchar(32)", "状态（enabled/disabled）"),
+        ("remark", "varchar(1024)", "备注"),
+    ] + _STD),
+    ("wcs_protocol_point", "协议点位/字段映射（协议数据格式落地）", [
+        _ID,
+        ("protocol_id", "bigint", "所属协议 id"),
+        ("point_group", "varchar(64)", "分区（From_WCS/To_WCS）"),
+        ("field_name", "varchar(128)", "逻辑字段名（统一 JSON 的 key）"),
+        ("symbol_name", "varchar(256)", "符号名"),
+        ("address", "varchar(256)", "驱动级地址：OPC UA NodeId / S7 DB100.DBW0 / Modbus 寄存器"),
+        ("data_type", "varchar(64)", "数据类型（INT/UINT/REAL/WORD/BOOL…）"),
+        ("rw", "varchar(2)", "读写（R/W）"),
+        ("value_range", "varchar(256)", "取值范围"),
+        ("scale", "numeric(18,6)", "缩放系数（当前仅存，未自动应用）"),
+        ("sort", "bigint", "排序"),
+        ("description", "varchar(1024)", "描述"),
+    ] + _STD),
+    ("wcs_application", "应用信息表（可对接应用/设备 + AppKey）", [
+        _ID,
+        ("app_code", "varchar(128)", "应用编码"),
+        ("app_name", "varchar(256)", "应用名称"),
+        ("app_key", "varchar(128)", "AppKey（鉴权用，建索引）"),
+        ("app_secret", "varchar(256)", "AppSecret（HMAC 签名密钥）"),
+        ("protocol_id", "bigint", "绑定协议 id"),
+        ("direction", "varchar(32)", "方向（upstream 上位 / downstream 下位）"),
+        ("conn_params", "text(JSON)", "连接参数（endpoint/host/port/unitId…）"),
+        ("max_retry", "bigint", "最大重连次数"),
+        ("heartbeat_interval_ms", "bigint", "心跳/轮询间隔(ms)"),
+        ("enabled", "boolean", "是否启用"),
+        ("status", "varchar(32)", "状态"),
+        ("remark", "varchar(1024)", "备注"),
+    ] + _STD),
+    ("wcs_app_binding", "应用绑定授权（上位侧→下位侧，越权防护）。唯一索引 (upstream_app_id, downstream_app_id, tenant_id)；禁自绑定", [
+        _ID,
+        ("upstream_app_id", "bigint", "上位侧应用 id（调用方）"),
+        ("downstream_app_id", "bigint", "下位侧应用 id（目标）"),
+        ("scope", "varchar(32)", "权限范围（dispatch/read/control）"),
+        ("enabled", "boolean", "是否启用"),
+        ("remark", "varchar(1024)", "备注"),
+    ] + _STD),
+    ("wcs_fault_code", "故障码表（按协议维护）", [
+        _ID,
+        ("protocol_id", "bigint", "所属协议 id"),
+        ("code", "bigint", "故障码"),
+        ("level", "varchar(32)", "级别（error/warn…）"),
+        ("name", "varchar(256)", "名称"),
+        ("message", "varchar(1024)", "故障信息"),
+        ("suggestion", "varchar(2048)", "处置建议"),
+    ] + _STD),
+    ("wcs_task", "WCS 任务（下发 + 握手执行态）", [
+        _ID,
+        ("task_no", "varchar(128)", "任务号（与 app 组合幂等去重）"),
+        ("app_id", "bigint", "目标设备应用 id"),
+        ("wms_ref", "varchar(256)", "WMS 单号/引用"),
+        ("task_type", "varchar(64)", "任务类型（入库/出库/移库…字典码）"),
+        ("take_row", "bigint", "取货-排"),
+        ("take_column", "bigint", "取货-列"),
+        ("take_floor", "bigint", "取货-层"),
+        ("put_row", "bigint", "放货-排"),
+        ("put_column", "bigint", "放货-列"),
+        ("put_floor", "bigint", "放货-层"),
+        ("port_num", "bigint", "出入口号"),
+        ("priority", "bigint", "优先级"),
+        ("status", "varchar(32)", "状态（pending/dispatched/executing/completed/cancelled）"),
+        ("handshake_step", "varchar(64)", "握手步（CREATED→…→DONE）"),
+        ("error_code", "bigint", "故障码（执行失败）"),
+        ("payload", "text(JSON)", "附加载荷"),
+        ("dispatch_time", "timestamp(6)", "下发时间"),
+        ("finish_time", "timestamp(6)", "完成时间"),
+    ] + _STD),
+    ("wcs_alarm", "报警（产生/确认/清除/历史）", [
+        _ID,
+        ("app_id", "bigint", "应用/设备 id"),
+        ("fault_code", "bigint", "故障码"),
+        ("level", "varchar(32)", "级别"),
+        ("message", "varchar(1024)", "报警信息"),
+        ("suggestion", "varchar(2048)", "处置建议"),
+        ("status", "varchar(32)", "状态（raised/ack/cleared）"),
+        ("raised_time", "timestamp(6)", "产生时间"),
+        ("ack_by", "varchar(256)", "确认人"),
+        ("ack_time", "timestamp(6)", "确认时间"),
+        ("cleared_time", "timestamp(6)", "清除时间"),
+    ] + _STD),
+    ("wcs_connection_log", "连接事件审计（无标准列 creator/is_valid/last_update_time）", [
+        _ID,
+        ("app_id", "bigint", "应用 id"),
+        ("app_code", "varchar(128)", "应用编码"),
+        ("event", "varchar(64)", "事件（connect/disconnect/timeout/error/reconnect）"),
+        ("state", "varchar(64)", "连接状态"),
+        ("detail", "varchar(2048)", "明细"),
+        ("create_time", "timestamp(6)", "时间"),
+        ("tenant_id", "bigint", "租户 id"),
+    ]),
+    ("wcs_message_log", "报文留存（高频，按需清理；无标准列 creator/is_valid/last_update_time）", [
+        _ID,
+        ("app_id", "bigint", "应用 id"),
+        ("direction", "varchar(16)", "方向（read/write）"),
+        ("field_name", "varchar(128)", "字段名"),
+        ("address", "varchar(256)", "地址（NodeId/寄存器）"),
+        ("raw_value", "varchar(512)", "原始值"),
+        ("json_payload", "text(JSON)", "JSON 载荷"),
+        ("create_time", "timestamp(6)", "时间"),
+        ("tenant_id", "bigint", "租户 id"),
+    ]),
+]
+
 
 def build():
     bl = render_business_logic()
@@ -442,6 +618,7 @@ def build():
         ("V0.4", "2026-06-23", "夏侯霖", "对抗式评审加固：create() 复用软删行(避免唯一索引冲突)、grant() 按 tenant 隔离+scope 收敛、appkey 关闭记 WARN、前端校正已删上位选择；测试数(23)。"),
         ("V0.5", "2026-06-23", "夏侯霖", "去除自绑定(V8)：绑定保持上位侧→下位侧称呼但不锁 direction，任意应用皆可任一侧(含下位→下位)，禁自绑定；测试数(24)。"),
         ("V0.6", "2026-06-23", "夏侯霖", "二轮评审加固：update() 改方向校验软删行(干净 CONFLICT)、dispatch 越权判定 isAllowed 按调用方租户隔离(读写一致)；测试数(26)。"),
+        ("V0.7", "2026-06-24", "夏侯霖", "第 8 节补全：全部 13 张表的完整字段结构（列名/类型/说明），前端拆「授权绑定/绑定明细」两页。"),
     ])
 
     heading(doc, "1. 项目概述", 1)
@@ -449,8 +626,8 @@ def build():
               "负责多协议设备通讯、连接治理、任务调度与实时监控。架构对齐 CayleyWMS。")
     table(doc, ["项", "取值"], [
         ("后端", "Java 25 · Spring Boot 4.0.6 · MyBatis-Plus · PostgreSQL 17 · Redis · Flyway · springdoc"),
-        ("工业驱动", "Apache PLC4X(OPC UA/Modbus/S7) · Eclipse Paho(MQTT) · JDK HttpClient · Socket · 内置 sim 仿真"),
-        ("前端", "Vue 3 · Vite · TypeScript（登录 + 协议/应用/绑定授权/连接监控/实时看板）"),
+        ("工业驱动", "Apache PLC4X(OPC UA/Modbus/S7) · Eclipse Paho(MQTT) · JDK HttpClient · Socket · Eclipse Milo(OPC UA 仿真服务端) · 内存 sim"),
+        ("前端", "Vue 3 · Vite · TypeScript（登录 + 协议/应用/授权绑定/绑定明细/连接监控/实时看板）"),
         ("端口", "后端 20021 · 前端 5184 · PostgreSQL 5433 · Redis 6380（避开 WMS）"),
         ("接口约定", "业务接口全 POST + application/json；统一响应 ApiResponse(isSuccess/code/errorMessage/data)"),
         ("鉴权", "管理端 JWT(Bearer)；开放接口 /open/** 用 AppKey + HMAC 签名 + 防重放"),
@@ -488,17 +665,28 @@ def build():
           widths=[1.1, 2.7, 1.9, 0.7])
 
     heading(doc, "8. 数据库表结构", 1)
-    para(doc, "PostgreSQL，Flyway 迁移(V1 建表 / V2 字典+管理员 / V3 堆垛机协议+点位+故障码 / V4 码垛机 OPC UA 协议+应用 / V5 OPC UA 仿真应用 / "
-              "V6 应用绑定授权表 / V7 上位 WMS-MAIN 应用+授权全部下位设备 / V8 去除自绑定)。"
-              "标准列：id、creator、create_time、last_update_time、is_valid(软删)、tenant_id；动态结构用 JSON(text)。")
+    para(doc, "PostgreSQL 17（测试用 H2 PostgreSQL 模式）。Flyway 迁移 V1 建表 / V2 字典+管理员 / V3 堆垛机协议+点位+故障码 / "
+              "V4 码垛机 OPC UA 协议+应用 / V5 OPC UA 仿真应用 / V6 应用绑定授权表 / V7 上位 WMS-MAIN+授权 / V8 去除自绑定。"
+              "多数业务表含标准列：id、creator、create_time、last_update_time、is_valid(软删)、tenant_id；JSON 字段以 text 存储(JacksonTypeHandler 序列化)。")
+
+    heading(doc, "8.1 表清单总览", 2)
     table(doc, ["业务域", "数据表", "说明"], [(d, t, c) for d, t, c in TABLES], widths=[1.2, 2.6, 2.6])
+
+    heading(doc, "8.2 各表字段结构", 2)
+    para(doc, "下列为每张表的完整字段（列名 / 类型 / 说明）。text(JSON) 表示以 text 存储、应用层序列化为 JSON。",
+         size=9, color=MUTED)
+    for idx, (tname, purpose, cols) in enumerate(TABLE_SCHEMAS, start=1):
+        heading(doc, f"8.2.{idx}　{tname}", 3)
+        para(doc, purpose, size=9, color=MUTED)
+        table(doc, ["列名", "类型", "说明"], [(c, t, d) for c, t, d in cols], widths=[1.8, 1.4, 3.2])
 
     heading(doc, "9. 运行与部署", 1)
     table(doc, ["场景", "命令/配置", "说明"], [
         ("起依赖", "docker compose up -d postgres redis", "PostgreSQL(5433) + Redis(6380)"),
-        ("起后端", 'cd backend && mvn spring-boot:run "-Dspring-boot.run.profiles=local"', "默认 20021；联调加 simulator profile"),
-        ("起前端", "cd frontend && npm install && npm run dev", "5184(被占则 5185)；/api 与 /ws 代理到后端"),
-        ("完整 Compose", "docker compose --profile full up -d --build", "pg/redis/backend/frontend 分容器"),
+        ("起后端", 'cd backend && mvn spring-boot:run "-Dspring-boot.run.profiles=local"', "默认 20021"),
+        ("无硬件 OPC UA 联调", 'mvn spring-boot:run "-Dspring-boot.run.profiles=local,simulator"', "随后端起 Milo OPC UA 仿真服务端 opc.tcp://127.0.0.1:4840/cayleywcs/stacker；对 PALLET_SIM 建连即真·OPC UA 端到端"),
+        ("起前端", "cd frontend && npm install && npm run dev", "5184(被占则换端口)；/api 与 /ws 代理到后端"),
+        ("完整 Compose", "docker compose --profile full up -d --build", "pg/redis/backend/frontend 分容器；后端默认带 simulator profile(CAYLEYWCS_BACKEND_PROFILES，对接真机置空)"),
         ("Swagger", "/swagger-ui.html", "接口文档"),
         ("测试", "cd backend && mvn test", "H2，无需外部依赖，26 用例"),
     ])
@@ -512,8 +700,8 @@ def build():
     para(doc, "WCS 安全分两层：① WCS API 层访问控制(AppKey 鉴权 + 绑定授权)，管住“谁能经 WCS 下发、且只能指挥被授权的设备”；"
               "② 设备级保护(网络/PLC 配置)，管住“谁能直接连到下位机”。前者由本系统实现，后者主战场在网络与 PLC，WCS 通过“做成唯一闸口 + 持证书加密连接 + 审计”参与。")
     para(doc, "① API 层(本系统)：/open/** 必须带合法 AppKey 签名(应用存在且启用 + 时间戳未过期 + nonce 不重放 + 签名正确)方可进入；"
-              "/open/task/dispatch 进一步做绑定授权——以验签得到的调用方真实身份(ATTR_APP_ID，证明) + 请求体 appId(声明) 查 wcs_app_binding，仅启用中的绑定放行，否则 FORBIDDEN。"
-              "授权按应用维护：在“绑定授权”页选定一个上位侧应用(如 WMS-MAIN)，勾选其可指挥的下位侧应用(整批 grant)；不锁 direction、禁自绑定。由此“调用方只能指挥被授权的应用”，杜绝混淆代理式越权。")
+              "/open/task/dispatch 进一步做绑定授权——以验签得到的调用方真实身份(ATTR_APP_ID，证明) + 请求体 appId(声明) 查 wcs_app_binding，仅启用中的绑定放行，否则 FORBIDDEN；判定按调用方租户隔离(与唯一索引含 tenant 对齐，读写一致)。"
+              "授权按应用维护：在“绑定授权/绑定明细”页选定一个上位侧应用(如 WMS-MAIN)，勾选其可指挥的下位侧应用(整批 grant)；不锁 direction、禁自绑定。由此“调用方只能指挥被授权的应用”，杜绝混淆代理式越权。")
     para(doc, "② 设备级保护(WCS 之外，须现场落实)：")
     table(doc, ["层", "措施", "归属"], [
         ("网络隔离(最重要)", "PLC 置独立 OT/控制网；防火墙仅放行 WCS→PLC 端口，其余不可达", "网络/现场"),

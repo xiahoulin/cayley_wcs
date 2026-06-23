@@ -93,6 +93,16 @@ public class AlarmServiceImpl implements AlarmService {
 
     @Override
     @Transactional
+    public void clearFault(Long appId, long faultCode) {
+        clearWhere(new QueryWrapper<AlarmEntity>()
+                .eq("\"is_valid\"", true)
+                .eq("\"app_id\"", appId)
+                .eq("\"fault_code\"", faultCode)
+                .in("\"status\"", "raised", "ack"));
+    }
+
+    @Override
+    @Transactional
     public void clearCommAlarms(Long appId) {
         clearWhere(new QueryWrapper<AlarmEntity>()
                 .eq("\"is_valid\"", true)

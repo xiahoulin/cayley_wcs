@@ -117,7 +117,7 @@ class StackerHandshakeTest {
             lenient().when(protoService.listPoints(PROTOCOL_ID)).thenReturn(points());
 
             manager = new ConnectionManager(appService, protoService, factory, event -> { }, null,
-                    4, 5, 12000L, 5);
+                    4, 5, 12000L, 5, 0L);
             manager.open(APP_ID);
         }
 

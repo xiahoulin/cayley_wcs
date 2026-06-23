@@ -60,6 +60,8 @@ public class StackerDeviceState {
         store.put(field, value);
         if ("cmd_ConfirmTask".equals(field)) {
             handleConfirm(toInt(value));
+        } else if ("cmd_ResetFault".equals(field)) {
+            handleResetFault(toInt(value));
         }
     }
 
@@ -90,6 +92,13 @@ public class StackerDeviceState {
             // 完成确认：回到无任务
             store.put("status_Task", 0);
             store.put("status_TaskTypeFeedback", 0);
+        }
+    }
+
+    /** 故障复位：cmd_ResetFault=1 时清除故障码，模拟 PLC 侧异常处理。 */
+    private void handleResetFault(int reset) {
+        if (reset == 1) {
+            store.put("status_ErrorCode", 0);
         }
     }
 

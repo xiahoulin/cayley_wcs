@@ -10,13 +10,17 @@ import com.cayleywcs.application.entity.ApplicationEntity;
 import com.cayleywcs.common.exception.ErrorCode;
 import com.cayleywcs.common.exception.WcsException;
 import com.cayleywcs.connection.event.ConnectionStateChangedEvent;
+import com.cayleywcs.connection.event.FaultClearedEvent;
 import com.cayleywcs.connection.event.FaultDetectedEvent;
 import com.cayleywcs.protocol.ProtocolService;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
 import jakarta.annotation.PreDestroy;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -52,6 +56,7 @@ public class ConnectionManager {
     private final int connectTimeoutSeconds;
     private final long heartbeatStaleMs;
     private final int reconnectMaxRetry;
+    private final long resetPulseHoldMs;
 
     private final Semaphore slots;
     private final ExecutorService connectPool;
@@ -66,7 +71,8 @@ public class ConnectionManager {
                              @Value("${cayleywcs.connection.max-connections:32}") int maxConnections,
                              @Value("${cayleywcs.connection.connect-timeout-seconds:60}") int connectTimeoutSeconds,
                              @Value("${cayleywcs.connection.heartbeat-stale-ms:12000}") long heartbeatStaleMs,
-                             @Value("${cayleywcs.connection.reconnect-max-retry:5}") int reconnectMaxRetry) {
+                             @Value("${cayleywcs.connection.reconnect-max-retry:5}") int reconnectMaxRetry,
+                             @Value("${cayleywcs.connection.reset-pulse-hold-ms:500}") long resetPulseHoldMs) {
         this.applicationService = applicationService;
         this.protocolService = protocolService;
         this.adapterFactory = adapterFactory;
@@ -76,6 +82,7 @@ public class ConnectionManager {
         this.connectTimeoutSeconds = Math.max(1, connectTimeoutSeconds);
         this.heartbeatStaleMs = Math.max(1000, heartbeatStaleMs);
         this.reconnectMaxRetry = Math.max(0, reconnectMaxRetry);
+        this.resetPulseHoldMs = Math.max(0, resetPulseHoldMs);
         this.slots = new Semaphore(this.maxConnections);
         this.connectPool = Executors.newFixedThreadPool(this.maxConnections, namedFactory("wcs-connect-"));
         this.workerPool = Executors.newScheduledThreadPool(this.maxConnections, namedFactory("wcs-worker-"));
@@ -180,6 +187,51 @@ public class ConnectionManager {
         }
     }
 
+    /**
+     * 故障复位：写 cmd_ResetFault=1 → 保持一个 PLC 扫描周期 → 写 0（电平脉冲），随后清本地故障码跟踪。
+     * 保持时长 reset-pulse-hold-ms(默认 500ms) 确保真实 PLC 能扫到上升沿——背靠背 1→0 会因脉冲过窄被慢扫描 PLC 漏掉。
+     * 无 cmd_ResetFault 点位的协议跳过设备写（不抛异常，WCS 侧报警清除由调用方保证）。
+     */
+    public void resetFault(Long appId) {
+        ManagedConnection mc = require(appId);
+        ProtocolPointEntity point = findPointOrNull(mc, "cmd_ResetFault");
+        if (point == null) {
+            log.warn("故障复位跳过：协议未配置 cmd_ResetFault 点位，appId={} app={}",
+                    appId, mc.application().getApp_code());
+            mc.setLastErrorCodes(Collections.emptySet());
+            return;
+        }
+        mc.adapter().write(point, 1);
+        if (auditService != null) {
+            auditService.writeMessageLog(appId, "write", "cmd_ResetFault", point.getAddress(), "1", "{}");
+        }
+        // 保持脉冲 ≥ 一个 PLC 扫描周期再撤销触发沿（仿真器同步清零，不受此保持影响）
+        sleepQuietly(resetPulseHoldMs);
+        mc.adapter().write(point, 0);
+        if (auditService != null) {
+            auditService.writeMessageLog(appId, "write", "cmd_ResetFault", point.getAddress(), "0", "{}");
+        }
+        // 清除本地故障码跟踪（PLC 侧复位后下轮轮询确认）
+        mc.setLastErrorCodes(Collections.emptySet());
+    }
+
+    private static void sleepQuietly(long ms) {
+        if (ms <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** 该应用当前是否有活动故障码。供握手状态机快速判定。 */
+    public boolean hasActiveFault(Long appId) {
+        ManagedConnection mc = connections.get(appId);
+        return mc != null && !mc.lastErrorCodes().isEmpty();
+    }
+
     private ManagedConnection require(Long appId) {
         ManagedConnection mc = connections.get(appId);
         if (mc == null) {
@@ -193,6 +245,14 @@ public class ConnectionManager {
                 .filter(p -> field.equals(p.getField_name()))
                 .findFirst()
                 .orElseThrow(() -> new WcsException(ErrorCode.BAD_REQUEST, "点位不存在: " + field));
+    }
+
+    /** 同 findPoint，但无该点位时返回 null（用于可选命令点，如 cmd_ResetFault）。 */
+    private ProtocolPointEntity findPointOrNull(ManagedConnection mc, String field) {
+        return mc.points().stream()
+                .filter(p -> field.equals(p.getField_name()))
+                .findFirst()
+                .orElse(null);
     }
 
     // ===== 看门狗调用：检测心跳失活并自动重连 =====
@@ -284,18 +344,63 @@ public class ConnectionManager {
         }
     }
 
-    /** 故障码边沿检测：status_ErrorCode 变化即发布事件（报警监听在 M5 联动）。 */
+    /** 故障码边沿检测：status_ErrorCode 变化即发布事件（报警监听在 M5 联动）。支持标量(仿真)和数组(真实PLC ARRAY[1..60])。 */
     private void detectFaultEdge(ManagedConnection mc, Map<String, Object> snap) {
         Object err = snap.get("status_ErrorCode");
-        // 注：真实协议 status_ErrorCode 为 ARRAY[1..60] OF INT，此处先处理标量(仿真)；数组扫描后续补。
-        int code = err instanceof Number n ? n.intValue() : 0;
-        if (code != mc.lastErrorCode()) {
-            mc.setLastErrorCode(code);
+        Set<Integer> currentCodes = extractFaultCodes(err);
+        Set<Integer> prevCodes = mc.lastErrorCodes();
+
+        if (!currentCodes.equals(prevCodes)) {
+            mc.setLastErrorCodes(currentCodes);
             if (eventPublisher != null) {
-                eventPublisher.publishEvent(new FaultDetectedEvent(
-                        mc.application().getId(), mc.protocol().getId(), code));
+                Long appId = mc.application().getId();
+                Long protocolId = mc.protocol().getId();
+                // 新增故障码 → 逐个 raise
+                for (int code : currentCodes) {
+                    if (!prevCodes.contains(code)) {
+                        eventPublisher.publishEvent(new FaultDetectedEvent(appId, protocolId, code));
+                    }
+                }
+                // 消失故障码 → 逐个精确解除（支持多故障部分恢复，不再等全清才清警）
+                for (int code : prevCodes) {
+                    if (!currentCodes.contains(code)) {
+                        eventPublisher.publishEvent(new FaultClearedEvent(appId, protocolId, code));
+                    }
+                }
             }
         }
+    }
+
+    /** 从轮询值提取非零故障码集合。支持标量(仿真器)、List(数组解码后)、数组。 */
+    private static Set<Integer> extractFaultCodes(Object err) {
+        if (err == null) {
+            return Collections.emptySet();
+        }
+        if (err instanceof Number n) {
+            int code = n.intValue();
+            return code == 0 ? Collections.emptySet() : Set.of(code);
+        }
+        if (err instanceof Collection<?> coll) {
+            Set<Integer> codes = new java.util.LinkedHashSet<>();
+            for (Object elem : coll) {
+                int code = elem instanceof Number num ? num.intValue() : 0;
+                if (code != 0) {
+                    codes.add(code);
+                }
+            }
+            return codes;
+        }
+        if (err instanceof Object[] arr) {
+            Set<Integer> codes = new java.util.LinkedHashSet<>();
+            for (Object elem : arr) {
+                int code = elem instanceof Number num ? num.intValue() : 0;
+                if (code != 0) {
+                    codes.add(code);
+                }
+            }
+            return codes;
+        }
+        return Collections.emptySet();
     }
 
     private void transition(ManagedConnection mc, ConnectionState to, String detail) {

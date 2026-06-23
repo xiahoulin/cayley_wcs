@@ -5,9 +5,11 @@ import com.cayleywcs.adapter.ProtocolAdapter;
 import com.cayleywcs.application.entity.ApplicationEntity;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,7 +25,7 @@ public class ManagedConnection {
 
     private volatile ConnectionState state = ConnectionState.NEW;
     private volatile long lastHeartbeatAt = 0L;
-    private volatile int lastErrorCode = 0;
+    private volatile Set<Integer> lastErrorCodes = Collections.emptySet();
     private final AtomicInteger retryCount = new AtomicInteger(0);
     private volatile Map<String, Object> latest = new LinkedHashMap<>();
     private volatile ScheduledFuture<?> workerFuture;
@@ -77,12 +79,12 @@ public class ManagedConnection {
         return retryCount;
     }
 
-    public int lastErrorCode() {
-        return lastErrorCode;
+    public Set<Integer> lastErrorCodes() {
+        return lastErrorCodes;
     }
 
-    public void setLastErrorCode(int lastErrorCode) {
-        this.lastErrorCode = lastErrorCode;
+    public void setLastErrorCodes(Set<Integer> lastErrorCodes) {
+        this.lastErrorCodes = lastErrorCodes;
     }
 
     public Map<String, Object> latest() {

@@ -40,6 +40,8 @@ cayleywcs:
     reconnect-max-retry: ${CAYLEYWCS_RECONNECT_MAX_RETRY:5}
     watchdog-interval-ms: ${CAYLEYWCS_WATCHDOG_INTERVAL_MS:5000}
     heartbeat-stale-ms: ${CAYLEYWCS_HEARTBEAT_STALE_MS:12000}
+    # 故障复位脉冲保持时长(ms)：cmd_ResetFault 写 1 后保持该时长再写 0，确保真实 PLC 扫到上升沿
+    reset-pulse-hold-ms: ${CAYLEYWCS_RESET_PULSE_HOLD_MS:500}
   task:
     engine-interval-ms: ${CAYLEYWCS_TASK_ENGINE_INTERVAL_MS:1000}
   monitor:

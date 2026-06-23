@@ -37,7 +37,7 @@ class StackerSimEndToEndTest {
         lenient().when(protoService.listPoints(PROTOCOL_ID)).thenReturn(points());
 
         ConnectionManager manager = new ConnectionManager(appService, protoService, factory, event -> { }, null,
-                4, 5, 12000L, 5);
+                4, 5, 12000L, 5, 0L);
 
         // 1) 建连
         var snap = manager.open(APP_ID);

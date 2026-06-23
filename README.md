@@ -111,7 +111,8 @@ docker compose --profile full up -d --build
 | M3 仿真器+审计 | ✅ 完成 | 审计落库(连接事件→`wcs_connection_log`、手动读写→`wcs_message_log`)；**内存堆垛机仿真器**(sim 适配器) `StackerSimEndToEndTest` 通过；**Milo OPC UA 线上仿真服务端**(`OpcUaStackerSimulator`，profile `simulator`)已落地——真·OPC UA 端到端联调通过(PLC4X→Milo：连接/心跳/读状态/写命令/三段握手/注故障) |
 | M4 任务调度 | ✅ 完成 | `wcs_task` CRUD + **堆垛机三段握手状态机**(检查→下发→执行确认→等待→完成确认→清零) + 任务引擎(设备级单飞@Scheduled) + `/open/task/dispatch`(AppKey,幂等)；`StackerHandshakeTest`(完成+故障失败)通过 |
 | M5 监控+报警 | ✅ 完成 | 报警生命周期(产生/确认/清除/历史+去重) + **故障码→报警联动**(轮询故障边沿→查故障表→报警,未维护走兜底) + 连接断开/恢复联动 + **WebSocket 实时推送**(`/ws/monitor` 连接快照/槽位/活动报警)；`AlarmFlowTest` 通过 |
-| M6 Vue 前端 | ✅ MVP 完成 | Vue3+Vite+TS 精简脚手架(reefplex 风)：登录 + **协议管理/应用管理(AppKey)/绑定授权/连接监控/实时看板(WebSocket)** 5 页；`npm run build` 通过。其余页(字典/故障码/任务/报警中心)二期补 |
+| M4/M5 协议对齐加固 | ✅ 完成 | ① 故障码数组扫描：`detectFaultEdge` 支持 `ARRAY[1..60] OF INT`(真实PLC)与标量(仿真)双模式，多码边沿检测逐个发事件；`StackerHandshakeStateMachine` 新增 `readFirstFaultCode` 数组感知读取 + `doCheck` 改用 `hasActiveFault`。② 任务下发顺序对齐 6.18 协议：地址(排/列/层)→货口→任务号→**最后写任务类型**。③ 故障复位：新增 `ConnectionManager.resetFault`(写 `cmd_ResetFault` 1→0 电平握手) + `POST /alarm/reset-fault` 接口 + 仿真器 `handleResetFault`。26 用例全绿。 |
+| M6 Vue 前端 | ✅ MVP 完成 | Vue3+Vite+TS 精简脚手架(reefplex 风)：登录 + **协议管理/应用管理(AppKey)/授权绑定/绑定明细/连接监控/实时看板(WebSocket)** 6 页；`npm run build` 通过。其余页(字典/故障码/任务/报警中心)二期补 |
 | M7 测试/文档 | ✅ 基本完成 | 架构约束+接口契约测试(全 POST+JSON/Service 接口+impl/Mapper)、前端 Dockerfile+nginx 模板+compose frontend 服务、父级 `cayley_project` 注册表登记。allinone 单容器镜像列为可选项 |
 
 测试：`cd backend && mvn test`（H2，无需外部依赖）。当前 **26 个用例全绿**（schema/连接池/仿真端到端/握手/报警联动/对账/绑定授权/架构约束）。
@@ -138,7 +139,7 @@ npm install
 npm run dev          # http://127.0.0.1:5184 ，/api 与 /ws 代理到后端 20021
 ```
 
-页面：实时看板（WebSocket 设备状态/报警）、协议管理（协议+点位）、应用管理（AppKey 生成/重置）、应用绑定授权（**选定上位侧应用 → 勾选其可指挥的下位侧应用**，不锁方向、禁自绑定，越权防护）、连接监控（建连/断开/重连、60s 超时回收可见）。
+页面：实时看板（WebSocket 设备状态/报警）、协议管理（协议+点位）、应用管理（AppKey 生成/重置）、**授权绑定**（选定上位侧应用 → 勾选其可指挥的下位侧应用，批量授权）、**绑定明细**（全部绑定列表 + 手动新建/编辑/删除 + 按应用搜索）、连接监控（建连/断开/重连、60s 超时回收可见）。绑定不锁 direction、禁自绑定。
 
 ## WMS 对账闭环（WS 提示 + REST 权威）
 

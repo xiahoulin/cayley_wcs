@@ -17,6 +17,9 @@ public interface AlarmService {
     /** 设备故障恢复：清除该应用所有 raised 的设备故障(fault_code>0)。 */
     void clearActiveFaults(Long appId);
 
+    /** 单码恢复：清除该应用指定 fault_code 的 raised/ack 报警（支持多故障逐个恢复）。 */
+    void clearFault(Long appId, long faultCode);
+
     /** 连接恢复：清除该应用所有 raised 的通讯类报警(fault_code<=0)。 */
     void clearCommAlarms(Long appId);
 

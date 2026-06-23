@@ -2,8 +2,10 @@ package com.cayleywcs.alarm;
 
 import com.cayleywcs.alarm.entity.AlarmEntity;
 import com.cayleywcs.common.api.ApiResponse;
+import com.cayleywcs.common.api.IdRequest;
 import com.cayleywcs.common.api.PageData;
 import com.cayleywcs.common.api.PageSearch;
+import com.cayleywcs.connection.ConnectionManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -18,9 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Alarm")
 public class AlarmController {
     private final AlarmService alarmService;
+    private final ConnectionManager connectionManager;
 
-    public AlarmController(AlarmService alarmService) {
+    public AlarmController(AlarmService alarmService, ConnectionManager connectionManager) {
         this.alarmService = alarmService;
+        this.connectionManager = connectionManager;
     }
 
     @PostMapping("/alarm/list")
@@ -43,6 +47,18 @@ public class AlarmController {
     @PostMapping("/alarm/clear")
     public ApiResponse<Boolean> clear(@RequestBody ClearRequest request) {
         return ApiResponse.success(alarmService.clear(request.id()));
+    }
+
+    @PostMapping("/alarm/reset-fault")
+    @Operation(summary = "设备故障复位：写 cmd_ResetFault=1→保持→0 触发 PLC 侧异常处理，并清除 WCS 侧活动报警")
+    public ApiResponse<Boolean> resetFault(@RequestBody IdRequest request) {
+        try {
+            connectionManager.resetFault(request.id());
+        } finally {
+            // 设备侧复位成败均清 WCS 活动报警（避免 resetFault 异常时报警残留）
+            alarmService.clearActiveFaults(request.id());
+        }
+        return ApiResponse.success(true);
     }
 
     public record ActiveQuery(Long appId) {

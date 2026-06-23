@@ -6,7 +6,8 @@ const nav = [
   { to: '/dashboard', label: '实时看板' },
   { to: '/protocol', label: '协议管理' },
   { to: '/application', label: '应用管理' },
-  { to: '/binding', label: '绑定授权' },
+  { to: '/binding-grant', label: '授权绑定' },
+  { to: '/binding-detail', label: '绑定明细' },
   { to: '/connection', label: '连接监控' },
 ]
 </script>

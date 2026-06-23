@@ -78,7 +78,7 @@ class ConnectionManagerTest {
 
     private ConnectionManager manager(int max, int timeoutSeconds) {
         return new ConnectionManager(appService, protoService, factory, event -> { }, null,
-                max, timeoutSeconds, 12000L, 5);
+                max, timeoutSeconds, 12000L, 5, 0L);
     }
 
     private void wire(long appId, String connParamsJson) {

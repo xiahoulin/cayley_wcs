@@ -2,10 +2,14 @@ package com.cayleywcs.adapter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * 协议数据格式 ↔ JSON 的编解码策略（需求 5 · Strategy）。
- * 把协议原始值规整为 JSON 友好类型（按 data_type：INT/UINT/WORD→long，REAL→double，其余→string）。
+ * 把协议原始值规整为 JSON 友好类型（按 data_type：INT/UINT/WORD→long，REAL→double，BOOL→boolean，
+ * ARRAY[...]→List，其余→string）。
  */
 public final class DataCodec {
 
@@ -18,12 +22,37 @@ public final class DataCodec {
             return null;
         }
         String type = dataType == null ? "" : dataType.toUpperCase();
+        if (type.startsWith("ARRAY")) {
+            return decodeArray(raw);
+        }
         return switch (type) {
             case "INT", "UINT", "WORD", "DINT", "DWORD" -> toLong(raw);
             case "REAL", "LREAL", "FLOAT", "DOUBLE" -> toDouble(raw);
             case "BOOL" -> toBool(raw);
             default -> String.valueOf(raw);
         };
+    }
+
+    /** 数组解码：遍历元素逐个转 long（ARRAY OF INT 场景，如故障码数组 DBW64-DBW182）。 */
+    private static List<Long> decodeArray(Object raw) {
+        if (raw instanceof Collection<?> coll) {
+            List<Long> list = new ArrayList<>(coll.size());
+            for (Object elem : coll) {
+                list.add(toLong(elem));
+            }
+            return list;
+        }
+        if (raw instanceof Object[] arr) {
+            List<Long> list = new ArrayList<>(arr.length);
+            for (Object elem : arr) {
+                list.add(toLong(elem));
+            }
+            return list;
+        }
+        // 兜底：标量包装成单元素列表（仿真器场景）
+        List<Long> single = new ArrayList<>(1);
+        single.add(toLong(raw));
+        return single;
     }
 
     /** 写：JSON 值 → 协议可写值。 */

@@ -28,9 +28,10 @@ public class StackerHandshakeStateMachine {
         Long appId = task.getApp_id();
         HandshakeStep step = currentStep(task);
         try {
-            int errorCode = readInt(appId, "status_ErrorCode");
-            if (errorCode != 0 && step != HandshakeStep.DONE && step != HandshakeStep.FAILED) {
-                fail(task, "设备故障，故障码=" + errorCode, errorCode);
+            // 故障检查：支持标量(仿真)和数组(真实PLC ARRAY[1..60])。任一非零即判故障。
+            int firstErrorCode = readFirstFaultCode(appId);
+            if (firstErrorCode != 0 && step != HandshakeStep.DONE && step != HandshakeStep.FAILED) {
+                fail(task, "设备故障，故障码=" + firstErrorCode, firstErrorCode);
                 return false;
             }
             return switch (step) {
@@ -52,7 +53,7 @@ public class StackerHandshakeStateMachine {
     private boolean doCheck(TaskEntity task, Long appId) {
         boolean ready = readInt(appId, "status_Mode") == MODE_ONLINE_AUTO
                 && readInt(appId, "status_Task") == 0
-                && readInt(appId, "status_ErrorCode") == 0;
+                && !connectionManager.hasActiveFault(appId);
         if (ready) {
             setStep(task, HandshakeStep.CHECKING);
         }
@@ -60,7 +61,7 @@ public class StackerHandshakeStateMachine {
     }
 
     private boolean doWriteParams(TaskEntity task, Long appId) {
-        write(appId, "cmd_TaskType", intValue(task.getTask_type()));
+        // 6.18 协议要求顺序：①先写取/放货地址(排/列/层) → ②写取放货口 → ③写任务号 → ④最后写任务类型
         write(appId, "cmd_TakeCoor_Row", longValue(task.getTake_row()));
         write(appId, "cmd_TakeCoor_Column", longValue(task.getTake_column()));
         write(appId, "cmd_TakeCoor_Floor", longValue(task.getTake_floor()));
@@ -69,6 +70,7 @@ public class StackerHandshakeStateMachine {
         write(appId, "cmd_PutCoor_Floor", longValue(task.getPut_floor()));
         write(appId, "cmd_PortNum", longValue(task.getPort_num()));
         write(appId, "cmd_TaskNum", longValue(parseTaskNum(task)));
+        write(appId, "cmd_TaskType", intValue(task.getTask_type()));
         setStep(task, HandshakeStep.PARAMS_WRITTEN);
         task.setStatus("dispatched");
         task.setDispatch_time(LocalDateTime.now());
@@ -140,6 +142,23 @@ public class StackerHandshakeStateMachine {
     private int readInt(Long appId, String field) {
         Object v = connectionManager.readPoint(appId, field);
         return v instanceof Number n ? n.intValue() : 0;
+    }
+
+    /** 读取故障码：支持标量(仿真器返回 Number)和数组(真实PLC返回 List)。返回首个非零码，无故障返回0。 */
+    private int readFirstFaultCode(Long appId) {
+        Object v = connectionManager.readPoint(appId, "status_ErrorCode");
+        if (v instanceof Number n) {
+            return n.intValue();
+        }
+        if (v instanceof Iterable<?> iter) {
+            for (Object elem : iter) {
+                int code = elem instanceof Number num ? num.intValue() : 0;
+                if (code != 0) {
+                    return code;
+                }
+            }
+        }
+        return 0;
     }
 
     private void write(Long appId, String field, Object value) {
