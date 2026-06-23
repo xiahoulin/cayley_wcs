@@ -43,6 +43,9 @@ services:
       CAYLEYWCS_BACKEND_PORT: ${CAYLEYWCS_BACKEND_INTERNAL_PORT:-20021}
       CAYLEYWCS_JWT_SECRET: ${CAYLEYWCS_JWT_SECRET:-local-cayleywcs-development-secret-change-me}
       CAYLEYWCS_ALLOWED_ORIGIN_PATTERNS: ${CAYLEYWCS_ALLOWED_ORIGIN_PATTERNS:-http://127.0.0.1:*,http://localhost:*}
+      # 容器内 profile：默认含 simulator，使内置 Milo OPC UA 仿真器随后端启动（与后端同进程，经 127.0.0.1:4840 自连）。
+      # 生产对接真实 PLC 时置空：CAYLEYWCS_BACKEND_PROFILES=""
+      SPRING_PROFILES_ACTIVE: ${CAYLEYWCS_BACKEND_PROFILES:-simulator}
     ports:
       - "${CAYLEYWCS_BACKEND_PORT:-20021}:${CAYLEYWCS_BACKEND_INTERNAL_PORT:-20021}"
     depends_on:

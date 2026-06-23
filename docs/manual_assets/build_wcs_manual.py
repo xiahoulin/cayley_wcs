@@ -108,7 +108,7 @@ def render_business_logic():
     box(d, 120, 400, 1400, 70, "接入层　Controller (@PostMapping JSON, ApiResponse)　│　管理端 JWT 鉴权　│　开放接口 AppKey 签名 (/open/**)",
         fill=C_WHITE, border=C_BLUE, tcolor=C_NAVY)
     mid = [
-        (120, "配置中台", ["协议·点位", "应用(AppKey)", "数据字典", "故障码"]),
+        (120, "配置中台", ["协议·点位", "应用(AppKey)", "绑定授权", "数据字典", "故障码"]),
         (470, "任务调度", ["三段握手状态机", "任务引擎(单飞)", "/open/task/dispatch"]),
         (820, "连接治理", ["线程池+信号量", "60s 超时回收", "看门狗重连"]),
         (1170, "监控·报警·审计", ["WS 实时推送", "故障码→报警", "连接/报文日志"]),
@@ -286,6 +286,7 @@ MODULES = [
     ("登录与鉴权", "已完成", "管理端 JWT 登录(admin/1)、刷新令牌；开放接口 AppKey 签名+防重放；未认证返回 401"),
     ("协议管理", "已完成", "对接协议(系统/类型字典/JSON 数据格式) + 协议点位/字段映射"),
     ("应用管理", "已完成", "可对接应用/设备，AppKey 生成/重置，绑定协议与连接参数"),
+    ("绑定授权", "已完成", "应用绑定授权(wcs_app_binding，上位侧→下位侧；不锁 direction、禁自绑定，按应用整批勾选)；dispatch 越权防护(FORBIDDEN)"),
     ("数据字典", "已完成", "协议类型/方向/故障级别/任务类型/连接状态等枚举单一事实源"),
     ("故障码管理", "已完成", "按协议维护故障码，运行时解析(命中/统一兜底)"),
     ("连接治理", "已完成", "线程池+信号量(最大连接/60s 超时回收)+看门狗重连+状态机+手动读写"),
@@ -320,6 +321,15 @@ MODULE_DETAIL = [
      ["POST /application/list | /all | /detail | /create | /update | /delete | /reset-secret"],
      ["wcs_application"],
      ["ApplicationController", "ApplicationService"]),
+    ("绑定授权",
+     "防越权：阻止“已持有某 key 的应用借 WCS 去指挥本无权指挥的别的应用/设备”。维护“上位侧应用→下位侧应用”的指挥授权表 wcs_app_binding。"
+     "/open/task/dispatch 经 AppKey 验签得到调用方真实身份(ATTR_APP_ID，证明)，与请求体 appId(声明) 一起查绑定：仅当存在启用中的绑定才放行，否则 FORBIDDEN。"
+     "模型：不按应用 direction 锁方向——任意应用都可出现在上位侧或下位侧(含“下位→下位”)，仅禁止自绑定(upstream==downstream)；direction 仅作提示。"
+     "推荐用法——按应用授权：种子 WMS-MAIN(ak_wms_main) 用自身 AppKey 调 /open/**；在“绑定授权”页选定一个上位侧应用，勾选它可指挥的下位侧应用(多选，已排除自身)，保存即整批授权(grant 声明式对账：缺补、撤选软删、自指忽略、幂等)。",
+     ["POST /binding/list | /all | /detail | /create | /update | /delete",
+      "POST /binding/granted（查某上位侧已授权应用）| /binding/grant（按应用整批授权）"],
+     ["wcs_app_binding", "wcs_application(WMS-MAIN 上位侧示例)"],
+     ["BindingController", "BindingService(grant/grantedDownstreamIds)", "OpenTaskController(assertAllowed)"]),
     ("数据字典",
      "通用数据字典，作为协议类型、对接方向、故障级别、报警状态、任务类型、任务状态、连接状态、点位读写/分组等枚举的单一事实源；前端下拉直接消费。",
      ["POST /dict/type/list | /create | /update | /delete",
@@ -347,7 +357,7 @@ MODULE_DETAIL = [
      ["—"],
      ["ProtocolAdapter", "ProtocolAdapterFactory", "Plc4xAdapter", "MqttAdapter", "HttpAdapter", "TcpAdapter", "SimAdapter"]),
     ("任务调度",
-     "接收 WMS 经 /open/task/dispatch 下发的任务(幂等：同 app+task_no 不重复)。任务引擎按设备级单飞推进堆垛机三段握手状态机："
+     "接收 WMS 经 /open/task/dispatch 下发的任务(幂等：同 app+task_no 不重复；并校验调用方对目标设备的绑定授权，越权返回 FORBIDDEN)。任务引擎按设备级单飞推进堆垛机三段握手状态机："
      "检查(模式=联机自动/无故障/无任务) → 下发参数(排/列/层/口/任务号/类型) → 写执行确认 → 等待完成 → 写完成确认 → 清零命令区。"
      "执行期间读到故障码即判失败并联动报警。支持任务 CRUD 与取消。",
      ["POST /task/list | /detail | /create | /cancel", "POST /open/task/dispatch (AppKey)"],
@@ -385,10 +395,12 @@ INTERFACES = [
     ("协议管理", "/protocol/list /all /detail /create /update /delete", "协议 CRUD", "JWT"),
     ("协议管理", "/protocol/point/list /create /update /delete", "协议点位 CRUD", "JWT"),
     ("应用管理", "/application/list /all /detail /create /update /delete /reset-secret", "应用与 AppKey", "JWT"),
+    ("绑定授权", "/binding/list /all /detail /create /update /delete", "上下位绑定授权 CRUD", "JWT"),
+    ("绑定授权", "/binding/granted /binding/grant", "按应用查/整批授权（上位侧→下位侧）", "JWT"),
     ("故障码管理", "/fault-code/list /create /update /delete /resolve", "故障码 CRUD + 解析", "JWT"),
     ("连接治理", "/connection/open /close /reconnect /detail /status /read /write", "建连/断开/重连/读写/状态", "JWT"),
     ("任务调度", "/task/list /detail /create /cancel", "任务 CRUD/取消", "JWT"),
-    ("任务调度", "/open/task/dispatch", "WMS 下发任务(幂等)", "AppKey"),
+    ("任务调度", "/open/task/dispatch", "WMS 下发任务(幂等 + 绑定越权校验)", "AppKey"),
     ("监控与报警", "/alarm/list /active /ack /clear", "报警列表/确认/清除", "JWT"),
     ("监控与报警", "/ws/monitor", "实时状态/报警推送(带 seq)", "公开(内网)"),
     ("审计", "/audit/connection-log/list /audit/message-log/list", "连接/报文日志", "JWT"),
@@ -402,6 +414,7 @@ TABLES = [
     ("配置中台", "wcs_dict_type / wcs_dict_item", "数据字典(协议类型等枚举)"),
     ("配置中台", "wcs_protocol / wcs_protocol_point", "协议表 + 点位/字段映射(协议数据格式)"),
     ("配置中台", "wcs_application", "应用信息表(AppKey、绑定协议、连接参数)"),
+    ("配置中台", "wcs_app_binding", "应用绑定授权(上位侧→下位侧，不锁 direction、禁自绑定，下发越权防护)"),
     ("配置中台", "wcs_fault_code", "按协议的故障码枚举"),
     ("任务调度", "wcs_task", "WCS 任务(下发 + 握手执行态)"),
     ("监控报警", "wcs_alarm", "报警(产生/确认/清除/历史)"),
@@ -419,11 +432,16 @@ def build():
     para(doc, "礁盘工业WCS使用功能说明书", size=24, bold=True, color=TITLE_COLOR, align=WD_ALIGN_PARAGRAPH.CENTER)
     para(doc, "仓库控制系统 · 多协议设备对接 / 连接治理 / 任务调度 / 实时监控",
          size=12, color=MUTED, align=WD_ALIGN_PARAGRAPH.CENTER)
-    para(doc, "当前范围：登录鉴权、协议/应用/字典/故障码配置、连接治理、协议适配、任务调度、监控报警、审计、WMS 对账、仿真器",
+    para(doc, "当前范围：登录鉴权、协议/应用/字典/故障码配置、绑定授权、连接治理、协议适配、任务调度、监控报警、审计、WMS 对账、仿真器",
          size=9, color=MUTED, align=WD_ALIGN_PARAGRAPH.CENTER)
     doc.add_paragraph()
     table(doc, ["版本", "日期", "作者", "说明"], [
         ("V0.1", "2026-06-19", "夏侯霖", "WCS 初版功能说明：按当前代码梳理全部模块、接口、数据表、业务逻辑图与核心时序/状态机。"),
+        ("V0.2", "2026-06-23", "夏侯霖", "新增“绑定授权”模块(wcs_app_binding + /binding/* + dispatch 越权防护)；补第 11 节安全边界；同步迁移清单(V4/V5/V6)与测试数(18)。"),
+        ("V0.3", "2026-06-23", "夏侯霖", "绑定授权升级为“以上位为中心授权”：种子上位 WMS-MAIN(V7) + /binding/grant 整批授权 + 前端按上位勾选下位设备；测试数(20)。"),
+        ("V0.4", "2026-06-23", "夏侯霖", "对抗式评审加固：create() 复用软删行(避免唯一索引冲突)、grant() 按 tenant 隔离+scope 收敛、appkey 关闭记 WARN、前端校正已删上位选择；测试数(23)。"),
+        ("V0.5", "2026-06-23", "夏侯霖", "去除自绑定(V8)：绑定保持上位侧→下位侧称呼但不锁 direction，任意应用皆可任一侧(含下位→下位)，禁自绑定；测试数(24)。"),
+        ("V0.6", "2026-06-23", "夏侯霖", "二轮评审加固：update() 改方向校验软删行(干净 CONFLICT)、dispatch 越权判定 isAllowed 按调用方租户隔离(读写一致)；测试数(26)。"),
     ])
 
     heading(doc, "1. 项目概述", 1)
@@ -432,7 +450,7 @@ def build():
     table(doc, ["项", "取值"], [
         ("后端", "Java 25 · Spring Boot 4.0.6 · MyBatis-Plus · PostgreSQL 17 · Redis · Flyway · springdoc"),
         ("工业驱动", "Apache PLC4X(OPC UA/Modbus/S7) · Eclipse Paho(MQTT) · JDK HttpClient · Socket · 内置 sim 仿真"),
-        ("前端", "Vue 3 · Vite · TypeScript（登录 + 协议/应用/连接监控/实时看板）"),
+        ("前端", "Vue 3 · Vite · TypeScript（登录 + 协议/应用/绑定授权/连接监控/实时看板）"),
         ("端口", "后端 20021 · 前端 5184 · PostgreSQL 5433 · Redis 6380（避开 WMS）"),
         ("接口约定", "业务接口全 POST + application/json；统一响应 ApiResponse(isSuccess/code/errorMessage/data)"),
         ("鉴权", "管理端 JWT(Bearer)；开放接口 /open/** 用 AppKey + HMAC 签名 + 防重放"),
@@ -470,7 +488,8 @@ def build():
           widths=[1.1, 2.7, 1.9, 0.7])
 
     heading(doc, "8. 数据库表结构", 1)
-    para(doc, "PostgreSQL，Flyway 迁移(V1 建表 / V2 字典+管理员 / V3 堆垛机协议+点位+故障码种子)。"
+    para(doc, "PostgreSQL，Flyway 迁移(V1 建表 / V2 字典+管理员 / V3 堆垛机协议+点位+故障码 / V4 码垛机 OPC UA 协议+应用 / V5 OPC UA 仿真应用 / "
+              "V6 应用绑定授权表 / V7 上位 WMS-MAIN 应用+授权全部下位设备 / V8 去除自绑定)。"
               "标准列：id、creator、create_time、last_update_time、is_valid(软删)、tenant_id；动态结构用 JSON(text)。")
     table(doc, ["业务域", "数据表", "说明"], [(d, t, c) for d, t, c in TABLES], widths=[1.2, 2.6, 2.6])
 
@@ -481,13 +500,31 @@ def build():
         ("起前端", "cd frontend && npm install && npm run dev", "5184(被占则 5185)；/api 与 /ws 代理到后端"),
         ("完整 Compose", "docker compose --profile full up -d --build", "pg/redis/backend/frontend 分容器"),
         ("Swagger", "/swagger-ui.html", "接口文档"),
-        ("测试", "cd backend && mvn test", "H2，无需外部依赖，16 用例"),
+        ("测试", "cd backend && mvn test", "H2，无需外部依赖，26 用例"),
     ])
 
     heading(doc, "10. WMS 对接与对账闭环", 1)
-    para(doc, "下发：WMS 调 /open/task/dispatch(AppKey 签名)，WCS 幂等建任务并自动跑三段握手。"
+    para(doc, "下发：WMS 调 /open/task/dispatch(AppKey 签名 + 绑定授权)，WCS 幂等建任务并自动跑三段握手。"
               "接收：WMS 订阅 /ws/monitor 拿低延迟提示(带 seq)，断号/重连后用 /open/snapshot 全量重同步、再按 last_update_time 水位线增量 /open/task|alarm/query，按 id 去重。"
               "如此既享受 WS 实时、又用 REST 保证任务完成/报警不丢。")
+
+    heading(doc, "11. 安全：下发越权防护与设备保护边界", 1)
+    para(doc, "WCS 安全分两层：① WCS API 层访问控制(AppKey 鉴权 + 绑定授权)，管住“谁能经 WCS 下发、且只能指挥被授权的设备”；"
+              "② 设备级保护(网络/PLC 配置)，管住“谁能直接连到下位机”。前者由本系统实现，后者主战场在网络与 PLC，WCS 通过“做成唯一闸口 + 持证书加密连接 + 审计”参与。")
+    para(doc, "① API 层(本系统)：/open/** 必须带合法 AppKey 签名(应用存在且启用 + 时间戳未过期 + nonce 不重放 + 签名正确)方可进入；"
+              "/open/task/dispatch 进一步做绑定授权——以验签得到的调用方真实身份(ATTR_APP_ID，证明) + 请求体 appId(声明) 查 wcs_app_binding，仅启用中的绑定放行，否则 FORBIDDEN。"
+              "授权按应用维护：在“绑定授权”页选定一个上位侧应用(如 WMS-MAIN)，勾选其可指挥的下位侧应用(整批 grant)；不锁 direction、禁自绑定。由此“调用方只能指挥被授权的应用”，杜绝混淆代理式越权。")
+    para(doc, "② 设备级保护(WCS 之外，须现场落实)：")
+    table(doc, ["层", "措施", "归属"], [
+        ("网络隔离(最重要)", "PLC 置独立 OT/控制网；防火墙仅放行 WCS→PLC 端口，其余不可达", "网络/现场"),
+        ("设备侧认证", "OPC UA 启用 SecurityPolicy(Basic256Sha256)+Sign&Encrypt+证书信任，或用户名口令", "PLC 配置"),
+        ("Modbus/S7", "协议本身无认证，仅靠网络隔离 + 网关兜底", "网络"),
+        ("设备写保护", "PLC 块只读、RUN/PROG 硬件钥匙开关(物理禁写)", "设备"),
+        ("硬线安全", "急停/互锁/光幕，不在通讯链路上；WCS 不承担安全停机", "电气安全"),
+    ], widths=[1.4, 3.6, 1.2])
+    para(doc, "边界提醒：绑定授权属 API 层逻辑访问控制，拦截“经 WCS 越权指挥别人设备”，但拦不住绕开 WCS 直连 PLC 端口者——后者必须靠网络分段把 WCS 做成唯一通道。"
+              "此外当前 AppKey 签名未覆盖请求体，坐标/任务类型理论可被篡改，彻底闭合需把 body 摘要并入签名(列为后续)。",
+         color=MUTED)
 
     doc.core_properties.title = "礁盘工业WCS使用功能说明书"
     doc.core_properties.author = "夏侯霖"

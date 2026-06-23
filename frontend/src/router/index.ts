@@ -13,6 +13,7 @@ const router = createRouter({
         { path: 'dashboard', component: () => import('../views/DashboardView.vue') },
         { path: 'protocol', component: () => import('../views/ProtocolView.vue') },
         { path: 'application', component: () => import('../views/ApplicationView.vue') },
+        { path: 'binding', component: () => import('../views/BindingView.vue') },
         { path: 'connection', component: () => import('../views/ConnectionView.vue') },
       ],
     },

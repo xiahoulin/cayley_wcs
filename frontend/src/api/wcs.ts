@@ -50,6 +50,15 @@ export interface DictItem {
   item_value: string
 }
 
+export interface AppBinding {
+  id?: number
+  upstream_app_id: number
+  downstream_app_id: number
+  scope?: string
+  enabled?: boolean
+  remark?: string
+}
+
 export interface ConnectionSnapshot {
   appId: number
   appCode: string
@@ -95,6 +104,7 @@ export const protocolPoints = (id: number) => post<ProtocolPoint[]>('/protocol/p
 // ===== 应用 =====
 export const applicationList = (pageIndex = 1, pageSize = 50) =>
   post<PageData<Application>>('/application/list', { pageIndex, pageSize })
+export const applicationAll = () => post<Application[]>('/application/all')
 export const applicationCreate = (a: Application) => post<Application>('/application/create', a)
 export const applicationUpdate = (a: Application) => post<Application>('/application/update', a)
 export const applicationDelete = (id: number) => post<boolean>('/application/delete', { id })
@@ -105,6 +115,17 @@ export const connectionStatus = () => post<ConnectionStatus>('/connection/status
 export const connectionOpen = (id: number) => post<ConnectionSnapshot>('/connection/open', { id })
 export const connectionClose = (id: number) => post<boolean>('/connection/close', { id })
 export const connectionReconnect = (id: number) => post<ConnectionSnapshot>('/connection/reconnect', { id })
+
+// ===== 上下位绑定授权 =====
+export const bindingAll = () => post<AppBinding[]>('/binding/all')
+export const bindingCreate = (b: AppBinding) => post<AppBinding>('/binding/create', b)
+export const bindingUpdate = (b: AppBinding) => post<AppBinding>('/binding/update', b)
+export const bindingDelete = (id: number) => post<boolean>('/binding/delete', { id })
+// 按应用授权：查/设 某上位侧应用可指挥的下位侧应用集合
+export const bindingGranted = (upstreamAppId: number) =>
+  post<number[]>('/binding/granted', { upstreamAppId })
+export const bindingGrant = (upstreamAppId: number, downstreamAppIds: number[], scope = 'dispatch') =>
+  post<number[]>('/binding/grant', { upstreamAppId, downstreamAppIds, scope })
 
 // ===== 报警 =====
 export const alarmActive = () => post<Alarm[]>('/alarm/active', {})

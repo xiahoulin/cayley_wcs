@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CayleyWCS - WMS 下发闭环",
-    "description": "模拟 WMS 经 REST 下发任务给 WCS，WCS 驱动 OPC UA 仿真器执行三段握手，WMS 通过 /open/task/query 对账。/open/** 自动做 AppKey HMAC 签名。",
+    "description": "模拟 WMS（上位侧应用 WMS-MAIN）经 REST 下发任务给 WCS，下发给已授权的下位侧设备 PALLET_SIM，WCS 驱动 OPC UA 仿真器执行三段握手，再通过 /open/task/query 对账。/open/** 用 WMS-MAIN 的 AppKey 自动 HMAC 签名；越权防护要求存在 WMS-MAIN→PALLET_SIM 的绑定授权（V7 种子已建）。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -27,7 +27,7 @@
           "  const appSecret = pm.collectionVariables.get('app_secret');",
           "  const ts = Math.floor(Date.now()/1000).toString();",
           "  const nonce = CryptoJS.lib.WordArray.random(16).toString();",
-          "  const canonical = [appKey, ts, nonce, 'POST', path].join('\n');",
+          "  const canonical = [appKey, ts, nonce, 'POST', path].join(String.fromCharCode(10));",
           "  const sign = CryptoJS.HmacSHA256(canonical, appSecret).toString(CryptoJS.enc.Hex);",
           "  pm.request.headers.upsert({key:'X-App-Key', value: appKey});",
           "  pm.request.headers.upsert({key:'X-Timestamp', value: ts});",
@@ -53,16 +53,19 @@
       }
     },
     {
-      "name": "2. 取应用 PALLET_SIM 的 appId/app_key/app_secret",
+      "name": "2. 取上位 WMS-MAIN 的 key/secret(签名) + 目标设备 PALLET_SIM 的 appId",
       "event": [{"listen": "test", "script": {"exec": [
+        "// 以应用为中心：用上位侧 WMS-MAIN 的 key 签名，下发给下位侧目标设备 PALLET_SIM（需已授权 WMS-MAIN→PALLET_SIM）。",
         "const apps = pm.response.json().data;",
-        "const a = apps.find(x => x.app_code === 'PALLET_SIM');",
-        "pm.test('found PALLET_SIM', () => pm.expect(a).to.not.be.undefined);",
-        "if (a) {",
-        "  pm.collectionVariables.set('appId', a.id);",
-        "  pm.collectionVariables.set('app_key', a.app_key);",
-        "  pm.collectionVariables.set('app_secret', a.app_secret);",
-        "  console.log('appId=' + a.id + ' app_key=' + a.app_key);",
+        "const caller = apps.find(x => x.app_code === 'WMS-MAIN');",
+        "const device = apps.find(x => x.app_code === 'PALLET_SIM');",
+        "pm.test('found WMS-MAIN caller', () => pm.expect(caller, 'WMS-MAIN 上位应用').to.not.be.undefined);",
+        "pm.test('found PALLET_SIM device', () => pm.expect(device, 'PALLET_SIM 目标设备').to.not.be.undefined);",
+        "if (caller && device) {",
+        "  pm.collectionVariables.set('app_key', caller.app_key);",
+        "  pm.collectionVariables.set('app_secret', caller.app_secret);",
+        "  pm.collectionVariables.set('appId', device.id);",
+        "  console.log('caller(WMS-MAIN)=' + caller.app_key + '  targetDeviceAppId=' + device.id);",
         "}"
       ]}}],
       "request": {

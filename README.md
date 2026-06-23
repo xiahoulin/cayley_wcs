@@ -38,6 +38,7 @@
 | `dict`（M1） | 数据字典：协议类型等枚举单一事实源 |
 | `protocol`（M1） | 协议表 + 协议点位/字段映射 |
 | `application`（M1） | 应用信息表 + 双向 AppKey 鉴权 |
+| `binding` | 应用绑定授权：`wcs_app_binding`(上位侧→下位侧，不锁 direction、禁自绑定) CRUD + **按应用整批授权**(`grant`/`grantedDownstreamIds`) + 下发越权判定(`isAllowed`/`assertAllowed`) |
 | `faultcode`（M1） | 故障码表 + 解析（未维护走统一兜底） |
 | `connection`（M2） | 连接治理：线程池 + 信号量 + 60s 超时回收 + 看门狗重连 |
 | `adapter`（M2） | 协议适配器 SPI（Adapter/Factory/Strategy/Template）+ 各协议实现 |
@@ -61,6 +62,9 @@ Flyway 迁移位于 `backend/src/main/resources/db/migration/`：
 | `V3__seed_stacker_protocol.sql` | 堆垛机标准协议(6.18 修订版) + 27 点位(DBW0–182) + 故障码 1–48 种子 |
 | `V4__seed_pallet_opcua_app.sql` | **礁盘工业码垛机** OPC UA 协议(NodeId 寻址 `ns=3;s="WCS_Task"."<组>"."<字段>"`) + 应用 + 点位/故障码(克隆自 6.18)。适配器 `StackerOpcUaAdapter`(PLC4X OPC UA + WCS_Heart 主动心跳) |
 | `V5__seed_opcua_sim_app.sql` | **码垛机OPCUA仿真** 协议+应用(`PALLET_SIM`)，指向内置 Milo 仿真器(`ns=2;s=WCS_Task.<组>.<字段>`)，用于无硬件 OPC UA 联调 |
+| `V6__seed_app_binding.sql` | **应用绑定授权表** `wcs_app_binding`(上位侧→下位侧)。dispatch 越权防护依赖此表（建表时含自绑定种子，V8 已清除） |
+| `V7__seed_wms_upstream_app.sql` | **上位 WMS 主系统** 应用(`WMS-MAIN`,`direction=upstream`,`ak_wms_main`) + 授权它指挥全部下位设备，作为「上位侧应用指挥下位侧应用」的示例 |
+| `V8__app_centric_binding.sql` | **去除自绑定**：删除全部 `upstream==downstream` 行。绑定语义保持「上位侧→下位侧」但**不按 direction 锁方向**（任意应用皆可任一侧，含「下位→下位」），仅禁止自指 |
 
 ## 无硬件 OPC UA 联调（Milo 仿真服务端）
 
@@ -86,12 +90,16 @@ cd backend
 mvn spring-boot:run "-Dspring-boot.run.profiles=local"
 ```
 
-完整容器编排：
+完整容器编排（pg `5433` + redis `6380` + backend `20021` + frontend `5184` 四容器）：
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item .env.example .env          # 可选，缺省走 compose 默认值
 docker compose --profile full up -d --build
 ```
+
+- 后端容器默认带 **`simulator` profile**（`SPRING_PROFILES_ACTIVE`）——内置 Milo OPC UA 仿真器随后端同进程启动（容器内 `127.0.0.1:4840` 自连），开箱即可跑 Postman 下发闭环。
+- 对接**真实 PLC** 时关掉仿真器：`.env` 设 `CAYLEYWCS_BACKEND_PROFILES=`（置空）后重建。
+- 验证：`GET http://127.0.0.1:20021/health` → `UP`；前端 `http://127.0.0.1:5184`；账号 `admin/1`。
 
 ## 进度
 
@@ -103,10 +111,24 @@ docker compose --profile full up -d --build
 | M3 仿真器+审计 | ✅ 完成 | 审计落库(连接事件→`wcs_connection_log`、手动读写→`wcs_message_log`)；**内存堆垛机仿真器**(sim 适配器) `StackerSimEndToEndTest` 通过；**Milo OPC UA 线上仿真服务端**(`OpcUaStackerSimulator`，profile `simulator`)已落地——真·OPC UA 端到端联调通过(PLC4X→Milo：连接/心跳/读状态/写命令/三段握手/注故障) |
 | M4 任务调度 | ✅ 完成 | `wcs_task` CRUD + **堆垛机三段握手状态机**(检查→下发→执行确认→等待→完成确认→清零) + 任务引擎(设备级单飞@Scheduled) + `/open/task/dispatch`(AppKey,幂等)；`StackerHandshakeTest`(完成+故障失败)通过 |
 | M5 监控+报警 | ✅ 完成 | 报警生命周期(产生/确认/清除/历史+去重) + **故障码→报警联动**(轮询故障边沿→查故障表→报警,未维护走兜底) + 连接断开/恢复联动 + **WebSocket 实时推送**(`/ws/monitor` 连接快照/槽位/活动报警)；`AlarmFlowTest` 通过 |
-| M6 Vue 前端 | ✅ MVP 完成 | Vue3+Vite+TS 精简脚手架(reefplex 风)：登录 + **协议管理/应用管理(AppKey)/连接监控/实时看板(WebSocket)** 4 页；`npm run build` 通过。其余 4 页(字典/故障码/任务/报警中心)二期补 |
+| M6 Vue 前端 | ✅ MVP 完成 | Vue3+Vite+TS 精简脚手架(reefplex 风)：登录 + **协议管理/应用管理(AppKey)/绑定授权/连接监控/实时看板(WebSocket)** 5 页；`npm run build` 通过。其余页(字典/故障码/任务/报警中心)二期补 |
 | M7 测试/文档 | ✅ 基本完成 | 架构约束+接口契约测试(全 POST+JSON/Service 接口+impl/Mapper)、前端 Dockerfile+nginx 模板+compose frontend 服务、父级 `cayley_project` 注册表登记。allinone 单容器镜像列为可选项 |
 
-测试：`cd backend && mvn test`（H2，无需外部依赖）。当前 **14 个用例全绿**（schema/连接池/仿真端到端/握手/报警联动/架构约束）。
+测试：`cd backend && mvn test`（H2，无需外部依赖）。当前 **26 个用例全绿**（schema/连接池/仿真端到端/握手/报警联动/对账/绑定授权/架构约束）。
+
+> 绑定授权经两轮多智能体对抗式评审加固：`create()`/`update()` 复用或校验软删行避免撞唯一索引(返回干净 CONFLICT)、`grant()` 与 **dispatch 越权判定 `isAllowed`** 均按 `tenant_id` 隔离(写/读两侧一致，杜绝跨租户放行)、`grant()` 声明式收敛 `scope`、appkey 关闭时 dispatch 记 WARN、前端校正已删上位选择、禁止自绑定。
+
+## 安全：下发越权防护（应用绑定授权）
+
+`/open/task/dispatch` 经 `AppKeyAuthFilter` 验签得到**调用方真实身份** `ATTR_APP_ID`(证明)，与 body 中的 `appId`(声明) 一起查 `wcs_app_binding`：仅当存在**启用中的绑定**(上位侧应用→下位侧应用) 才放行，否则 `FORBIDDEN`。
+
+- **模型**：绑定为「上位侧 `upstream_app_id` → 下位侧 `downstream_app_id`」。**不按应用 `direction` 锁方向**——任意应用都可出现在上位侧或下位侧（含「下位→下位」），仅**禁止自绑定**(`upstream==downstream`)。应用的 `direction` 仅作提示。
+- **按应用授权（推荐用法）**：种子 `WMS-MAIN`(`ak_wms_main`)用自身 AppKey 调 `/open/**`；在「绑定授权」页**选定一个上位侧应用 → 勾选它可指挥的下位侧应用（多选，已排除自身）→ 保存**即整批授权。该应用只能指挥被勾选的应用。
+  - `POST /binding/granted {upstreamAppId}` → 该上位侧已授权的下位侧应用 id 列表（回显勾选）。
+  - `POST /binding/grant {upstreamAppId, downstreamAppIds[], scope}` → 声明式整批授权（缺补、撤选软删、自指忽略，幂等）。
+- 维护入口：前端「应用绑定授权」页 或 `/binding/{list,all,create,update,delete}`；自绑定在 `create`/`grant` 被拒/忽略。
+- 边界：这是 **WCS API 层访问控制**，拦截「经 WCS 越权指挥别的应用/设备」；它**不替代**设备级保护(网络分段把 WCS 做唯一闸口 + 设备侧 OPC UA 安全策略/证书 + 写保护/钥匙开关 + 硬线急停)。
+- body 暂未纳入签名(坐标/任务类型可被篡改)——彻底闭合需把 body 摘要并入 canonical，列为后续。
 
 ## 前端本地运行
 
@@ -116,7 +138,7 @@ npm install
 npm run dev          # http://127.0.0.1:5184 ，/api 与 /ws 代理到后端 20021
 ```
 
-页面：实时看板（WebSocket 设备状态/报警）、协议管理（协议+点位）、应用管理（AppKey 生成/重置）、连接监控（建连/断开/重连、60s 超时回收可见）。
+页面：实时看板（WebSocket 设备状态/报警）、协议管理（协议+点位）、应用管理（AppKey 生成/重置）、应用绑定授权（**选定上位侧应用 → 勾选其可指挥的下位侧应用**，不锁方向、禁自绑定，越权防护）、连接监控（建连/断开/重连、60s 超时回收可见）。
 
 ## WMS 对账闭环（WS 提示 + REST 权威）
 

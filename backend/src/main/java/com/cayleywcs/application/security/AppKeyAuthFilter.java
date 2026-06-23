@@ -30,6 +30,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class AppKeyAuthFilter extends OncePerRequestFilter {
     public static final String ATTR_APP_ID = "wcs.app.id";
     public static final String ATTR_APP_CODE = "wcs.app.code";
+    public static final String ATTR_APP_TENANT_ID = "wcs.app.tenant";
 
     private final ApplicationService applicationService;
     private final AppKeySigner signer;
@@ -101,6 +102,7 @@ public class AppKeyAuthFilter extends OncePerRequestFilter {
         }
         request.setAttribute(ATTR_APP_ID, app.getId());
         request.setAttribute(ATTR_APP_CODE, app.getApp_code());
+        request.setAttribute(ATTR_APP_TENANT_ID, app.getTenant_id());
         chain.doFilter(request, response);
     }
 
