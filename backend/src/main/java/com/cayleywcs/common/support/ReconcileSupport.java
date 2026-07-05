@@ -14,6 +14,10 @@ public final class ReconcileSupport {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), ZoneId.systemDefault());
     }
 
+    public static long toEpochMillis(LocalDateTime time) {
+        return time == null ? 0L : time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
     public static int clampLimit(int limit) {
         if (limit <= 0) {
             return 200;

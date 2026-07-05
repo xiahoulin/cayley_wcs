@@ -1,50 +1,28 @@
 package com.cayleywcs.application.security;
 
-import java.nio.charset.StandardCharsets;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import com.cayleywcs.common.support.CryptoSupport;
 import org.springframework.stereotype.Component;
 
 /**
  * 开放接口 AppKey 签名（HMAC-SHA256）。
- * 规范串：appKey + "\n" + timestamp + "\n" + nonce + "\n" + method + "\n" + path。
+ * v1 规范串：appKey\ntimestamp\nnonce\nmethod\npath。
+ * v2 规范串（M13，闭合 body 篡改）：v1 之后追加 \nsha256Hex(body)——坐标/任务类型等 body 内容也纳入签名。
  */
 @Component
 public class AppKeySigner {
 
     public String sign(String appSecret, String appKey, String timestamp, String nonce, String method, String path) {
         String canonical = String.join("\n", appKey, timestamp, nonce, method, path);
-        return hmacHex(appSecret, canonical);
+        return CryptoSupport.hmacSha256Hex(appSecret, canonical);
+    }
+
+    public String signV2(String appSecret, String appKey, String timestamp, String nonce,
+                         String method, String path, String bodySha256Hex) {
+        String canonical = String.join("\n", appKey, timestamp, nonce, method, path, bodySha256Hex);
+        return CryptoSupport.hmacSha256Hex(appSecret, canonical);
     }
 
     public boolean verify(String expected, String actual) {
-        if (expected == null || actual == null) {
-            return false;
-        }
-        byte[] a = expected.getBytes(StandardCharsets.UTF_8);
-        byte[] b = actual.getBytes(StandardCharsets.UTF_8);
-        if (a.length != b.length) {
-            return false;
-        }
-        int r = 0;
-        for (int i = 0; i < a.length; i++) {
-            r |= a[i] ^ b[i];
-        }
-        return r == 0;
-    }
-
-    private static String hmacHex(String secret, String value) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] bytes = mac.doFinal(value.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(bytes.length * 2);
-            for (byte x : bytes) {
-                sb.append(String.format("%02x", x));
-            }
-            return sb.toString();
-        } catch (Exception ex) {
-            throw new IllegalStateException("HMAC failed", ex);
-        }
+        return CryptoSupport.constantTimeEquals(expected, actual);
     }
 }

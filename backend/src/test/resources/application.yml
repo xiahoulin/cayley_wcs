@@ -22,6 +22,20 @@ cayleywcs:
     jwt-secret: test-cayleywcs-secret-with-enough-length
     access-token-minutes: 120
     refresh-token-minutes: 1440
+  task:
+    engine-interval-ms: 100    # 测试加速：链端到端在秒级内自动跑完
+    retry-backoff-ms: 600000   # 测试：大退避防自动调度器抢跑；需要重试的用例把任务 last_update_time 改老触发
+    recovery-interval-ms: 200
+  chain:
+    orchestrate-interval-ms: 200
+  audit:
+    message-log-retention-days: 7
+    message-log-clean-cron: "0 0 0 31 2 ?"   # 2 月 31 日不存在：测试期 cron 永不触发，防定时串扰 fixture
+  webhook:
+    scan-interval-ms: 3600000     # 测试：扫描/投递不自动触发，用例显式调 runOnce()
+    deliver-interval-ms: 3600000
+    backoff-base-ms: 60000        # 大退避，first-fail 后 next_retry 稳定在未来（防 CI 卡顿致断言偶发红）
+    scan-lag-ms: 0                # 测试即时处理（不等滞后窗口）
   openapi:
     appkey-enabled: true
     signature-max-skew-seconds: 300
@@ -30,6 +44,7 @@ cayleywcs:
   connection:
     max-connections: 8
     connect-timeout-seconds: 60
+    recovery-reconcile-interval-ms: 3600000   # 测试：周期自愈对账不自动触发，用例显式调 reconcileOnce()
   gateway:
     apisix-enabled: false
   keycloak:

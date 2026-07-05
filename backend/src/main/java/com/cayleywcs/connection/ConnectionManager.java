@@ -34,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -57,12 +58,25 @@ public class ConnectionManager {
     private final long heartbeatStaleMs;
     private final int reconnectMaxRetry;
     private final long resetPulseHoldMs;
+    private final long reconnectRearmCooldownMs;
 
     private final Semaphore slots;
     private final ExecutorService connectPool;
     private final ScheduledExecutorService workerPool;
     private final Map<Long, ManagedConnection> connections = new ConcurrentHashMap<>();
+    /** 正在建连的 appId：串行化同一应用的并发 open（恢复器启动线程 vs 周期对账 vs 用户请求），防双 open 泄槽/孤儿 worker。 */
+    private final Set<Long> opening = ConcurrentHashMap.newKeySet();
 
+    /** 测试便捷构造（省略 rearm 冷却，默认 60s）：保留既有测试的 10 参调用零改动。 */
+    public ConnectionManager(ApplicationService applicationService, ProtocolService protocolService,
+                             ProtocolAdapterFactory adapterFactory, ApplicationEventPublisher eventPublisher,
+                             AuditService auditService, int maxConnections, int connectTimeoutSeconds,
+                             long heartbeatStaleMs, int reconnectMaxRetry, long resetPulseHoldMs) {
+        this(applicationService, protocolService, adapterFactory, eventPublisher, auditService,
+                maxConnections, connectTimeoutSeconds, heartbeatStaleMs, reconnectMaxRetry, resetPulseHoldMs, 60000L);
+    }
+
+    @Autowired
     public ConnectionManager(ApplicationService applicationService,
                              ProtocolService protocolService,
                              ProtocolAdapterFactory adapterFactory,
@@ -72,7 +86,8 @@ public class ConnectionManager {
                              @Value("${cayleywcs.connection.connect-timeout-seconds:60}") int connectTimeoutSeconds,
                              @Value("${cayleywcs.connection.heartbeat-stale-ms:12000}") long heartbeatStaleMs,
                              @Value("${cayleywcs.connection.reconnect-max-retry:5}") int reconnectMaxRetry,
-                             @Value("${cayleywcs.connection.reset-pulse-hold-ms:500}") long resetPulseHoldMs) {
+                             @Value("${cayleywcs.connection.reset-pulse-hold-ms:500}") long resetPulseHoldMs,
+                             @Value("${cayleywcs.connection.reconnect-rearm-cooldown-ms:60000}") long reconnectRearmCooldownMs) {
         this.applicationService = applicationService;
         this.protocolService = protocolService;
         this.adapterFactory = adapterFactory;
@@ -83,6 +98,7 @@ public class ConnectionManager {
         this.heartbeatStaleMs = Math.max(1000, heartbeatStaleMs);
         this.reconnectMaxRetry = Math.max(0, reconnectMaxRetry);
         this.resetPulseHoldMs = Math.max(0, resetPulseHoldMs);
+        this.reconnectRearmCooldownMs = Math.max(0, reconnectRearmCooldownMs);
         this.slots = new Semaphore(this.maxConnections);
         this.connectPool = Executors.newFixedThreadPool(this.maxConnections, namedFactory("wcs-connect-"));
         this.workerPool = Executors.newScheduledThreadPool(this.maxConnections, namedFactory("wcs-worker-"));
@@ -98,33 +114,56 @@ public class ConnectionManager {
         ProtocolEntity protocol = protocolService.getById(app.getProtocol_id());
         List<ProtocolPointEntity> points = protocolService.listPoints(protocol.getId());
 
-        // 最大连接数限流：满则立即拒绝，提示等待
-        if (!slots.tryAcquire()) {
-            throw new WcsException(ErrorCode.CONN_POOL_FULL, ErrorCode.CONN_POOL_FULL.message());
-        }
+        // 期望态=用户意图（M12）：校验通过即先落 open——即便随后建连失败，恢复器/看门狗 rearm 会持续追赶意图。
+        persistDesiredState(appId, "open");
 
+        // 并发 open 串行化：同一 appId 只允许一个 open 进临界区，防双 open 各自 acquire 槽/put/起 worker 泄漏。
+        if (!opening.add(appId)) {
+            throw new WcsException(ErrorCode.CONN_ALREADY_OPEN, "连接正在建立中: appId=" + appId);
+        }
         boolean ok = false;
         try {
-            ProtocolAdapter adapter = adapterFactory.create(new AdapterContext(app, protocol, points));
-            ManagedConnection mc = new ManagedConnection(app, protocol, points, adapter);
-            transition(mc, ConnectionState.CONNECTING, "open");
-            connectWithTimeout(mc);
-            transition(mc, ConnectionState.CONNECTED, "connected");
-            mc.markHeartbeat(System.currentTimeMillis());
-            connections.put(appId, mc);
-            startWorker(mc);
-            transition(mc, ConnectionState.RUNNING, "running");
-            ok = true;
-            return mc.snapshot();
-        } finally {
-            if (!ok) {
-                connections.remove(appId);
-                slots.release();
+            if (connections.containsKey(appId)) { // 二次检查（进临界区前可能已被建成）
+                throw new WcsException(ErrorCode.CONN_ALREADY_OPEN, "连接已存在: appId=" + appId);
             }
+            // 最大连接数限流：满则立即拒绝，提示等待
+            if (!slots.tryAcquire()) {
+                throw new WcsException(ErrorCode.CONN_POOL_FULL, ErrorCode.CONN_POOL_FULL.message());
+            }
+            try {
+                ProtocolAdapter adapter = adapterFactory.create(new AdapterContext(app, protocol, points));
+                ManagedConnection mc = new ManagedConnection(app, protocol, points, adapter);
+                transition(mc, ConnectionState.CONNECTING, "open");
+                connectWithTimeout(mc);
+                // 建连期间用户可能已 close（先落 desired=closed）——上线前复核意图，防「已请求关闭的连接却 RUNNING 上线」
+                //（对抗审查 P3）。读失败不阻断（宁可上线，实际态优先）。
+                if ("closed".equals(currentDesiredState(appId))) {
+                    mc.adapter().disconnect();
+                    transition(mc, ConnectionState.CLOSED, "aborted: desired=closed during connect");
+                    throw new WcsException(ErrorCode.CONN_NOT_FOUND, "建连期间被关闭: appId=" + appId);
+                }
+                transition(mc, ConnectionState.CONNECTED, "connected");
+                defensiveClearResetPulse(mc); // 崩溃可能遗留 cmd_ResetFault 高电平，建连成功后防御性写 0
+                mc.markHeartbeat(System.currentTimeMillis());
+                connections.put(appId, mc);
+                startWorker(mc);
+                transition(mc, ConnectionState.RUNNING, "running");
+                ok = true;
+                return mc.snapshot();
+            } finally {
+                if (!ok) {
+                    connections.remove(appId);
+                    slots.release();
+                }
+            }
+        } finally {
+            opening.remove(appId);
         }
     }
 
     public void close(Long appId) {
+        // 期望态=用户意图（M12）：先落 closed，防看门狗 rearm/恢复器把刚关的连接又拉起。
+        persistDesiredState(appId, "closed");
         ManagedConnection mc = connections.remove(appId);
         if (mc == null) {
             throw new WcsException(ErrorCode.CONN_NOT_FOUND, "连接不存在: appId=" + appId);
@@ -135,6 +174,28 @@ public class ConnectionManager {
         } finally {
             transition(mc, ConnectionState.CLOSED, "closed");
             slots.release();
+        }
+    }
+
+    /** 落库期望态（防御：单条列更新失败不影响连接操作本身，仅记日志——实际态才是硬约束）。 */
+    private void persistDesiredState(Long appId, String state) {
+        try {
+            applicationService.updateDesiredState(appId, state);
+        } catch (RuntimeException ex) {
+            log.warn("落库 desired_state={} 失败(appId={}): {}", state, appId, ex.getMessage());
+        }
+    }
+
+    /** 建连成功后把 cmd_ResetFault 复位到 0（若协议有该点位）：清除崩溃遗留的复位脉冲高电平。 */
+    private void defensiveClearResetPulse(ManagedConnection mc) {
+        ProtocolPointEntity point = findPointOrNull(mc, "cmd_ResetFault");
+        if (point == null) {
+            return;
+        }
+        try {
+            mc.adapter().write(point, 0);
+        } catch (RuntimeException ex) {
+            log.debug("防御性复位清零跳过(appId={}): {}", mc.application().getId(), ex.getMessage());
         }
     }
 
@@ -255,7 +316,7 @@ public class ConnectionManager {
                 .orElse(null);
     }
 
-    // ===== 看门狗调用：检测心跳失活并自动重连 =====
+    // ===== 看门狗调用：检测心跳失活并自动重连；FAILED 且期望 open 则冷却后 rearm（M12 自愈）=====
     public void runWatchdogOnce() {
         long now = System.currentTimeMillis();
         for (ManagedConnection mc : connections.values()) {
@@ -267,12 +328,63 @@ public class ConnectionManager {
             }
             if (mc.state() == ConnectionState.DISCONNECTED) {
                 attemptReconnect(mc);
+            } else if (mc.state() == ConnectionState.FAILED) {
+                rearmOrReleaseFailed(mc, now);
             }
+        }
+    }
+
+    /**
+     * 重连躺平修复（M12/F4）：FAILED 连接不再永久躺平——
+     * - 期望态=open 且距上次失败超冷却期 → retryCount 清零回 DISCONNECTED，重入重连循环；
+     * - 期望态≠open（用户已 close 或从未打算 open）→ 清理连接释放槽位（防 FAILED 连接永久占槽）。
+     */
+    private void rearmOrReleaseFailed(ManagedConnection mc, long now) {
+        Long appId = mc.application().getId();
+        String desired = currentDesiredState(appId);
+        if ("open".equals(desired)) {
+            if (now - mc.lastFailedAt() >= reconnectRearmCooldownMs) {
+                mc.retryCount().set(0);
+                transition(mc, ConnectionState.DISCONNECTED, "rearm after cooldown");
+                log.info("connection {} rearm：期望 open，冷却到点重入重连", mc.application().getApp_code());
+            }
+        } else if (!"closed".equals(desired)) {
+            // 期望态不确定（DB 抖动/查不到，对抗审查 P3）：本 tick 什么都不做——绝不在信息缺失时执行
+            // 不可逆的拆除。DB 恢复后下轮按真实 desired 处理；desired 真为 open 时自愈能力不丢。
+            log.debug("connection {} 期望态未知，本轮 rearm 判定跳过", mc.application().getApp_code());
+        } else {
+            // 用户意图明确为 closed：拆除并释放槽位。
+            // 条件移除（原子）：仅当本调用真正把该实例从表中摘除才 release——防与并发用户 close(appId)
+            // 双重 slots.release() 导致信号量超额、击穿最大连接数（对抗审查 P2：HTTP 线程 close vs 看门狗线程）。
+            if (connections.remove(appId, mc)) {
+                stopWorker(mc);
+                try {
+                    mc.adapter().disconnect();
+                } catch (RuntimeException ignored) {
+                    // 忽略
+                }
+                transition(mc, ConnectionState.CLOSED, "released (desired!=open)");
+                slots.release();
+            }
+        }
+    }
+
+    /**
+     * 读当前期望态（仅 FAILED 连接的 rearm 判定用，频次低）。异常/查不到返回 null=「未知」——
+     * 调用方对未知既不 rearm 也不 release（不在信息缺失时做不可逆拆除）。
+     */
+    private String currentDesiredState(Long appId) {
+        try {
+            ApplicationEntity app = applicationService.getById(appId);
+            return app == null ? null : app.getDesired_state();
+        } catch (RuntimeException ex) {
+            return null;
         }
     }
 
     private void attemptReconnect(ManagedConnection mc) {
         if (mc.retryCount().get() >= reconnectMaxRetry) {
+            mc.markFailed(System.currentTimeMillis());
             transition(mc, ConnectionState.FAILED, "reconnect retries exhausted");
             return;
         }
@@ -281,6 +393,7 @@ public class ConnectionManager {
         try {
             mc.adapter().disconnect();
             connectWithTimeout(mc);
+            defensiveClearResetPulse(mc);
             mc.markHeartbeat(System.currentTimeMillis());
             mc.retryCount().set(0);
             transition(mc, ConnectionState.RUNNING, "reconnected");
@@ -326,6 +439,14 @@ public class ConnectionManager {
     }
 
     private void pollOnce(ManagedConnection mc) {
+        // 只监控健康连接（对抗审查 P1）：FAILED/RECONNECTING/DISCONNECTED/CLOSED 的生命周期由看门狗独占。
+        // 否则 FAILED 连接的 worker 会把它打回 DISCONNECTED → 看门狗 attemptReconnect 耗尽路径每 tick markFailed(now)
+        // 刷新 lastFailedAt → rearm 的「距上次失败超冷却」永不成立 → 躺平修复被永久饿死（且状态/报警每 5s 横跳一次）。
+        // 顺带消除拆除中连接被 pollOnce 回写 RUNNING 的幽灵事件。
+        ConnectionState st = mc.state();
+        if (st != ConnectionState.RUNNING && st != ConnectionState.CONNECTED) {
+            return;
+        }
         try {
             if (!mc.adapter().isConnected()) {
                 transition(mc, ConnectionState.DISCONNECTED, "adapter not connected");

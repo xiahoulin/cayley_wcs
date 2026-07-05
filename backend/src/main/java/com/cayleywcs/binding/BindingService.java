@@ -42,6 +42,12 @@ public interface BindingService {
     List<Long> grantedDownstreamIds(Long upstreamAppId);
 
     /**
+     * 租户隔离版授权集：仅返回 tenantId 下的授权（null=不限）。用于 /open 查询可见范围收敛——
+     * 与 {@link #isAllowed(Long, Long, Long)} 口径一致，防止跨租户绑定经 appId 缺省路径泄读。
+     */
+    List<Long> grantedDownstreamIds(Long upstreamAppId, Long tenantId);
+
+    /**
      * 以上位侧应用为中心的整批授权（声明式对账）：把该应用的可指挥下位侧集合“设置为” downstreamAppIds。
      * 缺的补建、已撤选的软删，已存在的保持/重新启用，幂等。自指(downstream==upstream)被忽略。返回对账后的下位侧 id 列表。
      */

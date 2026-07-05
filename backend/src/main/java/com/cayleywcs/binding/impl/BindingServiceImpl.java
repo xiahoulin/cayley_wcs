@@ -148,13 +148,22 @@ public class BindingServiceImpl implements BindingService {
 
     @Override
     public List<Long> grantedDownstreamIds(Long upstreamAppId) {
+        return grantedDownstreamIds(upstreamAppId, null);
+    }
+
+    @Override
+    public List<Long> grantedDownstreamIds(Long upstreamAppId, Long tenantId) {
         if (upstreamAppId == null) {
             return List.of();
         }
-        return bindingMapper.selectList(new QueryWrapper<AppBindingEntity>()
-                        .eq("\"is_valid\"", true)
-                        .eq("\"enabled\"", true)
-                        .eq("\"upstream_app_id\"", upstreamAppId))
+        QueryWrapper<AppBindingEntity> wrapper = new QueryWrapper<AppBindingEntity>()
+                .eq("\"is_valid\"", true)
+                .eq("\"enabled\"", true)
+                .eq("\"upstream_app_id\"", upstreamAppId);
+        if (tenantId != null) { // 与 isAllowed(…, tenantId) 口径一致：/open 可见范围按调用方租户隔离
+            wrapper.eq("\"tenant_id\"", tenantId);
+        }
+        return bindingMapper.selectList(wrapper)
                 .stream()
                 .map(AppBindingEntity::getDownstream_app_id)
                 .distinct()

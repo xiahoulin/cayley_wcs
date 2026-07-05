@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: cayleywcs-backend
+  task:
+    scheduling:
+      pool:
+        # F1：TaskEngine/看门狗/WS 推送共用调度池，>1 防单条慢任务饿死其他 @Scheduled（PLC I/O 已下沉 worker 池）
+        size: 4
   datasource:
     url: ${CAYLEYWCS_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cayleywcs?stringtype=unspecified}
     username: ${CAYLEYWCS_DB_USER:cayley}
@@ -42,10 +47,39 @@ cayleywcs:
     heartbeat-stale-ms: ${CAYLEYWCS_HEARTBEAT_STALE_MS:12000}
     # 故障复位脉冲保持时长(ms)：cmd_ResetFault 写 1 后保持该时长再写 0，确保真实 PLC 扫到上升沿
     reset-pulse-hold-ms: ${CAYLEYWCS_RESET_PULSE_HOLD_MS:500}
+    # 单机自愈（M12）：FAILED 连接冷却多久后 rearm 重入重连；desired=open 应用的周期对账间隔
+    reconnect-rearm-cooldown-ms: ${CAYLEYWCS_RECONNECT_REARM_COOLDOWN_MS:60000}
+    recovery-reconcile-interval-ms: ${CAYLEYWCS_RECOVERY_RECONCILE_INTERVAL_MS:30000}
   task:
     engine-interval-ms: ${CAYLEYWCS_TASK_ENGINE_INTERVAL_MS:1000}
+    # 失败自动重试（M11）：failure_policy=auto_retry 时的退避与恢复扫描间隔
+    retry-backoff-ms: ${CAYLEYWCS_TASK_RETRY_BACKOFF_MS:30000}
+    recovery-interval-ms: ${CAYLEYWCS_TASK_RECOVERY_INTERVAL_MS:5000}
+  chain:
+    # 任务链编排（M10）
+    orchestrate-interval-ms: ${CAYLEYWCS_CHAIN_ORCHESTRATE_INTERVAL_MS:2000}
+    # 候选组全不可用时的激活超时(ms)，0=关闭（无限等待候选可用）；超时链判失败+报警
+    activation-timeout-ms: ${CAYLEYWCS_CHAIN_ACTIVATION_TIMEOUT_MS:0}
   monitor:
     push-interval-ms: ${CAYLEYWCS_MONITOR_PUSH_INTERVAL_MS:1000}
+  webhook:
+    # Webhook 外发（M13）：扫描/投递间隔、批量、退避、超时、SSRF host allowlist（逗号分隔，空=不限）
+    scan-interval-ms: ${CAYLEYWCS_WEBHOOK_SCAN_INTERVAL_MS:3000}
+    scan-batch: ${CAYLEYWCS_WEBHOOK_SCAN_BATCH:200}
+    deliver-interval-ms: ${CAYLEYWCS_WEBHOOK_DELIVER_INTERVAL_MS:2000}
+    max-attempts: ${CAYLEYWCS_WEBHOOK_MAX_ATTEMPTS:6}
+    backoff-base-ms: ${CAYLEYWCS_WEBHOOK_BACKOFF_BASE_MS:30000}
+    backoff-max-ms: ${CAYLEYWCS_WEBHOOK_BACKOFF_MAX_MS:1800000}
+    connect-timeout-ms: ${CAYLEYWCS_WEBHOOK_CONNECT_TIMEOUT_MS:5000}
+    host-allowlist: ${CAYLEYWCS_WEBHOOK_HOST_ALLOWLIST:}
+    # SSRF 纵深：封禁私网/环回目标（生产建议 true；配 host-allowlist 时以白名单为主控）
+    block-private-hosts: ${CAYLEYWCS_WEBHOOK_BLOCK_PRIVATE_HOSTS:false}
+    # 扫描滞后窗口(ms)：只处理 lut<=now-lag 的行，防事务延迟提交的低 lut 行越过游标丢失
+    scan-lag-ms: ${CAYLEYWCS_WEBHOOK_SCAN_LAG_MS:2000}
+  audit:
+    # 报文留存保留天数（0=永久）与每日清理 cron（M11）
+    message-log-retention-days: ${CAYLEYWCS_MSG_LOG_RETENTION_DAYS:7}
+    message-log-clean-cron: ${CAYLEYWCS_MSG_LOG_CLEAN_CRON:0 30 3 * * ?}
   simulator:
     # 仅在 spring.profiles 含 simulator 时启用的 OPC UA 仿真服务端
     opcua:

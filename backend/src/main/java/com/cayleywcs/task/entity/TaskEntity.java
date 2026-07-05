@@ -2,6 +2,7 @@ package com.cayleywcs.task.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.cayleywcs.common.entity.BaseEntity;
 import java.time.LocalDateTime;
@@ -31,6 +32,16 @@ public class TaskEntity extends BaseEntity {
 
     private LocalDateTime dispatch_time;
     private LocalDateTime finish_time;
+
+    /** 链归属（M10）：非空=某任务链的第 seq_no 段，由编排器物化；空=独立任务。 */
+    private Long chain_id;
+    private Long seq_no;
+    private Long retry_count;
+    private Long max_retry;
+
+    /** 乐观锁：引擎推进 / 管理端取消 / 编排器三方写并发，updateById 版本不匹配即 0 行（防丢失更新）。 */
+    @Version
+    private Long version;
 
     public String getTask_no() {
         return task_no;
@@ -174,5 +185,45 @@ public class TaskEntity extends BaseEntity {
 
     public void setFinish_time(LocalDateTime finish_time) {
         this.finish_time = finish_time;
+    }
+
+    public Long getChain_id() {
+        return chain_id;
+    }
+
+    public void setChain_id(Long chain_id) {
+        this.chain_id = chain_id;
+    }
+
+    public Long getSeq_no() {
+        return seq_no;
+    }
+
+    public void setSeq_no(Long seq_no) {
+        this.seq_no = seq_no;
+    }
+
+    public Long getRetry_count() {
+        return retry_count;
+    }
+
+    public void setRetry_count(Long retry_count) {
+        this.retry_count = retry_count;
+    }
+
+    public Long getMax_retry() {
+        return max_retry;
+    }
+
+    public void setMax_retry(Long max_retry) {
+        this.max_retry = max_retry;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

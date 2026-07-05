@@ -8,12 +8,27 @@ import java.util.concurrent.ConcurrentHashMap;
  * PLC 心跳翻转、模式=联机自动、接受命令、自动推进取放货三段握手、回报状态/速度/位置、可注入故障码。
  * 线程安全：所有读写经同一实例的 synchronized 方法。
  */
-public class StackerDeviceState {
+public class StackerDeviceState implements DeviceSim {
     private final Map<String, Object> store = new ConcurrentHashMap<>();
     private long plcHeart = 0;
     private int taskTicks = 0;
 
     public StackerDeviceState() {
+        seed();
+    }
+
+    /** 原地复位（不更换实例，保证 OPC UA 命名空间/已连接适配器持有的引用继续有效）。 */
+    @Override
+    public synchronized void reset() {
+        store.clear();
+        plcHeart = 0;
+        taskTicks = 0;
+        seed();
+    }
+
+    private void seed() {
+        plcHeart = 0;
+        taskTicks = 0;
         store.put("status_Mode", 2);              // 联机自动
         store.put("status_Task", 0);              // 无任务
         store.put("status_TaskTypeFeedback", 0);  // 待机
@@ -95,10 +110,12 @@ public class StackerDeviceState {
         }
     }
 
-    /** 故障复位：cmd_ResetFault=1 时清除故障码，模拟 PLC 侧异常处理。 */
+    /** 故障复位：cmd_ResetFault=1 时清除故障码并中止当前任务回到空闲（否则故障失败的任务把设备永久卡在非空闲态）。 */
     private void handleResetFault(int reset) {
         if (reset == 1) {
             store.put("status_ErrorCode", 0);
+            store.put("status_Task", 0);
+            store.put("status_TaskTypeFeedback", 0);
         }
     }
 

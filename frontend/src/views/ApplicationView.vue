@@ -2,14 +2,20 @@
 import { onMounted, ref } from 'vue'
 import {
   applicationList, applicationCreate, applicationUpdate, applicationDelete, applicationResetSecret,
-  protocolAll, type Application, type Protocol,
+  protocolAll, dictItems, type Application, type Protocol, type DictItem,
 } from '../api/wcs'
 
 const rows = ref<Application[]>([])
 const protocols = ref<Protocol[]>([])
+const deviceTypes = ref<DictItem[]>([])
 const error = ref('')
 const editing = ref<Application | null>(null)
 const connText = ref('{}')
+
+function deviceTypeName(code?: string) {
+  if (!code) return '-'
+  return deviceTypes.value.find((d) => d.item_value === code)?.item_name || code
+}
 
 function protocolName(id: number) {
   return protocols.value.find((p) => p.id === id)?.protocol_name || id
@@ -20,6 +26,7 @@ async function load() {
   try {
     rows.value = (await applicationList()).rows
     protocols.value = await protocolAll()
+    deviceTypes.value = await dictItems('device_type')
   } catch (e: any) {
     error.value = e?.message || '加载失败'
   }
@@ -28,7 +35,7 @@ async function load() {
 function openNew() {
   editing.value = {
     app_code: '', app_name: '', protocol_id: protocols.value[0]?.id || 0,
-    direction: 'downstream', heartbeat_interval_ms: 5000, enabled: true,
+    direction: 'downstream', device_type: 'stacker', heartbeat_interval_ms: 5000, enabled: true,
   }
   connText.value = '{}'
 }
@@ -81,7 +88,7 @@ onMounted(load)
     <div class="panel">
       <table>
         <thead>
-          <tr><th>编码</th><th>名称</th><th>协议</th><th>方向</th><th>AppKey</th><th>启用</th><th>操作</th></tr>
+          <tr><th>编码</th><th>名称</th><th>协议</th><th>方向</th><th>设备类型</th><th>AppKey</th><th>启用</th><th>操作</th></tr>
         </thead>
         <tbody>
           <tr v-for="a in rows" :key="a.id">
@@ -89,6 +96,7 @@ onMounted(load)
             <td>{{ a.app_name }}</td>
             <td>{{ protocolName(a.protocol_id) }}</td>
             <td>{{ a.direction }}</td>
+            <td><span class="tag muted">{{ deviceTypeName(a.device_type) }}</span></td>
             <td><code>{{ a.app_key }}</code></td>
             <td><span :class="['tag', a.enabled ? 'ok' : 'muted']">{{ a.enabled ? '启用' : '停用' }}</span></td>
             <td>
@@ -97,7 +105,7 @@ onMounted(load)
               <button class="danger" @click="remove(a)">删除</button>
             </td>
           </tr>
-          <tr v-if="!rows.length"><td colspan="7" style="color:var(--muted)">暂无数据</td></tr>
+          <tr v-if="!rows.length"><td colspan="8" style="color:var(--muted)">暂无数据</td></tr>
         </tbody>
       </table>
     </div>
@@ -119,6 +127,12 @@ onMounted(load)
             <select v-model="editing.direction">
               <option value="downstream">下位（设备）</option>
               <option value="upstream">上位（WMS）</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>设备类型</label>
+            <select v-model="editing.device_type">
+              <option v-for="d in deviceTypes" :key="d.item_value" :value="d.item_value">{{ d.item_name }}</option>
             </select>
           </div>
           <div class="field"><label>心跳间隔(ms)</label><input v-model.number="editing.heartbeat_interval_ms" type="number" /></div>

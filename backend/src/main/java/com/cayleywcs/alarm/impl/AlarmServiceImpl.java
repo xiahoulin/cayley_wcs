@@ -104,11 +104,13 @@ public class AlarmServiceImpl implements AlarmService {
     @Override
     @Transactional
     public void clearCommAlarms(Long appId) {
+        // 只清通讯类(-1)：-2 配置/-3 编排/-4 任务停滞是任务/配置侧问题，并不随连接恢复而解决，
+        // 若一并清除会把停滞死锁等状态变成完全静默（M11 审查 P1 的组成环节）。
         clearWhere(new QueryWrapper<AlarmEntity>()
                 .eq("\"is_valid\"", true)
                 .eq("\"app_id\"", appId)
                 .in("\"status\"", "raised", "ack")
-                .le("\"fault_code\"", 0));
+                .eq("\"fault_code\"", -1L));
     }
 
     @Override
@@ -137,6 +139,22 @@ public class AlarmServiceImpl implements AlarmService {
         if (appId != null) {
             wrapper.eq("\"app_id\"", appId);
         }
+        return reconcileQuery(wrapper, sinceMillis, limit);
+    }
+
+    @Override
+    public List<AlarmEntity> queryReconcile(List<Long> appIds, long sinceMillis, int limit) {
+        if (appIds != null && appIds.isEmpty()) {
+            return List.of(); // 无可见应用
+        }
+        QueryWrapper<AlarmEntity> wrapper = new QueryWrapper<AlarmEntity>().eq("\"is_valid\"", true);
+        if (appIds != null) {
+            wrapper.in("\"app_id\"", appIds);
+        }
+        return reconcileQuery(wrapper, sinceMillis, limit);
+    }
+
+    private List<AlarmEntity> reconcileQuery(QueryWrapper<AlarmEntity> wrapper, long sinceMillis, int limit) {
         if (sinceMillis > 0) {
             wrapper.ge("\"last_update_time\"", ReconcileSupport.toLocalDateTime(sinceMillis));
         }

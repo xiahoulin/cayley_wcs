@@ -4,11 +4,17 @@ import { auth } from '../store/auth'
 
 const nav = [
   { to: '/dashboard', label: '实时看板' },
+  { to: '/task', label: '任务队列' },
+  { to: '/alarm', label: '报警中心' },
+  { to: '/stats', label: '运行统计' },
   { to: '/protocol', label: '协议管理' },
+  { to: '/fault-code', label: '故障码' },
   { to: '/application', label: '应用管理' },
   { to: '/binding-grant', label: '授权绑定' },
   { to: '/binding-detail', label: '绑定明细' },
   { to: '/connection', label: '连接监控' },
+  { to: '/webhook', label: 'Webhook' },
+  { to: '/dict', label: '数据字典' },
 ]
 </script>
 

@@ -20,7 +20,7 @@ public interface AlarmService {
     /** 单码恢复：清除该应用指定 fault_code 的 raised/ack 报警（支持多故障逐个恢复）。 */
     void clearFault(Long appId, long faultCode);
 
-    /** 连接恢复：清除该应用所有 raised 的通讯类报警(fault_code<=0)。 */
+    /** 连接恢复：仅清除该应用的通讯类报警(fault_code==-1)；-2/-3/-4 等任务/配置侧报警不随连接恢复清除。 */
     void clearCommAlarms(Long appId);
 
     PageData<AlarmEntity> page(PageSearch pageSearch);
@@ -29,4 +29,7 @@ public interface AlarmService {
 
     /** 对账用：返回 last_update_time >= sinceMillis 的报警（sinceMillis=0 即全量），按更新时间升序。 */
     List<AlarmEntity> queryReconcile(Long appId, long sinceMillis, int limit);
+
+    /** 对账用（越权收敛）：限定 appIds 集合；null=不限（appkey 关闭旁路），空集=无可见应用返回空。 */
+    List<AlarmEntity> queryReconcile(List<Long> appIds, long sinceMillis, int limit);
 }

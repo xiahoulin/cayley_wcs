@@ -28,4 +28,15 @@ public interface ApplicationService {
      * 失败抛 {@link com.cayleywcs.common.exception.WcsException}。
      */
     ApplicationEntity validateForConnect(Long appId);
+
+    /**
+     * 改工作模式（M10 队列暂停/恢复、M11 维护）：normal/paused/maintenance。
+     * 只更该列（防与其他管理端写并发时全行覆盖丢字段）。
+     */
+    void updateWorkMode(Long appId, String workMode);
+
+    /**
+     * 改连接期望态（M12）：open/closed。用户意图，只更该列（不校验存在性——由调用方 open/close 保证）。
+     */
+    void updateDesiredState(Long appId, String desiredState);
 }

@@ -25,6 +25,7 @@ public class ManagedConnection {
 
     private volatile ConnectionState state = ConnectionState.NEW;
     private volatile long lastHeartbeatAt = 0L;
+    private volatile long lastFailedAt = 0L;
     private volatile Set<Integer> lastErrorCodes = Collections.emptySet();
     private final AtomicInteger retryCount = new AtomicInteger(0);
     private volatile Map<String, Object> latest = new LinkedHashMap<>();
@@ -75,6 +76,14 @@ public class ManagedConnection {
         this.lastHeartbeatAt = epochMillis;
     }
 
+    public long lastFailedAt() {
+        return lastFailedAt;
+    }
+
+    public void markFailed(long epochMillis) {
+        this.lastFailedAt = epochMillis;
+    }
+
     public AtomicInteger retryCount() {
         return retryCount;
     }
@@ -108,6 +117,7 @@ public class ManagedConnection {
                 application.getId(),
                 application.getApp_code(),
                 application.getApp_name(),
+                application.getDevice_type(),
                 protocol.getProtocol_type(),
                 state.name(),
                 lastHeartbeatAt,

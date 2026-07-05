@@ -1,26 +1,43 @@
 package com.cayleywcs.simulator;
 
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
- * 仿真设备注册表：按 appId 维护堆垛机仿真状态，供 sim 适配器与仿真控制接口共享同一实例。
+ * 堆垛机仿真注册表：{@link DeviceSimRegistry} 的堆垛机专用门面（保持既有 API，供 sim 适配器/仿真接口/测试使用）。
+ * M9 起新设备类型直接走 DeviceSimRegistry 按 device_type 建模。
  */
 @Component
 public class StackerSimulatorRegistry {
-    private final Map<Long, StackerDeviceState> devices = new ConcurrentHashMap<>();
+    private final DeviceSimRegistry store;
+
+    @Autowired
+    public StackerSimulatorRegistry(DeviceSimRegistry store) {
+        this.store = store;
+    }
+
+    /** 测试便捷构造：独立内存仓（Spring 注入走上面的共享仓构造）。 */
+    public StackerSimulatorRegistry() {
+        this(new DeviceSimRegistry());
+    }
 
     public StackerDeviceState getOrCreate(Long appId) {
-        return devices.computeIfAbsent(appId, k -> new StackerDeviceState());
+        return (StackerDeviceState) store.getOrCreate(appId, StackerDeviceState::new);
     }
 
     public Optional<StackerDeviceState> find(Long appId) {
-        return Optional.ofNullable(devices.get(appId));
+        return store.find(appId)
+                .filter(StackerDeviceState.class::isInstance)
+                .map(StackerDeviceState.class::cast);
     }
 
     public void reset(Long appId) {
-        devices.put(appId, new StackerDeviceState());
+        store.getOrCreate(appId, StackerDeviceState::new).reset();
+    }
+
+    /** 暴露底层通用仿真仓，供 sim 适配器共享同一实例（保证 find()/adapter 读写同一状态）。 */
+    public DeviceSimRegistry store() {
+        return store;
     }
 }
