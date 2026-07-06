@@ -86,11 +86,9 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=local,simulator"   # 启动 Milo
 
 然后对应用 **码垛机OPCUA仿真(`PALLET_SIM`)** 建连（前端连接监控页或 `POST /connection/open`）——WCS 经 PLC4X 走真·OPC UA 连到仿真器，可读状态/写命令/跑三段握手。注入故障：`POST /simulator/inject-fault {"appId":999001,"code":8}`。
 
-> **联调观测（`docker logs -f cayleywcs-backend` / Docker Desktop 可见）**：Milo 服务端 `StackerNamespace` 的 setValue 过滤器（`simulator` profile 生效）在收到 WCS 写入命令区 `cmd_*` 字段时打 INFO：
-> - **逐字段明细**：`[OPC UA仿真] 收到指令写入 <字段> = <值>`（跳过每秒心跳 `WCS_Heart`）；
-> - **完整指令数据**：写入 `cmd_ConfirmTask=1`（确认执行、参数已就位）时汇总打印 `[OPC UA仿真] ★收到完整指令★ 任务号=.. 类型=3(移库) 取货[排.. 列.. 层..] 放货[排.. 列.. 层..] 货口=..`。
+> **联调观测（`docker logs -f cayleywcs-backend` / Docker Desktop 可见）**：Milo 服务端 `StackerNamespace` 的 setValue 过滤器（`simulator` profile 生效）在收到 WCS 写入时，打印**原始 OPC UA 写入包**（不做自定义格式化，便于核对指令与数据是否正确）：`[OPC UA写入] node=ns=2;s=WCS_Task.From_WCS.cmd_TaskNum dataValue=DataValue{value=Variant{value=...}, status=..., sourceTime=..., serverTime=...}`（跳过每秒心跳 `WCS_Heart`）。下发一个任务即可看到取放坐标/任务号/任务类型/确认位逐条原始写入。
 >
-> 下发一个任务即可看到。看当前寄存器值用 `POST /simulator/snapshot {"appId":999001,"code":0}`（code 必填）；看历史逐字段用 `POST /audit/message-log/list {"appId":<设备id>,"limit":40}`。
+> 看当前寄存器值用 `POST /simulator/snapshot {"appId":999001,"code":0}`（code 必填）；看历史逐字段用 `POST /audit/message-log/list {"appId":<设备id>,"limit":40}`。
 
 > 注：jsonb 字段(`conn_params`/`data_format`/`payload`)用 `Map<String,Object>`（Spring Boot 4 = Jackson 3，避免与 MyBatis-Plus Jackson 2 的 `JsonNode` 跨版本冲突）；PLC4X 连接非并发安全，读写已在 `Plc4xAdapter` 串行化。
 
