@@ -20,18 +20,25 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "// 仅对 /open/** 开放接口做 AppKey HMAC-SHA256 签名",
+          "// 仅对 /open/** 开放接口做 AppKey HMAC-SHA256 v2 签名（原始 body 纳签）",
           "const path = pm.request.url.getPath();",
           "if (path && path.indexOf('/open/') === 0) {",
+          "  if (path === '/open/task/dispatch') {",
+          "    pm.collectionVariables.set('taskNo', 'WMS-' + Date.now());",
+          "  }",
           "  const appKey = pm.collectionVariables.get('app_key');",
           "  const appSecret = pm.collectionVariables.get('app_secret');",
           "  const ts = Math.floor(Date.now()/1000).toString();",
           "  const nonce = CryptoJS.lib.WordArray.random(16).toString();",
-          "  const canonical = [appKey, ts, nonce, 'POST', path].join(String.fromCharCode(10));",
+          "  const rawBody = pm.request.body && pm.request.body.mode === 'raw'",
+          "    ? pm.variables.replaceIn(pm.request.body.raw || '') : '';",
+          "  const bodyHash = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(rawBody)).toString(CryptoJS.enc.Hex);",
+          "  const canonical = [appKey, ts, nonce, pm.request.method.toUpperCase(), path, bodyHash].join(String.fromCharCode(10));",
           "  const sign = CryptoJS.HmacSHA256(canonical, appSecret).toString(CryptoJS.enc.Hex);",
           "  pm.request.headers.upsert({key:'X-App-Key', value: appKey});",
           "  pm.request.headers.upsert({key:'X-Timestamp', value: ts});",
           "  pm.request.headers.upsert({key:'X-Nonce', value: nonce});",
+          "  pm.request.headers.upsert({key:'X-Sign-Version', value:'2'});",
           "  pm.request.headers.upsert({key:'X-Sign', value: sign});",
           "}"
         ]
@@ -91,9 +98,6 @@
     {
       "name": "4. [WMS] 下发任务 (AppKey 签名)",
       "event": [
-        {"listen": "prerequest", "script": {"exec": [
-          "pm.collectionVariables.set('taskNo', 'WMS-' + Date.now());"
-        ]}},
         {"listen": "test", "script": {"exec": [
           "const d = pm.response.json();",
           "pm.test('dispatch ok', () => pm.expect(d.isSuccess).to.be.true);",

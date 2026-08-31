@@ -52,6 +52,10 @@
 
 ## 文档
 
+- **《CayleyWCS HTTP 接入 API 文档》**：`docs/open-api-guide.md`（WMS/ERP/第三方上位系统接入；覆盖 AppKey/HMAC v2、单任务与任务链、增量对账、断线快照、Webhook、错误码和联调清单）。
+- **《礁盘工业WCS系统对接文档_http版本》**：`docs/礁盘工业WCS系统对接文档_http版本.docx`（面向已经取得 WCS Base URL、AppKey/AppSecret、码垛机 appId 与 Webhook Secret 的外部系统；详细说明 HMAC v2、码垛任务下发、状态回调、增量对账与断线恢复，不包含 WCS 管理端操作）。
+- HTTP 对接文档生成器：`docs/manual_assets/build_wcs_http_integration_doc.py`（python-docx + PIL，运行即重建 Word 文档和 `docs/manual_assets/rendered/` 中的配图）。
+- **Postman 联调集合**：`docs/CayleyWCS-WMS-Loop.postman_collection.json`（开放接口自动按原始请求体计算 AppKey/HMAC v2 签名）。
 - **《礁盘工业WCS使用功能说明书》**：`docs/礁盘工业WCS使用功能说明书.docx`（参考 WMS 说明书结构，按代码梳理全部模块/接口/数据表 + 业务逻辑图/握手时序/连接状态机）。
 - 生成器（python-docx + PIL，同 WMS 套路）：`docs/manual_assets/build_wcs_manual.py`，运行即重建文档与图（`docs/manual_assets/rendered/*.png`）。
 
