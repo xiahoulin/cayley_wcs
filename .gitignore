@@ -5,6 +5,8 @@ backend/target/
 # Node / Vite (frontend, added at M6)
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
+frontend/coverage/
 
 # IDE
 .idea/
@@ -14,8 +16,11 @@ frontend/dist/
 # Env
 .env
 
-# Logs
+# Logs and local agent state
 *.log
+.logs/
+.task/
+.pytest_cache/
 
 # Python (docs 生成器)
 __pycache__/
