@@ -1,0 +1,10 @@
+# 大体积二进制文档与文档图片走 Git LFS。
+# 仅影响新增或再次修改的文件；已有历史对象保持原样，不改写历史。
+*.docx filter=lfs diff=lfs merge=lfs -text
+*.xlsx filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
+*.otf filter=lfs diff=lfs merge=lfs -text
+*.ttf filter=lfs diff=lfs merge=lfs -text
+docs/**/*.png filter=lfs diff=lfs merge=lfs -text
+docs/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
