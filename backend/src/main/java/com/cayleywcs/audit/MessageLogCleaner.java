@@ -3,11 +3,13 @@ package com.cayleywcs.audit;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cayleywcs.audit.entity.MessageLogEntity;
 import com.cayleywcs.audit.mapper.MessageLogMapper;
+import com.cayleywcs.config.WcsMetrics;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +23,7 @@ public class MessageLogCleaner {
 
     private final MessageLogMapper messageLogMapper;
     private final long retentionDays;
+    @Autowired private WcsMetrics metrics;
 
     public MessageLogCleaner(MessageLogMapper messageLogMapper,
                              @Value("${cayleywcs.audit.message-log-retention-days:7}") long retentionDays) {
@@ -28,9 +31,9 @@ public class MessageLogCleaner {
         this.retentionDays = retentionDays;
     }
 
-    @Scheduled(cron = "${cayleywcs.audit.message-log-clean-cron:0 30 3 * * ?}")
+    @Scheduled(cron = "${cayleywcs.audit.message-log-clean-cron:0 30 3 * * ?}", scheduler = "taskScheduler")
     public void tick() {
-        runOnce();
+        WcsMetrics.tick(metrics, "message-log-cleaner", this::runOnce);
     }
 
     /** 每批删除行数：分批防大表一次性 DELETE 长事务/锁（引擎轮询读写审计使量级可观）。 */

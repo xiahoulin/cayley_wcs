@@ -2,10 +2,12 @@ package com.cayleywcs.webhook;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cayleywcs.common.support.CryptoSupport;
+import com.cayleywcs.config.WcsMetrics;
 import com.cayleywcs.webhook.entity.WebhookDeliveryEntity;
 import com.cayleywcs.webhook.entity.WebhookEntity;
 import com.cayleywcs.webhook.mapper.WebhookDeliveryMapper;
 import com.cayleywcs.webhook.mapper.WebhookMapper;
+import jakarta.annotation.PreDestroy;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +48,8 @@ public class WebhookDeliveryWorker {
     private final long backoffMaxMs;
     private final Set<String> hostAllowlist;
     private final boolean blockPrivateHosts;
+    private volatile boolean stopping;
+    @Autowired private WcsMetrics metrics;
 
     public WebhookDeliveryWorker(WebhookDeliveryMapper deliveryMapper, WebhookMapper webhookMapper,
                                  @Value("${cayleywcs.webhook.max-attempts:6}") long maxAttempts,
@@ -70,13 +75,16 @@ public class WebhookDeliveryWorker {
     }
 
     @Scheduled(initialDelayString = "${cayleywcs.webhook.deliver-interval-ms:2000}",
-            fixedDelayString = "${cayleywcs.webhook.deliver-interval-ms:2000}")
+            fixedDelayString = "${cayleywcs.webhook.deliver-interval-ms:2000}", scheduler = "webhookScheduler")
     public void tick() {
-        runOnce();
+        WcsMetrics.tick(metrics, "webhook-delivery", this::runOnce);
     }
 
     /** 单轮投递（公开供测试驱动）。返回处理条数。 */
     public int runOnce() {
+        if (shouldStop()) {
+            return 0;
+        }
         List<WebhookDeliveryEntity> due = deliveryMapper.selectList(new QueryWrapper<WebhookDeliveryEntity>()
                 .eq("\"is_valid\"", true)
                 .eq("\"status\"", "pending")
@@ -85,22 +93,38 @@ public class WebhookDeliveryWorker {
                 .last("limit " + SCAN_LIMIT));
         int handled = 0;
         for (WebhookDeliveryEntity d : due) {
-            deliverOne(d);
+            if (shouldStop()) {
+                break;
+            }
+            boolean interrupted = deliverOne(d);
             handled++;
+            if (interrupted) {
+                break;
+            }
         }
         return handled;
     }
 
-    private void deliverOne(WebhookDeliveryEntity d) {
+    @PreDestroy
+    public void stop() {
+        stopping = true;
+    }
+
+    private boolean shouldStop() {
+        return stopping || Thread.currentThread().isInterrupted();
+    }
+
+    /** 返回 true 表示 HTTP 投递被中断，本轮须立即结束。 */
+    private boolean deliverOne(WebhookDeliveryEntity d) {
         WebhookEntity wh = webhookMapper.selectById(d.getWebhook_id());
         if (wh == null || !Boolean.TRUE.equals(wh.getIs_valid()) || !Boolean.TRUE.equals(wh.getEnabled())) {
             markFailed(d, "webhook 不存在/停用");
-            return;
+            return false;
         }
         String urlError = validateUrl(wh.getUrl());
         if (urlError != null) {
             markFailed(d, urlError); // SSRF/非法 URL：不重试，直接失败
-            return;
+            return false;
         }
         String body = d.getPayload() == null ? "{}" : d.getPayload();
         try {
@@ -112,12 +136,20 @@ public class WebhookDeliveryWorker {
                 d.setLast_response("HTTP " + code);
                 touch(d);
                 deliveryMapper.updateById(d);
-                return;
+                return false;
             }
             retryOrFail(d, "HTTP " + code + " " + truncate(resp.body()));
+        } catch (InterruptedException ex) {
+            try {
+                retryOrFail(d, "InterruptedException: " + ex.getMessage());
+            } finally {
+                Thread.currentThread().interrupt();
+            }
+            return true;
         } catch (Exception ex) {
             retryOrFail(d, ex.getClass().getSimpleName() + ": " + ex.getMessage());
         }
+        return false;
     }
 
     private HttpResponse<String> post(WebhookEntity wh, String body) throws Exception {

@@ -11,7 +11,7 @@
 ## 编码铁律（同 WMS）
 
 1. 业务接口一律 `POST` + `application/json`。
-2. JWT 仅在 `Authorization: Bearer`；`/open/**` 走 AppKey 鉴权。
+2. 管理端 JWT 仅在 `Authorization: Bearer`；对接应用通过 `POST /system/token` 获取 access_token，`/open/**` 采用 app_id、app_key、access_token、request_id、data 的 JSON 封装，认证后继续校验设备绑定权限。
 3. Service interface + `impl/*ServiceImpl`；MyBatis-Plus + Flyway。
 4. 统一响应 `ApiResponse<T>` / 分页 `PageData<T>`；异常经 `GlobalExceptionHandler`。
 5. 改完代码必须同步更新 `README.md`。

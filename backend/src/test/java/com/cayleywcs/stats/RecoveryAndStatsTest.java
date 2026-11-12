@@ -31,9 +31,14 @@ import org.springframework.test.context.ActiveProfiles;
  * M11 设备维护与统计：auto_retry 闭环（独立任务+链段）/耗尽转人工/退避/在飞停滞判失败+报警/
  * 统计三接口 fixture 断言/报文留存清理。
  */
-@SpringBootTest
+@SpringBootTest(properties={"cayleywcs.task.engine-interval-ms=1000000000","cayleywcs.chain.orchestrate-interval-ms=1000000000","cayleywcs.task.recovery-interval-ms=1000000000"})
 @ActiveProfiles("test-flyway")
 class RecoveryAndStatsTest {
+    @Autowired private com.cayleywcs.protocol.ProtocolService fixtureProtocols;
+    @Autowired private com.cayleywcs.application.mapper.ApplicationMapper fixtureApps;
+    @Autowired private com.cayleywcs.connection.ConnectionManager fixtureConnections;
+    @Autowired private com.cayleywcs.application.ApplicationService fixtureApplicationService;
+
 
     @Autowired
     private TaskRecoveryScheduler recoveryScheduler;
@@ -64,7 +69,6 @@ class RecoveryAndStatsTest {
         app.setApp_name(code);
         app.setApp_key("ak_" + code.toLowerCase());
         app.setApp_secret("s");
-        app.setProtocol_id(1L);
         app.setDirection("downstream");
         app.setDevice_type("stacker");
         app.setWork_mode("normal");
@@ -79,7 +83,7 @@ class RecoveryAndStatsTest {
         app.setIs_valid(true);
         app.setTenant_id(1L);
         applicationMapper.insert(app);
-        return app;
+        return com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,app.getId(),"stacker");
     }
 
     private TaskEntity newTask(Long appId, String no, String status) {
@@ -87,6 +91,7 @@ class RecoveryAndStatsTest {
         t.setApp_id(appId);
         t.setTask_no(no);
         t.setTask_type("1");
+        t.setPayload(com.cayleywcs.support.PublishedDeviceFixtures.stackerPayload());
         t = taskService.create(t);
         if (!TaskStatus.PENDING.equals(status)) {
             taskMapper.update(null, new UpdateWrapper<TaskEntity>()
@@ -100,6 +105,8 @@ class RecoveryAndStatsTest {
         ApplicationEntity app = newApp("REC-AUTO", "auto_retry", 2, 0);
         TaskEntity t = newTask(app.getId(), "REC-1", TaskStatus.FAILED);
         ageTask(t.getId()); // 退避到点（测试配置大退避防自动抢跑）
+        fixtureApplicationService.updateWorkMode(app.getId(),"paused");
+        fixtureConnections.open(app.getId());
 
         recoveryScheduler.runOnce();
 
@@ -157,6 +164,8 @@ class RecoveryAndStatsTest {
             Thread.sleep(20);
         }
         TaskEntity seg = chainService.tasksOf(chain.getId()).get(0);
+        fixtureApplicationService.updateWorkMode(app.getId(),"paused");
+        fixtureConnections.open(app.getId());
 
         // 段失败（未耗尽、退避到点）→ 编排器自动重派，链保持非终态
         taskMapper.update(null, new UpdateWrapper<TaskEntity>()
@@ -246,6 +255,7 @@ class RecoveryAndStatsTest {
     @Test
     void alarmTopCountsByFaultCode() {
         long appId = 88802L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
         alarmService.raise(appId, 5L, "warn", "m1", "s");
         alarmService.clearFault(appId, 5L);
         alarmService.raise(appId, 5L, "warn", "m2", "s"); // 清除后再发 = 第二行
@@ -260,8 +270,9 @@ class RecoveryAndStatsTest {
 
     @Test
     void connectionRecoveryClearsOnlyCommAlarm() {
-        // M11 审查 P1 组成环节：-4 停滞报警不得随连接恢复被清（任务侧问题未解决）
+        // -4 停滞报警不得随连接恢复被清（任务侧问题未解决）
         long appId = 88803L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
         alarmService.raise(appId, -1L, "error", "连接断开", "s");
         alarmService.raise(appId, TaskRecoveryScheduler.FAULT_CODE_TASK_STALE, "error", "任务停滞", "s");
 

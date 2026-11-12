@@ -46,33 +46,38 @@ public class AutoDoorDeviceHandler extends AbstractDeviceHandler {
 
     private boolean command(TaskEntity t, Long appId) {
         // 必填/合法性校验：action 必须 open|close，非法即判失败（不默认开门）
-        String action = payloadString(t, "action", "");
-        if (!"open".equalsIgnoreCase(action) && !"close".equalsIgnoreCase(action)) {
-            fail(t, "自动门任务 action 非法(需 open|close): '" + action + "'", 0);
+        Long openValue=payloadLongOrNull(t,"cmd_Open");
+        Long closeValue=payloadLongOrNull(t,"cmd_Close");
+        if (openValue==null || closeValue==null || (openValue!=0 && openValue!=1) || (closeValue!=0 && closeValue!=1)
+                || openValue+closeValue!=1) {
+            fail(t, "自动门 cmd_Open/cmd_Close 必须为0/1且恰好一个为1", 0);
             return false;
         }
         if (readInt(appId, "status_Mode") != MODE_ONLINE_AUTO || connectionManager.hasActiveFault(appId)) {
             return true; // 未就绪，下轮再试
         }
-        boolean open = "open".equalsIgnoreCase(action);
+        boolean open = openValue==1;
         t.setHandshake_step(Step.COMMANDING.name());
         t.setStatus(TaskStatus.EXECUTING);
         t.setDispatch_time(LocalDateTime.now());
+        beginPhysical(t);
         // 门动作是物理动作：占位提交防 cancel 竞态，赢不到则回退不发命令
         if (!claim(t)) {
             t.setHandshake_step(Step.CREATED.name());
             t.setStatus(TaskStatus.PENDING);
             return true;
         }
+        write(appId, open ? "cmd_Close" : "cmd_Open", 0);
         write(appId, open ? "cmd_Open" : "cmd_Close", 1);
         return true;
     }
 
     private boolean waitDoor(TaskEntity t, Long appId) {
-        boolean open = "open".equalsIgnoreCase(payloadString(t, "action", ""));
+        boolean open = payloadLong(t,"cmd_Open",0)==1;
         int target = open ? DOOR_OPEN : DOOR_CLOSED;
         int door = readInt(appId, "status_DoorState");
         if (door == target) {
+            captureResult(t);
             write(appId, "cmd_Open", 0);
             write(appId, "cmd_Close", 0);
             t.setHandshake_step(Step.DONE.name());

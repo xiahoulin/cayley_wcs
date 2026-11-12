@@ -1,0 +1,129 @@
+{
+  "task_id": "TASK-20261013-B6ABE134",
+  "status": "passed",
+  "current_deployment": [
+    {
+      "name": "cayleywcs-backend",
+      "image": "cayley_wcs-backend:no-group-20261013",
+      "running": true
+    },
+    {
+      "name": "cayleywcs-frontend",
+      "image": "cayley_wcs-frontend:no-group-20261013",
+      "running": true
+    }
+  ],
+  "current_stacker_application": {
+    "id": 3,
+    "app_code": "PALLET_SIM",
+    "device_type": "stacker",
+    "direction": "downstream",
+    "dispatch_strategy": "priority",
+    "work_mode": "normal",
+    "configuration_state": "active",
+    "desired_state": "open",
+    "protocol_revision_id": 2
+  },
+  "priority_semantics": {
+    "scope": "pending tasks for one device application",
+    "larger_number_first": true,
+    "default_priority": 0,
+    "tie_breaker": "task id ascending",
+    "priority_strategy_uses_priority": true,
+    "fifo_strategy_ignores_priority": true,
+    "inflight_tasks_continue_without_preemption": true,
+    "paused_or_maintenance_stops_new_dispatch": true,
+    "no_cross_device_global_priority_queue": true,
+    "chain_children_inherit_chain_priority": true,
+    "chain_scan_order": "chain id ascending",
+    "chain_scan_itself_not_priority_ordered": true,
+    "ordinary_application_edit_does_not_change_dispatch_strategy": true
+  },
+  "existing_tests": {
+    "total": 19,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "com.cayleywcs.task.orchestrate.ChainOrchestrationTest",
+        "tests": 9,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.task.orchestrate.DispatchStrategyTest",
+        "tests": 6,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.task.TaskEngineConcurrencyTest",
+        "tests": 4,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "architecture_facts": {
+    "backend": "single Spring Boot process with internal modules",
+    "current_upper_protocol": "HTTP",
+    "native_lower_protocols": [
+      "OPC UA",
+      "S7",
+      "Modbus TCP",
+      "HTTP",
+      "MQTT",
+      "TCP"
+    ],
+    "device_handlers": [
+      "stacker",
+      "palletizer",
+      "conveyor",
+      "lift",
+      "auto_door"
+    ],
+    "postgresql": [
+      "protocol snapshots",
+      "application token digests",
+      "task queues",
+      "chains",
+      "native number leases",
+      "results",
+      "alarms",
+      "logs",
+      "webhook cursors and deliveries"
+    ],
+    "redis": [
+      "management refresh tokens"
+    ],
+    "in_process": [
+      "device coordination locks",
+      "single-use websocket tickets"
+    ],
+    "milo_simulator_profile_only": true
+  },
+  "diagram_artifacts": {
+    "wcs-system-architecture.svg": {
+      "path": "E:\\workspace\\cayley_ai\\cayley_project\\cayley_wcs\\docs\\architecture\\wcs-system-architecture.svg",
+      "sha256": "d6beec52f80e00d6183add2ad4781c2585e214dd24b6d4c011d89bb0c9740306",
+      "bytes": 16504
+    },
+    "wcs-system-architecture.png": {
+      "path": "E:\\workspace\\cayley_ai\\cayley_project\\cayley_wcs\\docs\\architecture\\wcs-system-architecture.png",
+      "sha256": "24a65b3b61664ad528932d387cb81979d536d878d5a6154f2051498a70fc2d59",
+      "bytes": 780143
+    },
+    "wcs-system-architecture.md": {
+      "path": "E:\\workspace\\cayley_ai\\cayley_project\\cayley_wcs\\docs\\architecture\\wcs-system-architecture.md",
+      "sha256": "783ce3ca1155e864f1a306c80f7c9961f59c6406d56faaf506b0014636f3aff5",
+      "bytes": 4601
+    }
+  },
+  "diagram_render_and_original_resolution_visual_check": "passed",
+  "diagram_xml_and_source_links": "passed",
+  "production_code_docker_and_user_business_data_modified": false
+}

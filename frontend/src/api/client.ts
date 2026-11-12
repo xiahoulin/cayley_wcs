@@ -38,12 +38,16 @@ http.interceptors.response.use(
   },
 )
 
+export class ApiError extends Error {
+  constructor(public readonly code: number, message: string) { super(message); this.name = 'ApiError' }
+}
+
 /** 统一拆 ApiResponse 信封：失败抛出 errorMessage。 */
-export async function post<T>(url: string, body?: unknown): Promise<T> {
-  const resp = await http.post<ApiResponse<T>>(url, body ?? {})
+export async function post<T>(url: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const resp = await http.post<ApiResponse<T>>(url, body ?? {}, { signal })
   const payload = resp.data
   if (!payload.isSuccess) {
-    throw new Error(payload.errorMessage || `请求失败(${payload.code})`)
+    throw new ApiError(payload.code, payload.errorMessage || `请求失败(${payload.code})`)
   }
   return payload.data
 }

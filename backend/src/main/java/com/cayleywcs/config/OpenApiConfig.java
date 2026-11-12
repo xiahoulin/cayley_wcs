@@ -7,6 +7,10 @@ import io.swagger.v3.oas.models.Components;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.media.IntegerSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
 
 @Configuration
 public class OpenApiConfig {
@@ -30,7 +34,43 @@ public class OpenApiConfig {
     public GroupedOpenApi openIntegrationApi() {
         return GroupedOpenApi.builder()
                 .group("open")
-                .pathsToMatch("/open/**")
+                .pathsToMatch("/open/**", "/system/token")
+                .addOpenApiCustomizer(api -> {
+                    for (String name : java.util.List.of("TaskEntity", "TaskChainEntity", "AlarmEntity")) {
+                        Schema<?> schema = api.getComponents().getSchemas().get(name);
+                        if (schema != null && schema.getProperties() != null) schema.getProperties().remove("tenant_id");
+                    }
+                    api.getPaths().forEach((path, item) -> item.readOperations().forEach(operation -> {
+                    if (!"/system/token".equals(path) && operation.getRequestBody() != null) {
+                        operation.getRequestBody().getContent().values().forEach(media -> {
+                            Schema<?> data = media.getSchema();
+                            ObjectSchema envelope = new ObjectSchema();
+                            envelope.addProperty("app_id", new StringSchema());
+                            envelope.addProperty("app_key", new StringSchema());
+                            envelope.addProperty("access_token", new StringSchema());
+                            envelope.addProperty("request_id", new StringSchema().maxLength(64));
+                            envelope.addProperty("data", data);
+                            envelope.setRequired(java.util.List.of("app_id", "app_key", "access_token", "data"));
+                            media.setSchema(envelope);
+                        });
+                    }
+                    if (operation.getResponses() != null) operation.getResponses().values().forEach(response -> {
+                        if (response.getContent() == null) return;
+                        response.getContent().values().forEach(media -> {
+                            Schema<?> old = media.getSchema();
+                            if (old != null && old.get$ref() != null) old = api.getComponents().getSchemas().get(old.get$ref().substring(old.get$ref().lastIndexOf('/') + 1));
+                            Schema<?> data = old != null && old.getProperties() != null ? (Schema<?>) old.getProperties().get("data") : new ObjectSchema();
+                            ObjectSchema envelope = new ObjectSchema();
+                            envelope.addProperty("errcode", new IntegerSchema());
+                            envelope.addProperty("errmsg", new StringSchema());
+                            envelope.addProperty("request_id", new StringSchema());
+                            envelope.addProperty("timestamp", new StringSchema().format("date-time"));
+                            envelope.addProperty("data", data == null ? new ObjectSchema() : data);
+                            media.setSchema(envelope);
+                        });
+                    });
+                }));
+                })
                 .build();
     }
 

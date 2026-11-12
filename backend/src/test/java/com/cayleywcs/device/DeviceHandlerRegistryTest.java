@@ -56,11 +56,14 @@ class DeviceHandlerRegistryTest {
         when(users.currentUser()).thenReturn(null); // Audits 兜底 system
         ApplicationServiceImpl service =
                 new ApplicationServiceImpl(mock(ApplicationMapper.class), users, provider);
+        var contracts=mock(com.cayleywcs.protocol.contract.ProtocolContractService.class);
+        when(contracts.resolve(org.mockito.ArgumentMatchers.any())).thenReturn(
+                new com.cayleywcs.protocol.contract.ProtocolContractService.Snapshot(1L,1L,1L,"sim","stacker",List.of(),"test"));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"contracts",contracts);
 
         ApplicationEntity unknown = new ApplicationEntity();
         unknown.setApp_code("X1");
         unknown.setApp_name("未知设备");
-        unknown.setProtocol_id(1L);
         unknown.setDevice_type("conveyor"); // M9 才有 handler
         assertThatThrownBy(() -> service.create(unknown))
                 .isInstanceOf(WcsException.class)
@@ -69,21 +72,18 @@ class DeviceHandlerRegistryTest {
         ApplicationEntity ok = new ApplicationEntity();
         ok.setApp_code("X2");
         ok.setApp_name("堆垛机");
-        ok.setProtocol_id(1L);
         ok.setDevice_type("stacker");
         service.create(ok); // 不抛
 
         ApplicationEntity upstream = new ApplicationEntity();
         upstream.setApp_code("X3");
         upstream.setApp_name("上位系统");
-        upstream.setProtocol_id(1L);
         upstream.setDevice_type("none"); // 上位系统豁免
         service.create(upstream); // 不抛
 
         ApplicationEntity blank = new ApplicationEntity();
         blank.setApp_code("X4");
         blank.setApp_name("缺省类型");
-        blank.setProtocol_id(1L);
         service.create(blank); // 空值走 DB 默认，不抛
     }
 }

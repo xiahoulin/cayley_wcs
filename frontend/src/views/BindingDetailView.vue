@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import BindingMatchDetails from '../components/BindingMatchDetails.vue'
 import {
   bindingAll, bindingCreate, bindingUpdate, bindingDelete,
-  applicationAll, type AppBinding, type Application,
+  applicationAll, bindingCheck, type AppBinding, type Application, type BindingMatch,
 } from '../api/wcs'
 
 const rows = ref<AppBinding[]>([])
@@ -10,6 +11,22 @@ const apps = ref<Application[]>([])
 const error = ref('')
 const editing = ref<AppBinding | null>(null)
 const search = ref('')
+const match = ref<BindingMatch | null>(null)
+const checking = ref(false)
+const saving = ref(false)
+let checkGeneration = 0
+watch(() => [editing.value?.upstream_app_id, editing.value?.downstream_app_id], () => { match.value = null; checkGeneration++; if (editing.value) checkMatch() })
+async function checkMatch() {
+  if (!editing.value?.upstream_app_id || !editing.value?.downstream_app_id) return
+  const generation = ++checkGeneration
+  match.value = null
+  checking.value = true
+  try {
+    const checked = await bindingCheck(editing.value.upstream_app_id, editing.value.downstream_app_id)
+    if (generation === checkGeneration) match.value = checked
+  } catch (e: any) { if (generation === checkGeneration) error.value = e?.message || '匹配检查失败' }
+  finally { if (generation === checkGeneration) checking.value = false }
+}
 
 function appLabel(id: number) {
   const a = apps.value.find((x) => x.id === id)
@@ -56,13 +73,16 @@ async function save() {
     return
   }
   try {
+    saving.value = true
+    await checkMatch()
+    if (!match.value?.compatible) { error.value = '请先修正请求与响应点位差异'; return }
     if (editing.value.id) await bindingUpdate(editing.value)
     else await bindingCreate(editing.value)
     editing.value = null
     await load()
   } catch (e: any) {
     error.value = e?.message || '保存失败'
-  }
+  } finally { saving.value = false }
 }
 async function remove(b: AppBinding) {
   if (!b.id || !confirm('删除该绑定？删除后该上位侧将无权指挥对应下位侧应用。')) return
@@ -110,6 +130,7 @@ onMounted(load)
     <div v-if="editing" class="modal-mask" @click.self="editing = null">
       <div class="panel modal">
         <h3>{{ editing.id ? '编辑绑定' : '新建绑定' }}</h3>
+        <p v-if="error" class="tag err">{{ error }}</p>
         <div class="grid2">
           <div class="field">
             <label>上位侧应用</label>
@@ -139,11 +160,13 @@ onMounted(load)
             </select>
           </div>
         </div>
+        <BindingMatchDetails :match="match" :checking="checking" />
         <div class="field"><label>备注</label><input v-model="editing.remark" /></div>
         <div class="toolbar" style="margin-top:8px">
           <span class="spacer"></span>
           <button @click="editing = null">取消</button>
-          <button class="primary" @click="save">保存</button>
+          <button :disabled="checking" @click="checkMatch">重新检查</button>
+          <button class="primary" :disabled="saving || checking || !match?.compatible" @click="save">保存</button>
         </div>
       </div>
     </div>

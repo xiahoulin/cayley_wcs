@@ -7,10 +7,17 @@ import com.cayleywcs.common.entity.BaseEntity;
 import java.util.Map;
 
 /**
- * 协议表（需求 1）。data_format / transport_template 以 JSON 表示（text 存储 + JacksonTypeHandler）。
+ * 协议表。data_format / transport_template 以 JSON 表示（text 存储 + JacksonTypeHandler）。
  */
 @TableName(value = "\"wcs_protocol\"", autoResultMap = true)
 public class ProtocolEntity extends BaseEntity {
+    private Long app_id;
+    private Boolean legacy_template;
+
+    public Long getApp_id() { return app_id; }
+    public void setApp_id(Long value) { app_id = value; }
+    public Boolean getLegacy_template() { return legacy_template; }
+    public void setLegacy_template(Boolean value) { legacy_template = value; }
     private String protocol_code;
     private String protocol_name;
     private String target_system;
@@ -25,6 +32,16 @@ public class ProtocolEntity extends BaseEntity {
     private String version;
     private String status;
     private String remark;
+    private String lifecycle_state;
+    private Long row_version;
+    private Long published_revision_id;
+
+    public String getLifecycle_state() { return lifecycle_state; }
+    public void setLifecycle_state(String value) { lifecycle_state = value; }
+    public Long getRow_version() { return row_version; }
+    public void setRow_version(Long value) { row_version = value; }
+    public Long getPublished_revision_id() { return published_revision_id; }
+    public void setPublished_revision_id(Long value) { published_revision_id = value; }
 
     public String getProtocol_code() {
         return protocol_code;

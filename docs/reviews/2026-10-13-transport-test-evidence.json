@@ -1,0 +1,161 @@
+{
+  "cases": [
+    {
+      "name": "additionalDeclaredNativeTypesUseActualVariants()",
+      "suite": "com.cayleywcs.adapter.OpcUaNativeTransportTest",
+      "outcome": "passed",
+      "seconds": 5.689
+    },
+    {
+      "name": "readsWritesCorrelatedPointsAndRejectsRetainedAndTimeout()",
+      "suite": "com.cayleywcs.adapter.ExternalMqttTransportTest",
+      "outcome": "passed",
+      "seconds": 1.479
+    },
+    {
+      "name": "tcpReadsWritesFragmentedFramesAndRejectsInvalidCorrelation()",
+      "suite": "com.cayleywcs.adapter.PointMessageTransportTest",
+      "outcome": "passed",
+      "seconds": 0.019
+    },
+    {
+      "name": "rejectsDuplicatePayloadKeysAndStaleReplies()",
+      "suite": "com.cayleywcs.adapter.PointMessageTransportTest",
+      "outcome": "passed",
+      "seconds": 0.004
+    },
+    {
+      "name": "httpUsesPostPayloadAndChecksStatusCorrelationAndJson()",
+      "suite": "com.cayleywcs.adapter.PointMessageTransportTest",
+      "outcome": "passed",
+      "seconds": 0.217
+    },
+    {
+      "name": "nativeTypesPermissionsFaultArrayAndStackerHandshake()",
+      "suite": "com.cayleywcs.adapter.OpcUaNativeTransportTest",
+      "outcome": "passed",
+      "seconds": 4.131
+    },
+    {
+      "name": "tcpRejectsOversizedFrameAndClosesTimedOutChannel()",
+      "suite": "com.cayleywcs.adapter.PointMessageTransportTest",
+      "outcome": "passed",
+      "seconds": 0.405
+    },
+    {
+      "name": "completeOperationTimeoutIncludesSlowPartialResponses()",
+      "suite": "com.cayleywcs.adapter.PointMessageTransportTest",
+      "outcome": "passed",
+      "seconds": 0.259
+    },
+    {
+      "name": "modbusReadsAndWritesSignedAndMultiRegisterValuesAndCoils()",
+      "suite": "com.cayleywcs.adapter.ExternalPlcTransportTest",
+      "outcome": "passed",
+      "seconds": 2.489
+    },
+    {
+      "name": "s7ReadsAndWritesNativeSignedWordsAndArrays()",
+      "suite": "com.cayleywcs.adapter.ExternalPlcTransportTest",
+      "outcome": "passed",
+      "seconds": 0.132
+    }
+  ],
+  "notes": [
+    "PLC4X0.12 S7 empty-output issue reproduced on Netty4.2 and4.1; fixed by unified PLC4X0.13.1 upgrade",
+    "Removed duplicate PlcConnection.connect after connection manager already connected",
+    "Spring/Flyway/Redis/WMS workflow/deployment validation belongs to parent integration stage",
+    "The added OPCUA UInt64 full-range failure was retained as evidence then resolved by explicit unsupported capability, not by reducing the assertion",
+    "Final10 tests include native aliases,UInt32,UInt64 capability rejection; prior full-project Surefire run also passed10 tests before these added boundaries"
+  ],
+  "real_protocols": {
+    "s7": [
+      "Snap7 DB100",
+      "INT16=-2345",
+      "INT16 array [-32768,0,32767]",
+      "INT16 overflow rejected",
+      "SHORT/BIT aliases normalized to native INT/BOOL",
+      "UINT64 maximum 18446744073709551615 reads back exactly"
+    ],
+    "tcp": [
+      "length prefix big-endian JSON",
+      "fragmented header/body",
+      "bidirectional I/O",
+      "wrong correlation",
+      "invalid length",
+      "whole frame timeout"
+    ],
+    "opcua": [
+      "PLC4X TCP to Milo",
+      "Int16/UInt16/Int32/Int64/Float/Double/Boolean/Unicode String/typed arrays",
+      "UInt16 task number 65534",
+      "Long.MAX_VALUE preserved exactly",
+      "Bad_NotWritable",
+      "Bad_TypeMismatch",
+      "60-element Int16 fault array",
+      "task feedback 65534 and handshake 0->1->2->0",
+      "fault18 reset to0",
+      "UINT32 maximum 4294967295 reads back exactly",
+      "TEXT/BOOLEAN/INTEGER aliases use valid native tags",
+      "UINT64 and typed UINT64 arrays rejected before network I/O; device value stays zero"
+    ],
+    "mqtt": [
+      "actual Mosquitto and independent Python device",
+      "QoS 1",
+      "read/write correlation",
+      "retained stale reply ignored",
+      "missing device timeout"
+    ],
+    "modbus_tcp": [
+      "INT16=-12345",
+      "DINT=-123456789",
+      "coil=true",
+      "4 byte/word order combinations independently verified against raw UINT registers",
+      "device exception for out-of-range address",
+      "UINT64 maximum 18446744073709551615 reads back exactly"
+    ],
+    "http": [
+      "POST JSON payload",
+      "bad HTTP status",
+      "malformed JSON",
+      "correlation",
+      "bounded body",
+      "whole body timeout"
+    ]
+  },
+  "command": "WCS_EXTERNAL_SIMULATORS=true mvn -Dtest=ExternalPlcTransportTest,ExternalMqttTransportTest,PointMessageTransportTest,OpcUaNativeTransportTest test",
+  "scope": "Isolated real network adapter tests, no production Docker or business database mutation",
+  "task_id": "TASK-20261013-3AA0DA2D",
+  "source_reports": [
+    "Isolated JUnit Platform TEST-junit-jupiter.xml, only case names/results retained; raw XML environment not copied"
+  ],
+  "summary": {
+    "skipped": 0,
+    "passed": 10,
+    "failed": 0,
+    "tests": 10
+  },
+  "executed_at": "2026-10-13T02:08:50+09:00",
+  "validated_error_codes": [
+    4222,
+    4224,
+    4225
+  ],
+  "dependencies": {
+    "pymodbus": "3.12.1",
+    "milo": "0.6.14",
+    "netty": "4.2.12.Final",
+    "mosquitto": "2.0.22",
+    "plc4x": "0.13.1",
+    "paho_python": "2.1.0",
+    "snap7": "2.1.0"
+  },
+  "runner": "JUnit Platform Console 6.0.3, isolated compiled transport sources to avoid concurrent unrelated testCompile edits",
+  "capability_restrictions": {
+    "reason": "PLC4X0.13.1 unsigned64 writer loses high32 bits; tested device received 4294967295 for request18446744073709551615",
+    "other_protocols": "HTTP unaffected; S7/Modbus full unsigned64 native maximum verified",
+    "protocol": "opcua",
+    "type": "UINT64 and aliases/typed arrays",
+    "resolution": "PointTypeRegistry rejects capability at canonical/options/publish/matching and adapter returns4224 before I/O"
+  }
+}

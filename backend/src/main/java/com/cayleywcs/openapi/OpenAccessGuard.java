@@ -29,8 +29,7 @@ public class OpenAccessGuard {
     public void assertCanCommand(HttpServletRequest http, Long appId, String action) {
         Long caller = caller(http);
         if (caller == null) {
-            warnBypass(action, appId);
-            return;
+            throw new com.cayleywcs.common.exception.WcsException(com.cayleywcs.common.exception.ErrorCode.OPEN_TOKEN_MISSING, "缺少应用认证上下文");
         }
         // 越权判定按调用方租户隔离（与唯一索引含 tenant 对齐），防止跨租户绑定误放行。
         bindingService.assertAllowed(caller, appId, tenant(http));
@@ -40,8 +39,7 @@ public class OpenAccessGuard {
     public void assertCanQuery(HttpServletRequest http, Long appId, String action) {
         Long caller = caller(http);
         if (caller == null) {
-            warnBypass(action, appId);
-            return;
+            throw new com.cayleywcs.common.exception.WcsException(com.cayleywcs.common.exception.ErrorCode.OPEN_TOKEN_MISSING, "缺少应用认证上下文");
         }
         if (caller.equals(appId)) {
             return;
@@ -56,8 +54,7 @@ public class OpenAccessGuard {
     public List<Long> visibleAppIds(HttpServletRequest http, String action) {
         Long caller = caller(http);
         if (caller == null) {
-            warnBypass(action, null);
-            return null;
+            throw new com.cayleywcs.common.exception.WcsException(com.cayleywcs.common.exception.ErrorCode.OPEN_TOKEN_MISSING, "缺少应用认证上下文");
         }
         List<Long> ids = new ArrayList<>(bindingService.grantedDownstreamIds(caller, tenant(http)));
         if (!ids.contains(caller)) {

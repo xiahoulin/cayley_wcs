@@ -1,6 +1,9 @@
 package com.cayleywcs.simulator;
 
 import java.util.Map;
+import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -43,7 +46,7 @@ public class StackerDeviceState implements DeviceSim {
         store.put("status_CurrentPos_Lift", 0.0);
         store.put("status_CurrentPos_Fork", 0.0);
         store.put("status_TaskNum", 0);
-        store.put("status_ErrorCode", 0);
+        store.put("status_ErrorCode", Collections.nCopies(60, (short) 0));
     }
 
     /** 心跳节拍：翻转 PLC_Heart 并推进任务执行（执行中→2 拍后完成）。 */
@@ -81,11 +84,14 @@ public class StackerDeviceState implements DeviceSim {
     }
 
     public synchronized void injectFault(int code) {
-        store.put("status_ErrorCode", code);
+        if (code < 0 || code > Short.MAX_VALUE) { throw new IllegalArgumentException("故障码超出 Int16 范围"); }
+        var faults = new ArrayList<Short>(Collections.nCopies(60, (short) 0));
+        faults.set(0, (short) code);
+        store.put("status_ErrorCode", List.copyOf(faults));
     }
 
     public synchronized void clearFault() {
-        store.put("status_ErrorCode", 0);
+        store.put("status_ErrorCode", Collections.nCopies(60, (short) 0));
     }
 
     public synchronized Map<String, Object> snapshot() {
@@ -113,7 +119,7 @@ public class StackerDeviceState implements DeviceSim {
     /** 故障复位：cmd_ResetFault=1 时清除故障码并中止当前任务回到空闲（否则故障失败的任务把设备永久卡在非空闲态）。 */
     private void handleResetFault(int reset) {
         if (reset == 1) {
-            store.put("status_ErrorCode", 0);
+            store.put("status_ErrorCode", Collections.nCopies(60, (short) 0));
             store.put("status_Task", 0);
             store.put("status_TaskTypeFeedback", 0);
         }

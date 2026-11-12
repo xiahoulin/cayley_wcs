@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1430" viewBox="0 0 1600 1430" role="img" aria-labelledby="diagramTitle diagramDescription">
+<title id="diagramTitle">礁盘工业 WCS 系统架构</title><desc id="diagramDescription">当前 WCS 的 HTTP 应用接入、管理端、单个 Spring Boot 后端内的配置、任务、连接和设备驱动模块，以及 PostgreSQL、Redis、设备和内置仿真。</desc>
+<defs>
+<marker id="orange" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#e47718"/></marker>
+<marker id="orangeStart" markerWidth="9" markerHeight="9" refX="1" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M8 0 L0 4 L8 8 Z" fill="#e47718"/></marker>
+<marker id="teal" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#2f7b89"/></marker>
+<marker id="tealStart" markerWidth="9" markerHeight="9" refX="1" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M8 0 L0 4 L8 8 Z" fill="#2f7b89"/></marker>
+<marker id="blue" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#536b8c"/></marker>
+<marker id="blueStart" markerWidth="9" markerHeight="9" refX="1" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M8 0 L0 4 L8 8 Z" fill="#536b8c"/></marker>
+</defs><g font-family="Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif">
+<rect width="1600" height="1430" fill="#f4f7fb"/>
+<rect x="70" y="34" width="7" height="47" rx="2" fill="#e47718"/>
+<text x="94" y="62" font-size="34" fill="#10243e" font-weight="700" text-anchor="start">礁盘工业 WCS 系统架构</text>
+<text x="95" y="85" font-size="17" fill="#607086" font-weight="400" text-anchor="start">当前实现  ·  HTTP 上位接入与多协议设备控制</text>
+<rect x="150" y="115" width="530" height="100" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="150" y="115" width="5" height="100" rx="2" fill="#1e3a5f"/>
+<text x="173" y="146" font-size="23" fill="#1e3a5f" font-weight="700" text-anchor="start">WMS 与其他对接应用</text>
+<text x="173" y="175" font-size="17" fill="#334155" font-weight="400" text-anchor="start">获取访问令牌 access_token</text>
+<text x="173" y="197" font-size="17" fill="#334155" font-weight="400" text-anchor="start">下发单任务、任务链；查询结果与接收回调</text>
+<rect x="950" y="115" width="490" height="100" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="950" y="115" width="5" height="100" rx="2" fill="#2f7b89"/>
+<text x="973" y="146" font-size="23" fill="#2f7b89" font-weight="700" text-anchor="start">管理端 Vue 3</text>
+<text x="973" y="175" font-size="17" fill="#334155" font-weight="400" text-anchor="start">协议、应用、绑定、任务和运维配置</text>
+<text x="973" y="197" font-size="17" fill="#334155" font-weight="400" text-anchor="start">JWT 登录；票据授权后接收实时监控</text>
+<rect x="70" y="250" width="1460" height="840" rx="18" fill="#eaf0f7" stroke="#bdccde" stroke-width="1.8"/>
+<text x="100" y="284" font-size="27" fill="#10243e" font-weight="700" text-anchor="start">WCS 后端</text>
+<text x="475" y="283" font-size="18" fill="#52657d" font-weight="400" text-anchor="start">Java 25  /  Spring Boot 4</text>
+<rect x="850" y="262" width="270" height="30" rx="15" fill="#ffffff"/>
+<text x="985" y="283" font-size="16" fill="#52657d" font-weight="500" text-anchor="middle">单个后端进程内的模块</text>
+<rect x="150" y="315" width="430" height="95" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="150" y="315" width="5" height="95" rx="2" fill="#1e3a5f"/>
+<text x="173" y="346" font-size="23" fill="#1e3a5f" font-weight="700" text-anchor="start">开放 API 与应用认证</text>
+<text x="173" y="375" font-size="17" fill="#334155" font-weight="400" text-anchor="start">访问令牌、公共 JSON 封装</text>
+<text x="173" y="397" font-size="17" fill="#334155" font-weight="400" text-anchor="start">接口权限、设备绑定授权与业务查询</text>
+<rect x="950" y="315" width="490" height="95" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="950" y="315" width="5" height="95" rx="2" fill="#2f7b89"/>
+<text x="973" y="346" font-size="23" fill="#2f7b89" font-weight="700" text-anchor="start">管理 API 与监控入口</text>
+<text x="973" y="375" font-size="17" fill="#334155" font-weight="400" text-anchor="start">JWT 管理接口、配置和运行查询</text>
+<text x="973" y="397" font-size="17" fill="#334155" font-weight="400" text-anchor="start">单次 WebSocket 票据与监控推送</text>
+<rect x="110" y="455" width="400" height="145" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="110" y="455" width="5" height="145" rx="2" fill="#536b8c"/>
+<text x="133" y="486" font-size="23" fill="#536b8c" font-weight="700" text-anchor="start">应用、协议与点位配置</text>
+<text x="133" y="515" font-size="16" fill="#334155" font-weight="400" text-anchor="start">草稿、发布快照、应用固定版本</text>
+<text x="133" y="537" font-size="16" fill="#334155" font-weight="400" text-anchor="start">字段、请求与响应方向、用途</text>
+<text x="133" y="559" font-size="16" fill="#334155" font-weight="400" text-anchor="start">逻辑类型、原生类型、完整约束</text>
+<text x="133" y="581" font-size="16" fill="#334155" font-weight="400" text-anchor="start">上下游匹配与设备绑定授权</text>
+<rect x="560" y="455" width="480" height="110" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="560" y="455" width="5" height="110" rx="2" fill="#e47718"/>
+<text x="583" y="486" font-size="23" fill="#e47718" font-weight="700" text-anchor="start">任务接收与业务服务</text>
+<text x="583" y="515" font-size="17" fill="#334155" font-weight="400" text-anchor="start">参数校验、业务编号幂等、任务入库</text>
+<text x="583" y="537" font-size="17" fill="#334155" font-weight="400" text-anchor="start">请求点位对象 payload 与固定协议版本</text>
+<rect x="560" y="615" width="480" height="120" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="560" y="615" width="5" height="120" rx="2" fill="#e47718"/>
+<text x="583" y="646" font-size="23" fill="#e47718" font-weight="700" text-anchor="start">任务调度与任务链编排</text>
+<text x="583" y="675" font-size="17" fill="#334155" font-weight="400" text-anchor="start">同设备待派工：优先级或先进先出</text>
+<text x="583" y="697" font-size="17" fill="#334155" font-weight="400" text-anchor="start">在飞任务续执行、失败恢复</text>
+<text x="583" y="719" font-size="17" fill="#334155" font-weight="400" text-anchor="start">选设备、逐段生成任务、按段顺序执行</text>
+<rect x="560" y="780" width="480" height="145" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="560" y="780" width="5" height="145" rx="2" fill="#e47718"/>
+<text x="583" y="811" font-size="23" fill="#e47718" font-weight="700" text-anchor="start">设备执行与业务驱动</text>
+<text x="583" y="840" font-size="17" fill="#334155" font-weight="400" text-anchor="start">设备互斥、原生任务号租约</text>
+<text x="583" y="862" font-size="17" fill="#334155" font-weight="400" text-anchor="start">版本与权限复验、状态机握手</text>
+<text x="583" y="884" font-size="17" fill="#334155" font-weight="400" text-anchor="start">堆垛机、码垛机、输送线</text>
+<text x="583" y="906" font-size="17" fill="#334155" font-weight="400" text-anchor="start">提升机、自动门</text>
+<rect x="560" y="970" width="480" height="100" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="560" y="970" width="5" height="100" rx="2" fill="#e47718"/>
+<text x="583" y="1001" font-size="23" fill="#e47718" font-weight="700" text-anchor="start">协议适配与点位封装</text>
+<text x="583" y="1030" font-size="16" fill="#334155" font-weight="400" text-anchor="start">OPC UA / S7 / Modbus TCP / HTTP / MQTT / TCP</text>
+<text x="583" y="1052" font-size="16" fill="#334155" font-weight="400" text-anchor="start">按协议封装原生点位、转换类型并验证响应</text>
+<rect x="110" y="695" width="400" height="185" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="110" y="695" width="5" height="185" rx="2" fill="#536b8c"/>
+<text x="133" y="726" font-size="23" fill="#536b8c" font-weight="700" text-anchor="start">连接治理</text>
+<text x="133" y="755" font-size="16" fill="#334155" font-weight="400" text-anchor="start">连接池、设备连接与周期采集</text>
+<text x="133" y="777" font-size="16" fill="#334155" font-weight="400" text-anchor="start">心跳、断线重连、期望状态恢复</text>
+<text x="133" y="799" font-size="16" fill="#334155" font-weight="400" text-anchor="start">设备快照、故障复位</text>
+<text x="133" y="821" font-size="16" fill="#334155" font-weight="400" text-anchor="start">任务推进与设备读写共享协调锁</text>
+<rect x="110" y="940" width="400" height="130" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="110" y="940" width="5" height="130" rx="2" fill="#536b8c"/>
+<text x="133" y="971" font-size="23" fill="#536b8c" font-weight="700" text-anchor="start">内置仿真环境</text>
+<text x="133" y="1000" font-size="16" fill="#334155" font-weight="400" text-anchor="start">内存 sim 与 loopback 测试适配</text>
+<text x="133" y="1022" font-size="16" fill="#334155" font-weight="400" text-anchor="start">Milo OPC UA 堆垛机仿真服务端</text>
+<text x="133" y="1044" font-size="16" fill="#334155" font-weight="400" text-anchor="start">OPC UA 服务端仅 simulator 配置启用</text>
+<rect x="1100" y="455" width="400" height="145" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="1100" y="455" width="5" height="145" rx="2" fill="#2f7b89"/>
+<text x="1123" y="486" font-size="23" fill="#2f7b89" font-weight="700" text-anchor="start">结果与运行管理</text>
+<text x="1123" y="515" font-size="16" fill="#334155" font-weight="400" text-anchor="start">任务采集结果、报警和故障码</text>
+<text x="1123" y="537" font-size="16" fill="#334155" font-weight="400" text-anchor="start">报文审计、统计、健康指标</text>
+<text x="1123" y="559" font-size="16" fill="#334155" font-weight="400" text-anchor="start">实时看板 WebSocket 与快照查询</text>
+<rect x="1100" y="710" width="400" height="170" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="1100" y="710" width="5" height="170" rx="2" fill="#2f7b89"/>
+<text x="1123" y="741" font-size="23" fill="#2f7b89" font-weight="700" text-anchor="start">Webhook 回调</text>
+<text x="1123" y="770" font-size="16" fill="#334155" font-weight="400" text-anchor="start">数据库扫描游标与持久投递待办</text>
+<text x="1123" y="792" font-size="16" fill="#334155" font-weight="400" text-anchor="start">任务、任务链和报警状态通知</text>
+<text x="1123" y="814" font-size="16" fill="#334155" font-weight="400" text-anchor="start">HMAC 签名、失败退避与重试</text>
+<rect x="110" y="1190" width="400" height="135" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="110" y="1190" width="5" height="135" rx="2" fill="#536b8c"/>
+<text x="133" y="1221" font-size="23" fill="#536b8c" font-weight="700" text-anchor="start">Redis</text>
+<text x="133" y="1250" font-size="17" fill="#334155" font-weight="400" text-anchor="start">管理端刷新令牌</text>
+<text x="133" y="1272" font-size="17" fill="#334155" font-weight="400" text-anchor="start">登录会话刷新状态</text>
+<rect x="560" y="1190" width="480" height="135" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="560" y="1190" width="5" height="135" rx="2" fill="#e47718"/>
+<text x="583" y="1221" font-size="23" fill="#e47718" font-weight="700" text-anchor="start">设备 PLC 与控制器</text>
+<text x="583" y="1250" font-size="18" fill="#334155" font-weight="400" text-anchor="start">堆垛机、码垛机、输送线</text>
+<text x="583" y="1272" font-size="18" fill="#334155" font-weight="400" text-anchor="start">提升机、自动门</text>
+<rect x="1100" y="1190" width="400" height="155" rx="12" fill="#ffffff" stroke="#d8e0eb" stroke-width="1.5"/>
+<rect x="1100" y="1190" width="5" height="155" rx="2" fill="#536b8c"/>
+<text x="1123" y="1221" font-size="23" fill="#536b8c" font-weight="700" text-anchor="start">PostgreSQL</text>
+<text x="1123" y="1250" font-size="16" fill="#334155" font-weight="400" text-anchor="start">协议快照、应用、绑定、令牌摘要</text>
+<text x="1123" y="1272" font-size="16" fill="#334155" font-weight="400" text-anchor="start">任务队列、任务链、任务号租约</text>
+<text x="1123" y="1294" font-size="16" fill="#334155" font-weight="400" text-anchor="start">采集结果、报警、日志、回调待办</text>
+<path d="M415 215 V315" fill="none" stroke="#e47718" stroke-width="2.5"  marker-end="url(#orange)" />
+<text x="433" y="247" font-size="15" fill="#99611d" font-weight="400" text-anchor="start">POST JSON</text>
+<path d="M1195 215 V315" fill="none" stroke="#2f7b89" stroke-width="2.5"  marker-end="url(#teal)" />
+<text x="1214" y="247" font-size="15" fill="#2f7b89" font-weight="400" text-anchor="start">管理请求</text>
+<path d="M580 362 H800 V455" fill="none" stroke="#e47718" stroke-width="2.5"  marker-end="url(#orange)" />
+<path d="M950 376 H920 V429 H310 V455" fill="none" stroke="#536b8c" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#blue)" />
+<path d="M1250 410 V455" fill="none" stroke="#2f7b89" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#teal)" />
+<path d="M510 505 H560" fill="none" stroke="#536b8c" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#blue)" />
+<path d="M800 565 V615" fill="none" stroke="#e47718" stroke-width="2.5"  marker-end="url(#orange)" />
+<path d="M800 735 V780" fill="none" stroke="#e47718" stroke-width="2.5"  marker-end="url(#orange)" />
+<path d="M800 925 V970" fill="none" stroke="#e47718" stroke-width="2.5"  marker-end="url(#orange)" />
+<path d="M510 835 H560" fill="none" stroke="#536b8c" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#blue)" marker-start="url(#blueStart)"/>
+<path d="M510 805 H535 V1018 H560" fill="none" stroke="#536b8c" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#blue)" />
+<path d="M560 1043 H510" fill="none" stroke="#536b8c" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#blue)" marker-start="url(#blueStart)"/>
+<path d="M1040 530 H1100" fill="none" stroke="#2f7b89" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#teal)" />
+<path d="M1280 600 V710" fill="none" stroke="#2f7b89" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#teal)" />
+<path d="M1500 510 H1517 V232 H1370 V215" fill="none" stroke="#2f7b89" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#teal)" />
+<path d="M1500 795 H1560 V100 H415 V115" fill="none" stroke="#2f7b89" stroke-width="1.8" stroke-dasharray="7 6" marker-end="url(#teal)" />
+<path d="M800 1070 V1190" fill="none" stroke="#e47718" stroke-width="2.5"  marker-end="url(#orange)" marker-start="url(#orangeStart)"/>
+<text x="822" y="1150" font-size="16" fill="#99611d" font-weight="400" text-anchor="start">原生协议读写</text>
+<path d="M310 1090 V1190" fill="none" stroke="#536b8c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#blue)" marker-start="url(#blueStart)"/>
+<text x="332" y="1148" font-size="16" fill="#52657d" font-weight="400" text-anchor="start">管理登录状态</text>
+<path d="M1300 1090 V1190" fill="none" stroke="#536b8c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#blue)" marker-start="url(#blueStart)"/>
+<text x="1320" y="1148" font-size="16" fill="#52657d" font-weight="400" text-anchor="start">统一持久化</text>
+<text x="80" y="1390" font-size="18" fill="#334155" font-weight="400" text-anchor="start">优先级仅排序同一设备的待派工任务；已下发或执行中的任务继续完成。</text>
+<text x="80" y="1414" font-size="16" fill="#607086" font-weight="400" text-anchor="start">任务队列与应用访问令牌摘要保存在 PostgreSQL；虚线表示配置、监控、回调及存储支撑关系。</text>
+</g></svg>

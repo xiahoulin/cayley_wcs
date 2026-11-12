@@ -1,0 +1,803 @@
+{
+  "task_id": "TASK-20261013-5830881D",
+  "recorded_at": "2026-10-13T17:00:15+09:00",
+  "status": "passed",
+  "scope": "在当前WCS开放API Word文档下发单任务一节插入HTTP到OPC UA堆垛机时序图；不涉及运行代码或Docker更新",
+  "document": {
+    "path": "docs/礁盘工业WCS开放API接口文档.docx",
+    "revision": "2.5",
+    "source_sha256": "5e4d9bd126480b8406966aea04bf40bf7ec0ea424f3dbd859b2eb479fa5bb866",
+    "published_sha256": "8d81144f24fc1a50a28e20cc7358a90d8f81acb0c68c200408bd102a8cf162e0",
+    "published_bytes_equal_validated_candidate": true,
+    "original_backup_verified": true,
+    "pages": 38,
+    "diagram_page": 10,
+    "placement": "3 1 下发单任务的相关错误码与新增流程说明之后，3 2 查询任务之前",
+    "native_toc_refreshed": true,
+    "native_page_fields_refreshed": true,
+    "navigation_entries": 29,
+    "model_labels_excluded_from_navigation": 11,
+    "all_toc_pages_match_rendered_headings": true,
+    "tables": 40,
+    "all_existing_business_text_preserved_in_order": true,
+    "all_nonrevision_tables_unchanged": true,
+    "protected_api_code_paragraphs": 524,
+    "protected_post_call_formats": 7,
+    "original_logo_and_media_preserved": true
+  },
+  "diagram": {
+    "embedded_png_sha256": "f7b2adbc2b811b398515d27e61c7c0d2c1130864e09600ec8ab7f39882780aed",
+    "width_mm": 174.0,
+    "height_mm": 217.46941666666666,
+    "event_count": 22,
+    "participant_count": 5,
+    "single_page": true,
+    "source_assets": [
+      {
+        "path": "docs/architecture/stacker-task-sequence.md",
+        "sha256": "9fc1789726c96c554eee8b5d43b62a53010219214ee19ed31534a1230fe3a66b"
+      },
+      {
+        "path": "docs/architecture/stacker-task-sequence.svg",
+        "sha256": "a86efad81240655588dd97647782856ec1ce7c8084aa840001259b538974e2ca"
+      },
+      {
+        "path": "docs/architecture/stacker-task-sequence.png",
+        "sha256": "f7b2adbc2b811b398515d27e61c7c0d2c1130864e09600ec8ab7f39882780aed"
+      }
+    ]
+  },
+  "implementation_facts": [
+    "HTTP成功表示受理；后台调度与响应返回可并行",
+    "新分配原生设备任务号前检查物理空闲，并持久预约任务号",
+    "参数写入和执行确认之前使用任务版本占位；执行意图先持久保存",
+    "执行确认1，受理后确认0，完成后确认2",
+    "响应采集验证及结果持久保存先于完成确认和清零",
+    "清零阶段补发确认2；命令区清零并回读任务状态0后完成",
+    "已完成状态保存成功后释放原生任务号占用",
+    "查询和回调使用本任务持久保存的结果",
+    "采集校验失败不进入完成确认与清零；通信异常等待恢复；重启按持久阶段恢复"
+  ],
+  "implementation_sources": [
+    {
+      "path": "backend/src/main/java/com/cayleywcs/task/OpenTaskController.java",
+      "sha256": "dc8798fad43f5219ecb73f32e09486f38bd08c50871b2522fe5444bfd5a6eae2"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/task/impl/TaskServiceImpl.java",
+      "sha256": "28a13a510c3958f50f8d8218fc34e1b6de489fad965730ebb0d6f9b1e3ea83e9"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/task/TaskEngine.java",
+      "sha256": "ccfa69ccef870e0d6c472b7ec45bf60bc6302649fc94b895c1e45e75fa0e5286"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/task/TaskExecutionService.java",
+      "sha256": "c6ca7f118d772f04e086332d7b135bdb4a1c9b4f82f75eb64687e3d247458b41"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/task/StackerHandshakeStateMachine.java",
+      "sha256": "4c5ae9a600f63dbb5b77c683dc25b2293f5e711ca5fda0ed1a555b007e6e01a2"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/device/AbstractDeviceHandler.java",
+      "sha256": "0124361c4abc23e0c1869dbbeaebe4b672a7b0e28085ffda9d3c3c381b39eb6a"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/connection/DeviceExecutionCoordinator.java",
+      "sha256": "bfdabaf758a261f8a661044fc28cca8a3b0aac6d775f542c82c6ad90991126ec"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/openapi/OpenReconcileController.java",
+      "sha256": "6fef9a3b63fa80bcddab674aab4c1dfed17a5cbfdf1a73ada13fc81a50636aa1"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/webhook/WebhookScanner.java",
+      "sha256": "055c2cf38467a0c1746adb8d5a78ea814c60ea842907770f1a5fd92a7ae7618e"
+    },
+    {
+      "path": "backend/src/main/java/com/cayleywcs/webhook/WebhookDeliveryWorker.java",
+      "sha256": "3cc7333730be0c956c76ef71049bc30ba61eaa3a4689ce2d3e4255c0eadc571c"
+    }
+  ],
+  "visual_qa": {
+    "status": "passed",
+    "candidate_sha256": "8d81144f24fc1a50a28e20cc7358a90d8f81acb0c68c200408bd102a8cf162e0",
+    "pages": 38,
+    "pages_inspected": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38
+    ],
+    "inspected_by": "/root/chinese_field_doc",
+    "all_pages_opened_at_original_resolution": true,
+    "diagram_page": 10,
+    "diagram_single_page_complete_and_readable": true,
+    "notes_page": 9,
+    "following_section_page": 11,
+    "cover_page": 1,
+    "toc_page": 2,
+    "notes": [
+      "两段新增说明利用第9页相关错误码后的余白，原有正文顺序不变。",
+      "第10页时序图标题与全部22步图在同一页，箭头/标签清楚完整，无挤压裁切。",
+      "第11页自然开始3.2，目录所有29项页码与Word实际一致。",
+      "第38页故障表尾部、两个错误响应示例和重试说明完整结束，没有新短尾页。"
+    ],
+    "checks": {
+      "no_blank_or_short_spill_pages": true,
+      "no_clipping": true,
+      "no_overlap": true,
+      "no_missing_glyphs": true,
+      "tables_and_code_continuations_complete": true,
+      "header_footer_and_page_numbers_correct": true
+    },
+    "page_evidence": [
+      {
+        "page": 1,
+        "png_sha256": "e2a1ffe6d27e87a854a9f89139f2c898d5ce2b4fef82db1517686a8525164d40",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 2,
+        "png_sha256": "509d524d14c87004990e8d0f2ae943bc90100b56d43db8da41b6d4f14ed4b0ad",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 3,
+        "png_sha256": "8a94880d664127eb54523c38ab23db4c4bc04fd0555ce05c53f537ae4c028fe1",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 4,
+        "png_sha256": "f2dcec5c940dee96ca778725b527aa93beae8e4f29e08ec9718f6814965edd9f",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 5,
+        "png_sha256": "9798a5110ea88545ad58460b8ab9bcc95fc7f97bfbebd72b70300c175a56bef6",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 6,
+        "png_sha256": "ff27ca19cfb051118bd7b64fc07f0b27f0d6cb0b0f3e4738c415def35bf3fd02",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 7,
+        "png_sha256": "e4326056f008748bd271a08b2a0b211ca0c2ba4eb9308804c88b70ed2d2f7dfe",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 8,
+        "png_sha256": "9233d7ac13f8b9d740bf5a906483bff470b281d36129fc849d507359c1059fd4",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 9,
+        "png_sha256": "84b7139706eb94a5a35c0f8de069b74f98a33701b2813953b220bb952bdf8e0b",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 10,
+        "png_sha256": "6c3f705838c19a03c1b3cc18b74aa990237b2ce305d5c2e46538ba298a9c7e7e",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 11,
+        "png_sha256": "c0d3b009d01f3be25e394c127045ec9f569c0ba519e7b2de70b8a9227d46317a",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 12,
+        "png_sha256": "ed05c722e80933b3f2037cbb32bd8866caf6876be1dd2a001c3d29d2c44f65cf",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 13,
+        "png_sha256": "5c536f0b2e1c02ee0dda676015f37a05012d47c88eb8aea49ae604a58e2b2d03",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 14,
+        "png_sha256": "16fcbbf39fe152cea42d7c84d96e6b6afa5b38ec54038b851ea6986f32aa70a1",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 15,
+        "png_sha256": "e37e0401fed6c53c32af198532088f6596d99d9ae3e9530aad4d360ebdf6a330",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 16,
+        "png_sha256": "4a4ab54a15538e9e772c856f02b8e4fd274f519dba46493167e5b7c6578db425",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 17,
+        "png_sha256": "593893f17ee769984465b666c82e350fae78db3f7d5266a1caae1cf77d165190",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 18,
+        "png_sha256": "152b68e724405e46196516a97926af0dfd528d3105b126e93563b8a1be9f6756",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 19,
+        "png_sha256": "d17f59cfbfb421e5a73f9c12864751781ceb495d8e51c7c6d08e0dae9ee573b4",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 20,
+        "png_sha256": "e5e5ea6339aacbaf1a9439ddf6cd218454628ee627462877776d6e6f2b5a1219",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 21,
+        "png_sha256": "0b3bd8b31fc14060ab4d9b74c3a4bd702a25883ed6be346d04797b0a6a6575c4",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 22,
+        "png_sha256": "4be12f77279285df37892eade204ed9cc33d2c21a4b66ca72ad497cd862da396",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 23,
+        "png_sha256": "3069db4978d5d4838d60b1a72a2d0f37c43ba570c7dc78e7fe29ea5bba3bb3ce",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 24,
+        "png_sha256": "d9c4600c1fe9187acb9cea9f8d7af36a545ce0a9d2242db71397ea5b4e32a8d6",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 25,
+        "png_sha256": "97388925eed4a8159226709da8f3065dc299268103b2c687a352001b451c7d09",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 26,
+        "png_sha256": "423f7a0f961513a2ec67a77bf1c9347c87bdf9e69b500dae3a87293b558325d6",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 27,
+        "png_sha256": "b02fb9426dc8e69e21c2ab81f433789f8c41cdb0ee38c5bc74d377a61c3f4de3",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 28,
+        "png_sha256": "5df6931495d93a872b789629d21f58ecd4543d5a9234d5459f719a124f5116af",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 29,
+        "png_sha256": "116ac20e4ced7c23d5977f3caeafb7d75ab2a08d1f47fcc56b3e53ec969c7afd",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 30,
+        "png_sha256": "2d4ebc63347138deba40a5cea76e7c1081312e6c7a0d68a4bc9e0717f075ed8b",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 31,
+        "png_sha256": "e74bbdaba808b8d6d30210318a7cdbd0b6bfb4fe0a5ae4b4a696bbeb5e90bdeb",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 32,
+        "png_sha256": "c8475bdf0c6deefe9fbbb6affb64e9b65d5c77dc65451b2da46f88c0f9e1a471",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 33,
+        "png_sha256": "856111b2fd3b8ff54ebdc4f20e38330c218423100b3f0a99fa4210de07fcc887",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 34,
+        "png_sha256": "b689b84bd733fc3a2342a2906eb2e5eb6be2bc9e2f257fc0ab39fa86c37e11c5",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 35,
+        "png_sha256": "1fba23b19aab868d26cd94b2dd47eaed5965ceea1d02c3498bc20e7c5bb40915",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 36,
+        "png_sha256": "44adfa3e9addefd1ba4a700b879830c9597ef3440dd098e138e2e7d420758960",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 37,
+        "png_sha256": "54289587fc059d8302dd7391b75cc2723fadaefc37dddcde4f1ac68d01baf79a",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      },
+      {
+        "page": 38,
+        "png_sha256": "6830798b710635dff1395ec9a7f1cc39d92b295ad049f4fc7ed7350ae71f3027",
+        "dimensions": [
+          1020,
+          1320
+        ],
+        "original_resolution_visual_check": "passed"
+      }
+    ],
+    "root_visual_corroboration": {
+      "status": "passed",
+      "pages_inspected": [
+        9,
+        10,
+        11,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37
+      ],
+      "notes": "主Agent也在最终PNG原始分辨率检查图前后正文及32–37页，报告表头续页、字段、JSON、错误码与故障码表清楚完整，无截断重叠或页眉页脚碰撞。"
+    }
+  },
+  "navigation": {
+    "status": "passed",
+    "pages": 38,
+    "headings": [
+      {
+        "text": "1 接入与调用约定",
+        "level": 1,
+        "page": 3
+      },
+      {
+        "text": "1 1 应用凭据与协议绑定",
+        "level": 2,
+        "page": 3
+      },
+      {
+        "text": "1 2 地址与公共请求",
+        "level": 2,
+        "page": 3
+      },
+      {
+        "text": "1 3 统一返回格式",
+        "level": 2,
+        "page": 4
+      },
+      {
+        "text": "1 4 数据类型与时间",
+        "level": 2,
+        "page": 4
+      },
+      {
+        "text": "1 5 结果核对",
+        "level": 2,
+        "page": 5
+      },
+      {
+        "text": "2 访问令牌 access_token 获取接口",
+        "level": 1,
+        "page": 5
+      },
+      {
+        "text": "3 业务接口目录与调用说明",
+        "level": 1,
+        "page": 7
+      },
+      {
+        "text": "3 1 下发单任务",
+        "level": 2,
+        "page": 7
+      },
+      {
+        "text": "3 2 查询任务",
+        "level": 2,
+        "page": 11
+      },
+      {
+        "text": "3 3 查询报警",
+        "level": 2,
+        "page": 13
+      },
+      {
+        "text": "3 4 设备实时快照",
+        "level": 2,
+        "page": 14
+      },
+      {
+        "text": "3 5 下发任务链",
+        "level": 2,
+        "page": 17
+      },
+      {
+        "text": "3 6 查询任务链",
+        "level": 2,
+        "page": 20
+      },
+      {
+        "text": "4 完整数据模型",
+        "level": 1,
+        "page": 22
+      },
+      {
+        "text": "5 字典与枚举",
+        "level": 1,
+        "page": 27
+      },
+      {
+        "text": "5 1 任务类型与设备反馈",
+        "level": 2,
+        "page": 27
+      },
+      {
+        "text": "5 2 任务与任务链状态",
+        "level": 2,
+        "page": 27
+      },
+      {
+        "text": "5 3 握手阶段",
+        "level": 2,
+        "page": 28
+      },
+      {
+        "text": "5 4 报警与连接状态",
+        "level": 2,
+        "page": 28
+      },
+      {
+        "text": "5 5 设备选择策略",
+        "level": 2,
+        "page": 29
+      },
+      {
+        "text": "6 回调通知",
+        "level": 1,
+        "page": 29
+      },
+      {
+        "text": "6 1 通知范围与确认",
+        "level": 2,
+        "page": 29
+      },
+      {
+        "text": "6 2 签名请求头",
+        "level": 2,
+        "page": 30
+      },
+      {
+        "text": "6 3 回调字段与实例",
+        "level": 2,
+        "page": 30
+      },
+      {
+        "text": "7 错误码与处理方式",
+        "level": 1,
+        "page": 33
+      },
+      {
+        "text": "7 1 开放接口错误码",
+        "level": 2,
+        "page": 33
+      },
+      {
+        "text": "7 2 设备故障码",
+        "level": 2,
+        "page": 35
+      },
+      {
+        "text": "7 3 失败返回与重试",
+        "level": 2,
+        "page": 38
+      }
+    ],
+    "toc": [
+      {
+        "text": "1 接入与调用约定",
+        "page": 3
+      },
+      {
+        "text": "1 1 应用凭据与协议绑定",
+        "page": 3
+      },
+      {
+        "text": "1 2 地址与公共请求",
+        "page": 3
+      },
+      {
+        "text": "1 3 统一返回格式",
+        "page": 4
+      },
+      {
+        "text": "1 4 数据类型与时间",
+        "page": 4
+      },
+      {
+        "text": "1 5 结果核对",
+        "page": 5
+      },
+      {
+        "text": "2 访问令牌 access_token 获取接口",
+        "page": 5
+      },
+      {
+        "text": "3 业务接口目录与调用说明",
+        "page": 7
+      },
+      {
+        "text": "3 1 下发单任务",
+        "page": 7
+      },
+      {
+        "text": "3 2 查询任务",
+        "page": 11
+      },
+      {
+        "text": "3 3 查询报警",
+        "page": 13
+      },
+      {
+        "text": "3 4 设备实时快照",
+        "page": 14
+      },
+      {
+        "text": "3 5 下发任务链",
+        "page": 17
+      },
+      {
+        "text": "3 6 查询任务链",
+        "page": 20
+      },
+      {
+        "text": "4 完整数据模型",
+        "page": 22
+      },
+      {
+        "text": "5 字典与枚举",
+        "page": 27
+      },
+      {
+        "text": "5 1 任务类型与设备反馈",
+        "page": 27
+      },
+      {
+        "text": "5 2 任务与任务链状态",
+        "page": 27
+      },
+      {
+        "text": "5 3 握手阶段",
+        "page": 28
+      },
+      {
+        "text": "5 4 报警与连接状态",
+        "page": 28
+      },
+      {
+        "text": "5 5 设备选择策略",
+        "page": 29
+      },
+      {
+        "text": "6 回调通知",
+        "page": 29
+      },
+      {
+        "text": "6 1 通知范围与确认",
+        "page": 29
+      },
+      {
+        "text": "6 2 签名请求头",
+        "page": 30
+      },
+      {
+        "text": "6 3 回调字段与实例",
+        "page": 30
+      },
+      {
+        "text": "7 错误码与处理方式",
+        "page": 33
+      },
+      {
+        "text": "7 1 开放接口错误码",
+        "page": 33
+      },
+      {
+        "text": "7 2 设备故障码",
+        "page": 35
+      },
+      {
+        "text": "7 3 失败返回与重试",
+        "page": 38
+      }
+    ]
+  },
+  "verification": {
+    "structural": "passed",
+    "protected_content": "passed",
+    "render_and_all_pages_visual": "passed"
+  }
+}

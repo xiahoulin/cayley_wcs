@@ -29,9 +29,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import com.cayleywcs.task.TaskExecutionService;
+import com.cayleywcs.task.RequestFingerprints;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Objects;
 
 @Service
 public class ChainServiceImpl implements ChainService {
+    @Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
     private static final Logger log = LoggerFactory.getLogger(ChainServiceImpl.class);
 
     /** chainNo 长度上限：子任务 task_no = chainNo + "-" + seq 须容于 varchar(128)。 */
@@ -41,6 +47,8 @@ public class ChainServiceImpl implements ChainService {
     private final TaskMapper taskMapper;
     private final CurrentUserProvider currentUserProvider;
     private final DeviceSelectionStrategyRegistry selectionRegistry;
+    @Autowired private TaskExecutionService execution;
+    @Autowired @org.springframework.context.annotation.Lazy private com.cayleywcs.task.TaskService taskService;
 
     public ChainServiceImpl(TaskChainMapper chainMapper, TaskMapper taskMapper,
                             CurrentUserProvider currentUserProvider,
@@ -51,11 +59,22 @@ public class ChainServiceImpl implements ChainService {
         this.selectionRegistry = selectionRegistry;
     }
 
-    // 注意（对抗审查 P1）：本方法**不得**加 @Transactional——PG 上唯一键冲突会把整个事务标记
-    // aborted(25P02)，catch DuplicateKeyException 后的兜底重查在同一事务内必然失败（H2 语句级回滚掩盖此坑）。
-    // 方法内只有一个 insert（自身原子），无需事务包裹；幂等靠先查+唯一索引+冲突后重查（各自 auto-commit）。
+    // Catch duplicate insertion only after its transaction has rolled back (PostgreSQL 25P02).
     @Override
     public TaskChainEntity dispatchChain(ChainDispatchRequest request, Long upstreamAppId) {
+        try { return lifecycle.referenceWrite(() -> dispatchChainLocked(request,upstreamAppId)); }
+        catch (DuplicateKeyException ex) {
+            TaskChainEntity winner=findByChainNo(request.chainNo());
+            if(winner!=null) {
+                String fingerprint=chainFingerprint(request,normalizeSegments(request.segments()));
+                if(Objects.equals(winner.getUpstream_app_id(),upstreamAppId) && Objects.equals(winner.getRequest_fingerprint(),fingerprint)) return winner;
+                throw new WcsException(ErrorCode.CONFLICT,"链编号并发重复或请求内容不同");
+            }
+            throw ex;
+        }
+    }
+
+    private TaskChainEntity dispatchChainLocked(ChainDispatchRequest request,Long upstreamAppId) {
         if (request.chainNo() == null || request.chainNo().isBlank()) {
             throw new WcsException(ErrorCode.TASK_INVALID, "chainNo 必填（链幂等键）");
         }
@@ -68,10 +87,28 @@ public class ChainServiceImpl implements ChainService {
             throw new WcsException(ErrorCode.TASK_INVALID, "未知选机策略: " + request.selectStrategy());
         }
         List<Map<String, Object>> segments = normalizeSegments(request.segments());
+        if (upstreamAppId==null) throw new WcsException(ErrorCode.FORBIDDEN,"缺少可信调用方");
+        String fingerprint=chainFingerprint(request,segments);
+        for (Map<String,Object> segment:segments) {
+            List<Long> ids=segment.containsKey("appId")?List.of(((Number)segment.get("appId")).longValue())
+                    :(List<Long>)segment.get("candidateAppIds");
+            Map<String,Long> revisions=new LinkedHashMap<>();
+            Map<String,Object> normalized=null;
+            for (Long id:ids) {
+                execution.assertCandidate(upstreamAppId,id);
+                Map<String,Object> values=execution.normalize(id,(Map<String,Object>)segment.get("payload"));
+                if (normalized!=null && !RequestFingerprints.of(normalized).equals(RequestFingerprints.of(values)))
+                    throw new WcsException(4223,"候选设备点位约定不同");
+                normalized=values; revisions.put(id.toString(),execution.revisionId(id));
+            }
+            segment.put("payload",normalized); segment.put("pinnedRevisionIds",revisions);
+        }
 
         // 幂等：同租户同 chain_no（唯一索引含软删行——软删链 chain_no 不复用，命中即返回既有）
         TaskChainEntity existing = findByChainNo(request.chainNo());
         if (existing != null) {
+            if (!Objects.equals(existing.getUpstream_app_id(),upstreamAppId) || !Objects.equals(existing.getRequest_fingerprint(),fingerprint))
+                throw new WcsException(ErrorCode.CONFLICT,"链编号已使用或请求内容不同");
             return existing;
         }
         TaskChainEntity chain = new TaskChainEntity();
@@ -79,6 +116,7 @@ public class ChainServiceImpl implements ChainService {
         chain.setUpstream_app_id(upstreamAppId == null ? 0L : upstreamAppId);
         chain.setStatus(ChainStatus.PENDING);
         chain.setSegments(segments);
+        chain.setRequest_fingerprint(fingerprint);
         chain.setSelect_strategy(request.selectStrategy() == null || request.selectStrategy().isBlank()
                 ? "idle_first" : request.selectStrategy());
         chain.setPriority(request.priority() == null ? 0L : request.priority());
@@ -86,17 +124,16 @@ public class ChainServiceImpl implements ChainService {
         chain.setWms_ref(request.wmsRef() == null ? "" : request.wmsRef());
         chain.setError_message("");
         Audits.fillCreate(chain, currentUserProvider.systemUser());
-        try {
-            chainMapper.insert(chain);
-        } catch (DuplicateKeyException ex) {
-            // 并发重发：唯一索引兜底，重查返回既有
-            TaskChainEntity winner = findByChainNo(request.chainNo());
-            if (winner != null) {
-                return winner;
-            }
-            throw ex;
-        }
+        chainMapper.insert(chain);
         return chain;
+    }
+
+    private String chainFingerprint(ChainDispatchRequest request,List<Map<String,Object>> segments) {
+        Map<String,Object> original=new LinkedHashMap<>();
+        original.put("segments",segments); original.put("priority",request.priority()==null?0L:request.priority());
+        original.put("selectStrategy",request.selectStrategy()==null?"idle_first":request.selectStrategy());
+        original.put("wmsRef",request.wmsRef()==null?"":request.wmsRef()); original.put("payload",request.payload());
+        return RequestFingerprints.of(original);
     }
 
     /** 段规范化：seq 缺省按数组序 1..n；校验非空、appId/candidateAppIds 二选一、seq 唯一。 */
@@ -128,14 +165,6 @@ public class ChainServiceImpl implements ChainService {
             } else {
                 m.put("candidateAppIds", candidates);
             }
-            putIfNotNull(m, "taskType", seg.taskType());
-            putIfNotNull(m, "takeRow", seg.takeRow());
-            putIfNotNull(m, "takeColumn", seg.takeColumn());
-            putIfNotNull(m, "takeFloor", seg.takeFloor());
-            putIfNotNull(m, "putRow", seg.putRow());
-            putIfNotNull(m, "putColumn", seg.putColumn());
-            putIfNotNull(m, "putFloor", seg.putFloor());
-            putIfNotNull(m, "portNum", seg.portNum());
             putIfNotNull(m, "payload", seg.payload());
             out.add(m);
         }
@@ -157,11 +186,14 @@ public class ChainServiceImpl implements ChainService {
     }
 
     @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public PageData<TaskChainEntity> page(PageSearch pageSearch) {
-        List<TaskChainEntity> rows = chainMapper.selectList(new QueryWrapper<TaskChainEntity>()
-                .eq("\"is_valid\"", true)
-                .orderByDesc("\"id\""));
-        return PageSupport.slice(rows, pageSearch);
+        return PageSupport.database(pageSearch,
+                () -> chainMapper.selectCount(new QueryWrapper<TaskChainEntity>().eq("\"is_valid\"", true)),
+                window -> chainMapper.selectList(new QueryWrapper<TaskChainEntity>()
+                        .eq("\"is_valid\"", true)
+                        .orderByDesc("\"id\"")
+                        .last("limit " + window.size() + " offset " + window.offset())));
     }
 
     @Override
@@ -202,9 +234,9 @@ public class ChainServiceImpl implements ChainService {
                 .eq("\"chain_id\"", id)
                 .eq("\"status\"", TaskStatus.PENDING));
         for (TaskEntity t : tasks) {
-            t.setStatus(TaskStatus.CANCELLED);
-            Audits.touch(t);
-            if (taskMapper.updateById(t) != 1) {
+            // 已有物理受理意图的段继续安全收尾；其余段沿单任务路径清理预约号及已写参数。
+            if (Boolean.TRUE.equals(t.getPhysical_started())) continue;
+            if (!taskService.cancel(t.getId())) {
                 log.warn("chain {} 子任务 {} 取消冲突(引擎并发)，该段在飞跑完后链保持 cancelled", id, t.getTask_no());
             }
         }

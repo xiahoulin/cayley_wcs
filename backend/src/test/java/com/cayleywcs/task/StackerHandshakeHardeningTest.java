@@ -22,7 +22,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * M8 对抗审查加固回归：
+ * 握手并发与重入回归约束：
  * ① cancel 竞态占位提交——claim 失败必须一个字节都不写设备；
  * ② 传输/生命周期异常不落终态——连接拆除后 advance 放弃本步、任务保持在飞；
  * ③ task_no 无数字的任务重入按 0==0 等值续推，不误判失败；
@@ -74,21 +74,21 @@ class StackerHandshakeHardeningTest {
     }
 
     @Test
-    void digitlessTaskNoResumesByZeroEquality() {
+    void digitlessTaskNoResumesByAllocatedNativeNumber() {
         Harness h = new Harness();
         StackerHandshakeStateMachine sm = new StackerHandshakeStateMachine(h.manager);
-        TaskEntity task = task("URGENT-A"); // 无数字 → cmd_TaskNum=0
+        TaskEntity task = task("URGENT-A"); // 业务编号无数字，仍使用独立原生任务号1
 
         sm.advance(task); // CHECKING
         sm.advance(task); // PARAMS_WRITTEN
-        // 崩溃窗口：确认已写到设备（设备以任务号 0 开跑），任务行停在 PARAMS_WRITTEN
+        // 崩溃窗口：确认已写到设备（设备以分配的原生任务号开跑），任务行停在 PARAMS_WRITTEN
         h.manager.writePoint(APP_ID, "cmd_ConfirmTask", 1);
 
         boolean more = sm.advance(task);
 
         assertThat(more).isTrue();
         assertThat(task.getHandshake_step())
-                .as("0==0 等值应续推而非误判任务号不匹配")
+                .as("独立原生任务号一致时续推")
                 .isEqualTo(HandshakeStep.EXECUTE_CONFIRMED.name());
         assertThat(task.getStatus()).isEqualTo(TaskStatus.EXECUTING);
         h.manager.shutdown();
@@ -126,7 +126,7 @@ class StackerHandshakeHardeningTest {
 
     @Test
     void readoptionResumesDeviceHeldTaskAfterStaleRetry() {
-        // M11 审查 P1：停滞判 failed 期间设备自主完成停 status_Task=2 → 重派（同任务号回 CREATED）
+        // 停滞判 failed 期间设备自主完成停 status_Task=2 → 重派（同任务号回 CREATED）
         // → doCheck 再收养 → 补发完成确认按完成收尾，设备回 0，队列解锁
         Harness h = new Harness();
         StackerHandshakeStateMachine sm = new StackerHandshakeStateMachine(h.manager);
@@ -229,6 +229,8 @@ class StackerHandshakeHardeningTest {
         t.setPriority(0L);
         t.setStatus(TaskStatus.PENDING);
         t.setHandshake_step(HandshakeStep.CREATED.name());
+        t.setPayload(RequestPayloads.migrate(t.getTask_type(),t.getTake_row(),t.getTake_column(),t.getTake_floor(),t.getPut_row(),t.getPut_column(),t.getPut_floor(),t.getPort_num(),null));
+        t.setNative_task_num(t.getTask_no().matches("[0-9]+")?Long.valueOf(t.getTask_no()):1L);
         return t;
     }
 
@@ -272,7 +274,7 @@ class StackerHandshakeHardeningTest {
                     "status_TaskTypeFeedback", "status_CurrentColumnNum", "status_CurrentFloorNum", "status_ErrorCode"}) {
                 ProtocolPointEntity p = new ProtocolPointEntity();
                 p.setField_name(f);
-                p.setData_type("INT");
+                p.setData_type("status_ErrorCode".equals(f)?"ARRAY[60] OF INT":"INT");
                 list.add(p);
             }
             return list;

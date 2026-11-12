@@ -1,0 +1,231 @@
+{
+  "taskId": "TASK-20261112-52D24ADC",
+  "runtimeReleasePassed": true,
+  "uniqueRootCauseConfirmed": false,
+  "backendImage": "cayley_wcs-backend:jvm-c2-fix-20261112",
+  "frontendImage": "cayley_wcs-frontend:dashboard-adapters-20261112",
+  "runtime": "Temurin-25.0.5+8-LTS",
+  "jreDigest": "sha256:ecdc0adb37bde1a281c4d245a3cd535004b1fc8322d560f5b09463b248c81df0",
+  "applicationJarSha256": "2b94a5ac89f3bd48dff8fc1d7558eabc6cc55165fa28d5641f43b29e5b1386e2",
+  "c1LimitRemoved": true,
+  "compilerExclusionsAdded": false,
+  "productionSoak": {
+    "passed": true,
+    "elapsedSeconds": 602.7,
+    "successfulSamples": 429,
+    "httpRequests": 2574,
+    "failures": [],
+    "c2Compilations": [
+      "[18.558s][info][jit,compilation] 15062       4       org.apache.ibatis.scripting.xmltags.DynamicContext$ContextMap::get (63 bytes)"
+    ],
+    "simulatorHeartbeatValues": [
+      "0",
+      "1"
+    ],
+    "restartCount": 0
+  },
+  "requiredAgvTimestampsAdvanced": {
+    "loc_x": true,
+    "loc_y": true,
+    "loc_angle": true,
+    "speed_vx": true,
+    "speed_vy": true,
+    "speed_w": true,
+    "nav_task_status": true
+  },
+  "preservationChecks": [
+    {
+      "name": "versions_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_task_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_task_chain_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_application_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_protocol_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_protocol_point_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_protocol_revision_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_app_binding_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_dict_type_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_dict_item_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_device_task_number_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_device_task_number_lease_preserved",
+      "passed": true
+    },
+    {
+      "name": "point_columns_preserved",
+      "passed": true
+    },
+    {
+      "name": "dashboard_selection_preserved",
+      "passed": true
+    },
+    {
+      "name": "cayleywcs-frontend_container_preserved",
+      "passed": true
+    },
+    {
+      "name": "cayleywcs-postgres_container_preserved",
+      "passed": true
+    },
+    {
+      "name": "cayleywcs-redis_container_preserved",
+      "passed": true
+    },
+    {
+      "name": "effective_jvm_options_have_no_compiler_limits",
+      "passed": true
+    }
+  ],
+  "originalTaskCount": 100,
+  "originalChainCount": 5,
+  "schemaVersion": "24",
+  "newRuntimeProbe": {
+    "passed": true,
+    "exitCode": 0,
+    "runtimeImage": "eclipse-temurin@sha256:ecdc0adb37bde1a281c4d245a3cd535004b1fc8322d560f5b09463b248c81df0",
+    "mybatis": "mybatis-3.5.19.jar",
+    "c2Compilations": [
+      "488  273       4       org.apache.ibatis.scripting.xmltags.DynamicContext$ContextMap::get (63 bytes)"
+    ],
+    "result": [
+      "MYBATIS_C2_PROBE_OK checksum=272000000 dynamicSqlCases=200000 java=25.0.5+8-LTS"
+    ]
+  },
+  "isolatedNewRuntimeHttpRequests": 19188,
+  "isolatedNewRuntimeSeconds": 240.08,
+  "compilerStressRuns": [
+    {
+      "jvm": "old",
+      "seed": 1,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "old",
+      "seed": 2,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "old",
+      "seed": 3,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "old",
+      "seed": 7,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "old",
+      "seed": 17,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "old",
+      "seed": 41,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "new",
+      "seed": 1,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "new",
+      "seed": 2,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "new",
+      "seed": 3,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "new",
+      "seed": 7,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "new",
+      "seed": 17,
+      "exit": 0,
+      "correctResults": true
+    },
+    {
+      "jvm": "new",
+      "seed": 41,
+      "exit": 0,
+      "correctResults": true
+    }
+  ],
+  "replay": [
+    {
+      "jvm": "old",
+      "exit": 0,
+      "targetCompilations": [
+        "30972  236    b  4       java.util.regex.Matcher::replaceAll (59 bytes)"
+      ],
+      "parseErrors": [],
+      "faithfulReplay": true
+    },
+    {
+      "jvm": "new",
+      "exit": 0,
+      "targetCompilations": [
+        "34898  236    b  4       java.util.regex.Matcher::replaceAll (59 bytes)"
+      ],
+      "parseErrors": [
+        "Error while parsing line 15208 at position 48: constant pool length mismatch: wrong class files?",
+        "Error while parsing line 15526 at position 474: tag mismatch: wrong class files?"
+      ],
+      "faithfulReplay": false
+    }
+  ],
+  "sensorHardwareAcceptance": "DR164 endpoint remains unconfigured; no fabricated readings",
+  "remainingInvestigation": "Two distinct old-runtime C2 failures; same-version replay succeeds. Host has earlier corrected processor WHEA records; causality remains unproven.",
+  "globalChecks": {
+    "skillSync": "passed",
+    "doctor": "8 pre-existing thin-pointer findings outside current WCS change scope"
+  },
+  "hostTuning": "User confirms no CPU overclock, undervolting or memory XMP changes"
+}

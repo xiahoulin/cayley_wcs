@@ -15,6 +15,12 @@ import com.cayleywcs.connection.event.FaultDetectedEvent;
 import com.cayleywcs.protocol.ProtocolService;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
+import com.cayleywcs.protocol.contract.ProtocolContractService;
+import com.cayleywcs.protocol.contract.PointContractValidator;
+import com.cayleywcs.task.TaskExecutionService;
+import java.util.LinkedHashMap;
+import java.util.Objects;
+import org.springframework.context.annotation.Lazy;
 import jakarta.annotation.PreDestroy;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,7 +46,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
- * 连接治理（需求 4）：线程池管理应用连接；最大连接数用信号量限流，满则拒绝并提示等待；
+ * 连接治理：线程池管理应用连接；最大连接数用信号量限流，满则拒绝并提示等待；
  * 每次建连有超时（默认 60s），超时未连成功则取消并回收连接槽。成功后每个连接一条工作线程做心跳+状态轮询。
  */
 @Component
@@ -66,6 +72,14 @@ public class ConnectionManager {
     private final Map<Long, ManagedConnection> connections = new ConcurrentHashMap<>();
     /** 正在建连的 appId：串行化同一应用的并发 open（恢复器启动线程 vs 周期对账 vs 用户请求），防双 open 泄槽/孤儿 worker。 */
     private final Set<Long> opening = ConcurrentHashMap.newKeySet();
+    private ProtocolContractService contracts;
+    private DeviceExecutionCoordinator coordinator;
+    private TaskExecutionService execution;
+
+    @Autowired
+    void setContracts(ProtocolContractService contracts,DeviceExecutionCoordinator coordinator,@Lazy TaskExecutionService execution) {
+        this.contracts=contracts; this.coordinator=coordinator; this.execution=execution;
+    }
 
     /** 测试便捷构造（省略 rearm 冷却，默认 60s）：保留既有测试的 10 参调用零改动。 */
     public ConnectionManager(ApplicationService applicationService, ProtocolService protocolService,
@@ -104,7 +118,7 @@ public class ConnectionManager {
         this.workerPool = Executors.newScheduledThreadPool(this.maxConnections, namedFactory("wcs-worker-"));
     }
 
-    /** 建立连接（需求 4 全流程）。 */
+    /** 建立连接。 */
     public ConnectionSnapshot open(Long appId) {
         if (connections.containsKey(appId)) {
             throw new WcsException(ErrorCode.CONN_ALREADY_OPEN, "连接已存在: appId=" + appId);
@@ -112,10 +126,17 @@ public class ConnectionManager {
         // 出站开闸：校验 app_key/启用状态
         ApplicationEntity app = applicationService.validateForConnect(appId);
         ProtocolEntity protocol = protocolService.getById(app.getProtocol_id());
-        List<ProtocolPointEntity> points = protocolService.listPoints(protocol.getId());
+        List<ProtocolPointEntity> points;
+        if (contracts != null) {
+            if (!"active".equals(app.getConfiguration_state())) throw new WcsException(ErrorCode.CONFLICT,"应用配置正在切换");
+            var revision=contracts.resolve(app);
+            app.setProtocol_revision_id(revision.id());
+            points=revision.points();
+        } else points=protocolService.listPoints(protocol.getId());
 
         // 期望态=用户意图（M12）：校验通过即先落 open——即便随后建连失败，恢复器/看门狗 rearm 会持续追赶意图。
-        persistDesiredState(appId, "open");
+        // Opening must commit its intent before creating a transport. Deletion holds the same DB guard.
+        applicationService.updateDesiredState(appId, "open");
 
         // 并发 open 串行化：同一 appId 只允许一个 open 进临界区，防双 open 各自 acquire 槽/put/起 worker 泄漏。
         if (!opening.add(appId)) {
@@ -135,8 +156,12 @@ public class ConnectionManager {
                 ManagedConnection mc = new ManagedConnection(app, protocol, points, adapter);
                 transition(mc, ConnectionState.CONNECTING, "open");
                 connectWithTimeout(mc);
+                if (contracts != null && !isCurrentConfiguration(mc)) {
+                    mc.adapter().disconnect();
+                    throw new WcsException(ErrorCode.CONFLICT,"建连期间配置版本已改变");
+                }
                 // 建连期间用户可能已 close（先落 desired=closed）——上线前复核意图，防「已请求关闭的连接却 RUNNING 上线」
-                //（对抗审查 P3）。读失败不阻断（宁可上线，实际态优先）。
+                // 读失败不阻断（宁可上线，实际态优先）。
                 if ("closed".equals(currentDesiredState(appId))) {
                     mc.adapter().disconnect();
                     transition(mc, ConnectionState.CLOSED, "aborted: desired=closed during connect");
@@ -162,8 +187,13 @@ public class ConnectionManager {
     }
 
     public void close(Long appId) {
+        if (contracts!=null) applicationService.getById(appId);
+        closeTransport(appId,true);
+    }
+
+    private void closeTransport(Long appId,boolean persistIntent) {
         // 期望态=用户意图（M12）：先落 closed，防看门狗 rearm/恢复器把刚关的连接又拉起。
-        persistDesiredState(appId, "closed");
+        if (persistIntent) persistDesiredState(appId, "closed");
         ManagedConnection mc = connections.remove(appId);
         if (mc == null) {
             throw new WcsException(ErrorCode.CONN_NOT_FOUND, "连接不存在: appId=" + appId);
@@ -207,15 +237,26 @@ public class ConnectionManager {
     }
 
     public List<ConnectionSnapshot> snapshots() {
+        if (contracts!=null) {
+            Set<Long> visible=applicationService.listAll().stream().map(ApplicationEntity::getId).collect(java.util.stream.Collectors.toSet());
+            return connections.entrySet().stream().filter(entry->visible.contains(entry.getKey())).map(entry->entry.getValue().snapshot()).toList();
+        }
         return connections.values().stream().map(ManagedConnection::snapshot).toList();
     }
 
     public ConnectionSnapshot snapshot(Long appId) {
+        if (contracts!=null) applicationService.getById(appId);
         ManagedConnection mc = connections.get(appId);
         if (mc == null) {
             throw new WcsException(ErrorCode.CONN_NOT_FOUND, "连接不存在: appId=" + appId);
         }
         return mc.snapshot();
+    }
+
+    /** In-process observers of already authorized gateway configurations; never exposed directly over HTTP. */
+    public ConnectionSnapshot cachedSnapshot(Long appId) {
+        ManagedConnection mc = connections.get(appId);
+        return mc == null ? null : mc.snapshot();
     }
 
     public SlotUsage slotUsage() {
@@ -228,10 +269,18 @@ public class ConnectionManager {
 
     /** 手动读取单点（读 + 报文留存），供联调与前端连接监控页。 */
     public Object readPoint(Long appId, String field) {
+        if (coordinator != null) return coordinator.exclusive(appId,()->readPointLocked(appId,field));
+        return readPointLocked(appId,field);
+    }
+
+    private Object readPointLocked(Long appId,String field) {
         ManagedConnection mc = require(appId);
+        ensureCurrent(mc);
         ProtocolPointEntity point = findPoint(mc, field);
         Object raw = mc.adapter().read(point);
-        Object value = DataCodec.decode(point.getData_type(), raw);
+        Object value;
+        try { value = DataCodec.decode(mc.protocol().getProtocol_type(),point.getData_type(),raw); }
+        catch (IllegalArgumentException ex) { throw new WcsException(4225,"点位反馈类型无效："+field+"，"+ex.getMessage()); }
         if (auditService != null) {
             auditService.writeMessageLog(appId, "read", field, point.getAddress(), String.valueOf(value), "{}");
         }
@@ -240,12 +289,116 @@ public class ConnectionManager {
 
     /** 手动写入单点（写 + 报文留存）。任务握手(M4)也复用此写路径。 */
     public void writePoint(Long appId, String field, Object value) {
+        if (coordinator != null) {
+            coordinator.exclusive(appId,()->{writePointLocked(appId,field,value);return null;});
+        } else writePointLocked(appId,field,value);
+    }
+
+    private void writePointLocked(Long appId,String field,Object value) {
         ManagedConnection mc = require(appId);
+        ensureCurrent(mc);
         ProtocolPointEntity point = findPoint(mc, field);
+        if (execution != null && coordinator.currentTask()!=null) execution.assertWriteAllowed(coordinator.currentTask());
         mc.adapter().write(point, value);
         if (auditService != null) {
             auditService.writeMessageLog(appId, "write", field, point.getAddress(), String.valueOf(value), "{}");
         }
+    }
+
+    /** Dedicated single-attempt navigation; generic point writes remain blocked for AGVs. */
+    public <T> T withSeerNavigation(Long appId,java.util.function.Function<com.cayleywcs.adapter.seer.SeerTcpAdapter,T> operation) {
+        return coordinator.exclusive(appId,()->{
+            var mc=require(appId);ensureCurrent(mc);
+            if(mc.state()!=ConnectionState.RUNNING || !(mc.adapter() instanceof com.cayleywcs.adapter.seer.SeerTcpAdapter seer))
+                throw new WcsException(409,"仙工 AGV 连接未就绪");
+            return operation.apply(seer);
+        });
+    }
+
+    public boolean matchesConfiguration(ApplicationEntity app) {
+        ManagedConnection mc=connections.get(app.getId());
+        return mc != null && isCurrentConfiguration(mc)
+                && Objects.equals(mc.application().getConfiguration_epoch(),app.getConfiguration_epoch());
+    }
+
+    private boolean isCurrentConfiguration(ManagedConnection mc) {
+        if (contracts==null) return true;
+        ApplicationEntity app=applicationService.getById(mc.application().getId());
+        return "active".equals(app.getConfiguration_state())
+                && Objects.equals(app.getConfiguration_epoch(),mc.application().getConfiguration_epoch())
+                && Objects.equals(contracts.resolve(app).id(),mc.application().getProtocol_revision_id());
+    }
+
+    private void ensureCurrent(ManagedConnection mc) {
+        if (!isCurrentConfiguration(mc)) throw new WcsException(ErrorCode.CONFLICT,"旧连接配置已失效");
+    }
+
+    public Map<String,Object> responsePayload(Long appId) {
+        ManagedConnection mc=require(appId);
+        Map<String,Object> response=new LinkedHashMap<>();
+        for (ProtocolPointEntity point:mc.points()) {
+            if (contracts==null || ("response".equals(point.getDirection()) && "business".equals(point.getPoint_scope())))
+                response.put(point.getField_name(),readPoint(appId,point.getField_name()));
+        }
+        return response;
+    }
+
+    public Map<String,Object> validatedResponsePayload(Long appId) {
+        return coordinator.exclusive(appId,()->{
+            ManagedConnection mc=require(appId); ensureCurrent(mc);
+            return contracts.validateResponse(mc.application(),responsePayload(appId));
+        });
+    }
+
+    public Map<String,Object> readPayload(Long appId,Map<String,Object> selector) {
+        applicationService.getById(appId);
+        if (selector==null || selector.isEmpty()) throw new WcsException(ErrorCode.BAD_REQUEST,"payload 不能为空");
+        for (var value:selector.values()) if (value!=null) throw new WcsException(ErrorCode.BAD_REQUEST,"读取点位选择值必须为null");
+        return coordinator.exclusive(appId,()->{
+            ManagedConnection mc=require(appId); ensureCurrent(mc);
+            // 先检查全部选择项，业务读取只采集响应点位；内部驱动仍可直接读回请求握手点。
+            for (String field:selector.keySet()) {
+                ProtocolPointEntity point=findPoint(mc,field);
+                if (!"business".equals(point.getPoint_scope()) || !"response".equals(point.getDirection()))
+                    throw new WcsException(ErrorCode.FORBIDDEN,"读取点位须为对外业务响应点位："+field);
+            }
+            Map<String,Object> values=new LinkedHashMap<>();
+            for (String field:selector.keySet()) values.put(field,readPointLocked(appId,field));
+            return packet(values);
+        });
+    }
+
+    public Map<String,Object> writePayload(Long appId,Map<String,Object> values) {
+        if (values==null || values.isEmpty()) throw new WcsException(ErrorCode.BAD_REQUEST,"payload 不能为空");
+        return coordinator.exclusive(appId,()->{
+            ManagedConnection mc=require(appId); ensureCurrent(mc);
+            ApplicationEntity app=applicationService.getById(appId);
+            if ("agv".equals(app.getDevice_type()) || com.cayleywcs.telemetry.profile.SensorPointCatalog.isSensor(app.getDevice_type()))
+                throw new WcsException(ErrorCode.FORBIDDEN,"该应用仅提供只读状态，禁止设置点位");
+            if (!"maintenance".equals(app.getWork_mode()))
+                throw new WcsException(ErrorCode.CONFLICT,"手动点位写入须先将设备切换到维护模式");
+            execution.assertMaintenanceIdle(app);
+            Map<String,Object> normalized=new LinkedHashMap<>();
+            for (var entry:values.entrySet()) {
+                ProtocolPointEntity point=findPoint(mc,entry.getKey());
+                if (!"business".equals(point.getPoint_scope()) || !"request".equals(point.getDirection()))
+                    throw new WcsException(ErrorCode.FORBIDDEN,"内部控制点须使用专用运维操作");
+                normalized.put(entry.getKey(),PointContractValidator.value(mc.protocol().getProtocol_type(),point,entry.getValue(),4241));
+            }
+            if ("auto_door".equals(app.getDevice_type())) {
+                normalized=contracts.validatePayload(app,values);
+                // 先撤销另一方向，再发动作信号，避免短暂同时开门和关门。
+                for (var entry:normalized.entrySet()) if (((Number)entry.getValue()).longValue()==0) writePointLocked(appId,entry.getKey(),entry.getValue());
+                for (var entry:normalized.entrySet()) if (((Number)entry.getValue()).longValue()!=0) writePointLocked(appId,entry.getKey(),entry.getValue());
+                return packet(normalized);
+            }
+            for (var entry:normalized.entrySet()) writePointLocked(appId,entry.getKey(),entry.getValue());
+            return packet(normalized);
+        });
+    }
+
+    private static Map<String,Object> packet(Map<String,Object> payload) {
+        return Map.of("payload",payload,"quality","good","capturedAt",System.currentTimeMillis());
     }
 
     /**
@@ -254,7 +407,15 @@ public class ConnectionManager {
      * 无 cmd_ResetFault 点位的协议跳过设备写（不抛异常，WCS 侧报警清除由调用方保证）。
      */
     public void resetFault(Long appId) {
+        if (coordinator!=null) { coordinator.exclusive(appId,()->{resetFaultLocked(appId);return null;}); return; }
+        resetFaultLocked(appId);
+    }
+
+    private void resetFaultLocked(Long appId) {
+        ApplicationEntity app=applicationService.getById(appId);
         ManagedConnection mc = require(appId);
+        ensureCurrent(mc);
+        if (execution!=null) execution.assertFaultResetAllowed(app);
         ProtocolPointEntity point = findPointOrNull(mc, "cmd_ResetFault");
         if (point == null) {
             log.warn("故障复位跳过：协议未配置 cmd_ResetFault 点位，appId={} app={}",
@@ -274,6 +435,7 @@ public class ConnectionManager {
         }
         // 清除本地故障码跟踪（PLC 侧复位后下轮轮询确认）
         mc.setLastErrorCodes(Collections.emptySet());
+        if (execution!=null) execution.confirmFaultReset(app);
     }
 
     private static void sleepQuietly(long ms) {
@@ -302,18 +464,16 @@ public class ConnectionManager {
     }
 
     private ProtocolPointEntity findPoint(ManagedConnection mc, String field) {
-        return mc.points().stream()
-                .filter(p -> field.equals(p.getField_name()))
-                .findFirst()
-                .orElseThrow(() -> new WcsException(ErrorCode.BAD_REQUEST, "点位不存在: " + field));
+        ProtocolPointEntity point = mc.point(field);
+        if (point == null) {
+            throw new WcsException(ErrorCode.BAD_REQUEST, "点位不存在: " + field);
+        }
+        return point;
     }
 
     /** 同 findPoint，但无该点位时返回 null（用于可选命令点，如 cmd_ResetFault）。 */
     private ProtocolPointEntity findPointOrNull(ManagedConnection mc, String field) {
-        return mc.points().stream()
-                .filter(p -> field.equals(p.getField_name()))
-                .findFirst()
-                .orElse(null);
+        return mc.point(field);
     }
 
     // ===== 看门狗调用：检测心跳失活并自动重连；FAILED 且期望 open 则冷却后 rearm（M12 自愈）=====
@@ -349,13 +509,13 @@ public class ConnectionManager {
                 log.info("connection {} rearm：期望 open，冷却到点重入重连", mc.application().getApp_code());
             }
         } else if (!"closed".equals(desired)) {
-            // 期望态不确定（DB 抖动/查不到，对抗审查 P3）：本 tick 什么都不做——绝不在信息缺失时执行
+            // 期望态不确定（DB 抖动或查不到）：本 tick 什么都不做——绝不在信息缺失时执行
             // 不可逆的拆除。DB 恢复后下轮按真实 desired 处理；desired 真为 open 时自愈能力不丢。
             log.debug("connection {} 期望态未知，本轮 rearm 判定跳过", mc.application().getApp_code());
         } else {
             // 用户意图明确为 closed：拆除并释放槽位。
             // 条件移除（原子）：仅当本调用真正把该实例从表中摘除才 release——防与并发用户 close(appId)
-            // 双重 slots.release() 导致信号量超额、击穿最大连接数（对抗审查 P2：HTTP 线程 close vs 看门狗线程）。
+            // 双重 slots.release() 导致信号量超额、击穿最大连接数（HTTP 线程 close 与看门狗线程并发）。
             if (connections.remove(appId, mc)) {
                 stopWorker(mc);
                 try {
@@ -409,6 +569,7 @@ public class ConnectionManager {
         });
         try {
             future.get(connectTimeoutSeconds, TimeUnit.SECONDS);
+            ensureCurrent(mc);
         } catch (TimeoutException ex) {
             future.cancel(true);
             transition(mc, ConnectionState.FAILED, "connect timeout");
@@ -439,7 +600,12 @@ public class ConnectionManager {
     }
 
     private void pollOnce(ManagedConnection mc) {
-        // 只监控健康连接（对抗审查 P1）：FAILED/RECONNECTING/DISCONNECTED/CLOSED 的生命周期由看门狗独占。
+        if (coordinator!=null) coordinator.exclusive(mc.application().getId(),()->{pollOnceLocked(mc);return null;});
+        else pollOnceLocked(mc);
+    }
+
+    private void pollOnceLocked(ManagedConnection mc) {
+        // 只监控健康连接：FAILED/RECONNECTING/DISCONNECTED/CLOSED 的生命周期由看门狗独占。
         // 否则 FAILED 连接的 worker 会把它打回 DISCONNECTED → 看门狗 attemptReconnect 耗尽路径每 tick markFailed(now)
         // 刷新 lastFailedAt → rearm 的「距上次失败超冷却」永不成立 → 躺平修复被永久饿死（且状态/报警每 5s 横跳一次）。
         // 顺带消除拆除中连接被 pollOnce 回写 RUNNING 的幽灵事件。
@@ -448,12 +614,21 @@ public class ConnectionManager {
             return;
         }
         try {
+            ensureCurrent(mc);
             if (!mc.adapter().isConnected()) {
                 transition(mc, ConnectionState.DISCONNECTED, "adapter not connected");
                 return;
             }
             mc.adapter().heartbeat();
             Map<String, Object> snap = mc.adapter().readAll(mc.points());
+            ensureCurrent(mc);
+            if (contracts!=null) {
+                Map<String,Object> business=new LinkedHashMap<>();
+                for (var point:mc.points()) if ("business".equals(point.getPoint_scope()) && "response".equals(point.getDirection()))
+                    business.put(point.getField_name(),snap.get(point.getField_name()));
+                Map<String,Object> normalized=contracts.validateResponse(mc.application(),business);
+                snap=new LinkedHashMap<>(snap); snap.putAll(normalized);
+            }
             mc.setLatest(snap);
             mc.markHeartbeat(System.currentTimeMillis());
             detectFaultEdge(mc, snap);
@@ -461,6 +636,7 @@ public class ConnectionManager {
                 transition(mc, ConnectionState.RUNNING, "poll ok");
             }
         } catch (Exception ex) {
+            if (contracts!=null && !isCurrentConfiguration(mc)) return;
             transition(mc, ConnectionState.DISCONNECTED, "poll error: " + ex.getMessage());
         }
     }
@@ -540,7 +716,7 @@ public class ConnectionManager {
     public void shutdown() {
         connections.keySet().forEach(id -> {
             try {
-                close(id);
+                closeTransport(id,false); // 服务退出不等于用户关闭；保留期望态供启动恢复。
             } catch (RuntimeException ignored) {
                 // 关闭期间忽略
             }

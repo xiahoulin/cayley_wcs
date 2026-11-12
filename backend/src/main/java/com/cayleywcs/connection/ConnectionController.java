@@ -5,6 +5,9 @@ import com.cayleywcs.common.api.IdRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import com.cayleywcs.task.RequestPayloads;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,16 +15,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 连接监控/运维接口（需求 4）：手动建连/断开/重连 + 槽位与状态查询，供前端连接监控页。
+ * 连接监控/运维接口：手动建连/断开/重连 + 槽位与状态查询，供前端连接监控页。
  */
 @RestController
 @RequestMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Connection")
 public class ConnectionController {
     private final ConnectionManager connectionManager;
+    private final DeviceStateService deviceStates;
 
-    public ConnectionController(ConnectionManager connectionManager) {
+    public ConnectionController(ConnectionManager connectionManager,DeviceStateService deviceStates) {
         this.connectionManager = connectionManager;
+        this.deviceStates=deviceStates;
+    }
+    @PostMapping("/connection/applications") public ApiResponse<List<Map<String,Object>>> applications() { return ApiResponse.success(deviceStates.applications()); }
+    @PostMapping("/connection/state") public ApiResponse<Map<String,Object>> state(@RequestBody IdRequest request) { return ApiResponse.success(deviceStates.state(request.id())); }
+    @PostMapping("/connection/state/set") public ApiResponse<Map<String,Object>> set(@RequestBody Map<String,Object> body) {
+        var request=RequestPayloads.parse(body,Set.of("appId","revisionId","configurationEpoch","payload"),DeviceStateService.Setting.class);
+        return ApiResponse.success(deviceStates.set(request));
     }
 
     @PostMapping("/connection/open")
@@ -55,20 +66,21 @@ public class ConnectionController {
 
     @PostMapping("/connection/read")
     @Operation(summary = "手动读取单点")
-    public ApiResponse<Object> read(@RequestBody PointIoRequest request) {
-        return ApiResponse.success(connectionManager.readPoint(request.appId(), request.field()));
+    public ApiResponse<Map<String,Object>> read(@RequestBody Map<String,Object> body) {
+        PointIoRequest request=RequestPayloads.parse(body,Set.of("appId","payload"),PointIoRequest.class);
+        return ApiResponse.success(connectionManager.readPayload(request.appId(), request.payload()));
     }
 
     @PostMapping("/connection/write")
     @Operation(summary = "手动写入单点")
-    public ApiResponse<Boolean> write(@RequestBody PointIoRequest request) {
-        connectionManager.writePoint(request.appId(), request.field(), request.value());
-        return ApiResponse.success(true);
+    public ApiResponse<Map<String,Object>> write(@RequestBody Map<String,Object> body) {
+        PointIoRequest request=RequestPayloads.parse(body,Set.of("appId","payload"),PointIoRequest.class);
+        return ApiResponse.success(connectionManager.writePayload(request.appId(),request.payload()));
     }
 
     public record StatusView(List<ConnectionSnapshot> connections, ConnectionManager.SlotUsage slots) {
     }
 
-    public record PointIoRequest(Long appId, String field, Object value) {
+    public record PointIoRequest(Long appId, Map<String,Object> payload) {
     }
 }

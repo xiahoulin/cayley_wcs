@@ -7,6 +7,9 @@ import com.cayleywcs.auth.JwtUser;
 import com.cayleywcs.binding.entity.AppBindingEntity;
 import com.cayleywcs.common.exception.ErrorCode;
 import com.cayleywcs.common.exception.WcsException;
+import com.cayleywcs.application.mapper.ApplicationMapper;
+import com.cayleywcs.protocol.ProtocolService;
+import com.cayleywcs.support.PublishedDeviceFixtures;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * 应用绑定授权（上位侧→下位侧，越权防护）：
  * 无绑定越权拒绝(FORBIDDEN) / 整批授权对账 / 禁用绑定拒绝 / 重复冲突 / 禁止自绑定 / 复用软删行 / 租户隔离 / scope 收敛。
- * 不锁 direction：任意应用都可作上位侧或下位侧。
+ * 使用已发布HTTP上位与完整设备模板验证关系；方向与固定归属必须一致。
  */
 @SpringBootTest
 @ActiveProfiles("test-flyway")
@@ -31,6 +34,8 @@ class BindingTest {
     private BindingService bindingService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired ApplicationMapper apps;
+    @Autowired ProtocolService protocols;
 
     @BeforeEach
     void authenticate() {
@@ -38,6 +43,9 @@ class BindingTest {
         JwtUser admin = new JwtUser(1L, "admin", "admin", "admin", 1L, 1L);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(admin, null, List.of()));
+        PublishedDeviceFixtures.ensure(protocols,apps,appId("ak_wms_main"),"none");
+        for(String key:List.of("ak_pallet_opcua","ak_stacker_demo","ak_pallet_sim"))PublishedDeviceFixtures.ensure(protocols,apps,appId(key),"stacker");
+        bindingService.grant(appId("ak_wms_main"),List.of(appId("ak_pallet_opcua"),appId("ak_stacker_demo"),appId("ak_pallet_sim")),"dispatch");
     }
 
     @AfterEach
@@ -79,7 +87,8 @@ class BindingTest {
 
     @Test
     void createBindingAllowsThenDisableDenies() {
-        long upstream = appId("ak_stacker_demo");
+        long upstream = 91501L;
+        PublishedDeviceFixtures.ensure(protocols,apps,upstream,"none");
         long downstream = appId("ak_pallet_opcua");
 
         assertThat(bindingService.isAllowed(upstream, downstream)).isFalse();
@@ -96,7 +105,7 @@ class BindingTest {
 
         // 禁用后立即失效。
         created.setEnabled(false);
-        bindingService.update(created);
+        created=bindingService.update(created);
         assertThat(bindingService.isAllowed(upstream, downstream)).isFalse();
 
         // 软删后亦失效。
@@ -109,7 +118,8 @@ class BindingTest {
 
     @Test
     void grantReconcilesDownstreamSetAndIgnoresSelf() {
-        long upstream = 91001L; // 合成上位侧 id（grant 仅写绑定关系，不要求应用存在）
+        long upstream = 91001L;
+        PublishedDeviceFixtures.ensure(protocols,apps,upstream,"none");
         long d1 = appId("ak_pallet_opcua");
         long d2 = appId("ak_stacker_demo");
 
@@ -148,6 +158,7 @@ class BindingTest {
         // 合成 pair，避免与其它用例/种子互相干扰（@SpringBootTest 无事务回滚）。
         long up = 95001L;
         long down = 95002L;
+        pair(up,down);
 
         AppBindingEntity first = bindingService.create(binding(up, down));
         Long id = first.getId();
@@ -173,6 +184,7 @@ class BindingTest {
     void grantIsTenantScopedAndDoesNotTouchOtherTenant() {
         long up = 96001L;
         long down = 96002L;
+        pair(up,down);
         // 一条属于租户 2 的绑定（唯一索引含 tenant，故可与租户1并存）。
         jdbcTemplate.update("insert into \"wcs_app_binding\" "
                 + "(\"upstream_app_id\",\"downstream_app_id\",\"scope\",\"enabled\",\"creator\",\"is_valid\",\"tenant_id\") "
@@ -191,6 +203,7 @@ class BindingTest {
     void grantConvergesScopeOnAlreadyActiveRow() {
         long up = 97001L;
         long down = 97002L;
+        pair(up,down);
         bindingService.grant(up, List.of(down), "dispatch");
         assertThat(scopeOf(up, down)).isEqualTo("dispatch");
 
@@ -206,6 +219,7 @@ class BindingTest {
         long up = 98001L;
         long active = 98002L;
         long ghost = 98003L;
+        pair(up,active);PublishedDeviceFixtures.ensure(protocols,apps,ghost,"stacker");
         AppBindingEntity x = bindingService.create(binding(up, active)); // 活跃行 (up,active)
         AppBindingEntity y = bindingService.create(binding(up, ghost));
         bindingService.delete(y.getId()); // 软删 (up,ghost)，仍占唯一槽位
@@ -223,10 +237,11 @@ class BindingTest {
     void isAllowedIsTenantScopedForDispatch() {
         long up = 99001L;
         long down = 99002L;
-        // 一条租户 2 的绑定。
-        jdbcTemplate.update("insert into \"wcs_app_binding\" "
-                + "(\"upstream_app_id\",\"downstream_app_id\",\"scope\",\"enabled\",\"creator\",\"is_valid\",\"tenant_id\") "
-                + "values (?,?,?,true,'t2',true,2)", up, down, "dispatch");
+        for(long id:List.of(up,down))jdbcTemplate.update("insert into wcs_application(id,app_code,app_name,app_key,tenant_id) values(?,?,?, ?,2)",id,"T2_"+id,"租户2应用","t2-key-"+id);
+        PublishedDeviceFixtures.ensure(protocols,apps,up,"none");PublishedDeviceFixtures.ensure(protocols,apps,down,"stacker");
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(new JwtUser(2L,"t2","t2","admin",2L,1L),null,List.of()));
+        bindingService.create(binding(up,down));
+        authenticateAsOwner1();
 
         // 租户1 的下发鉴权(tenant=1) 不应被租户2的绑定放行。
         assertThat(bindingService.isAllowed(up, down, 1L)).isFalse();
@@ -234,9 +249,9 @@ class BindingTest {
                 .isInstanceOf(WcsException.class)
                 .satisfies(ex -> assertThat(((WcsException) ex).getCode()).isEqualTo(ErrorCode.FORBIDDEN.code()));
 
-        // 租户2 视角放行；不限租户的内部重载也放行。
+        // 明确固定归属2视角放行；缺省重载仍按当前管理身份归属校验。
         assertThat(bindingService.isAllowed(up, down, 2L)).isTrue();
-        assertThat(bindingService.isAllowed(up, down)).isTrue();
+        assertThat(bindingService.isAllowed(up, down)).isFalse();
     }
 
     private String scopeOf(long up, long down) {
@@ -251,4 +266,6 @@ class BindingTest {
         b.setDownstream_app_id(down);
         return b;
     }
+    private void pair(long up,long down) {PublishedDeviceFixtures.ensure(protocols,apps,up,"none");PublishedDeviceFixtures.ensure(protocols,apps,down,"stacker");}
+    private void authenticateAsOwner1() {SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(new JwtUser(1L,"admin","admin","admin",1L,1L),null,List.of()));}
 }

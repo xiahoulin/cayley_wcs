@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FaultCodeServiceImpl implements FaultCodeService {
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.protocol.ProtocolService protocols;
     private final FaultCodeMapper faultCodeMapper;
     private final FaultCodeResolver faultCodeResolver;
     private final CurrentUserProvider currentUserProvider;
@@ -35,40 +37,45 @@ public class FaultCodeServiceImpl implements FaultCodeService {
     @Override
     @Transactional
     public FaultCodeEntity create(FaultCodeEntity entity) {
+        lifecycle.references(); protocols.getById(entity.getProtocol_id()); entity.setId(null);
         Audits.fillCreate(entity, currentUserProvider.currentUser());
         faultCodeMapper.insert(entity);
-        faultCodeResolver.invalidate();
+        com.cayleywcs.common.support.ResourceLifecycleGuard.afterCommit(faultCodeResolver::invalidate);
         return entity;
     }
 
     @Override
     @Transactional
     public FaultCodeEntity update(FaultCodeEntity entity) {
+        lifecycle.references(); protocols.getById(entity.getProtocol_id());
         FaultCodeEntity existing = faultCodeMapper.selectById(entity.getId());
         if (existing == null || !Boolean.TRUE.equals(existing.getIs_valid())) {
             throw new IllegalArgumentException("fault code not found: " + entity.getId());
         }
+        protocols.getById(existing.getProtocol_id());
         entity.setCreator(existing.getCreator());
         entity.setCreate_time(existing.getCreate_time());
         entity.setTenant_id(existing.getTenant_id());
         entity.setIs_valid(true);
         Audits.touch(entity);
         faultCodeMapper.updateById(entity);
-        faultCodeResolver.invalidate();
+        com.cayleywcs.common.support.ResourceLifecycleGuard.afterCommit(faultCodeResolver::invalidate);
         return faultCodeMapper.selectById(entity.getId());
     }
 
     @Override
     @Transactional
     public boolean delete(Long id) {
+        lifecycle.references();
         FaultCodeEntity existing = faultCodeMapper.selectById(id);
         if (existing == null || !Boolean.TRUE.equals(existing.getIs_valid())) {
             return false;
         }
+        protocols.getById(existing.getProtocol_id());
         existing.setIs_valid(false);
         Audits.touch(existing);
         boolean ok = faultCodeMapper.updateById(existing) == 1;
-        faultCodeResolver.invalidate();
+        com.cayleywcs.common.support.ResourceLifecycleGuard.afterCommit(faultCodeResolver::invalidate);
         return ok;
     }
 }

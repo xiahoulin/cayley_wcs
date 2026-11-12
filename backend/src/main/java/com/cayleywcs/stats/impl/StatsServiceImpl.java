@@ -1,181 +1,208 @@
 package com.cayleywcs.stats.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.cayleywcs.alarm.entity.AlarmEntity;
-import com.cayleywcs.alarm.mapper.AlarmMapper;
-import com.cayleywcs.audit.entity.ConnectionLogEntity;
-import com.cayleywcs.audit.mapper.ConnectionLogMapper;
 import com.cayleywcs.common.support.ReconcileSupport;
 import com.cayleywcs.stats.StatsService;
 import com.cayleywcs.task.TaskStatus;
-import com.cayleywcs.task.entity.TaskEntity;
-import com.cayleywcs.task.mapper.TaskMapper;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
+/** 统计只读取所需列；多语句入口使用同一只读快照，日志用服务端游标重放。 */
 @Service
 public class StatsServiceImpl implements StatsService {
-    private final TaskMapper taskMapper;
-    private final AlarmMapper alarmMapper;
-    private final ConnectionLogMapper connectionLogMapper;
-
-    public StatsServiceImpl(TaskMapper taskMapper, AlarmMapper alarmMapper,
-                            ConnectionLogMapper connectionLogMapper) {
-        this.taskMapper = taskMapper;
-        this.alarmMapper = alarmMapper;
-        this.connectionLogMapper = connectionLogMapper;
-    }
-
-    @Override
-    public TaskSummary taskSummary(Long appId, long fromMillis, long toMillis) {
-        QueryWrapper<TaskEntity> wrapper = new QueryWrapper<TaskEntity>().eq("\"is_valid\"", true);
-        if (appId != null) {
-            wrapper.eq("\"app_id\"", appId);
-        }
-        if (fromMillis > 0) {
-            wrapper.ge("\"create_time\"", ReconcileSupport.toLocalDateTime(fromMillis));
-        }
-        if (toMillis > 0) {
-            wrapper.le("\"create_time\"", ReconcileSupport.toLocalDateTime(toMillis));
-        }
-        List<TaskEntity> tasks = taskMapper.selectList(wrapper);
-
-        long completed = 0;
-        long failed = 0;
-        long cancelled = 0;
-        long inFlight = 0;
-        long pending = 0;
-        long execSum = 0;
-        long execCount = 0;
-        Map<Long, Long> failCodes = new LinkedHashMap<>();
-        for (TaskEntity t : tasks) {
-            switch (t.getStatus() == null ? "" : t.getStatus()) {
-                case TaskStatus.COMPLETED -> {
-                    completed++;
-                    if (t.getDispatch_time() != null && t.getFinish_time() != null) {
-                        execSum += Duration.between(t.getDispatch_time(), t.getFinish_time()).toMillis();
-                        execCount++;
-                    }
-                }
-                case TaskStatus.FAILED -> {
-                    failed++;
-                    long code = t.getError_code() == null ? 0 : t.getError_code();
-                    failCodes.merge(code, 1L, Long::sum);
-                }
-                case TaskStatus.CANCELLED -> cancelled++;
-                case TaskStatus.DISPATCHED, TaskStatus.EXECUTING -> inFlight++;
-                default -> pending++;
-            }
-        }
-        long terminalDecided = completed + failed; // 完成率 = completed / (completed+failed)，取消不计入
-        double completionRate = terminalDecided == 0 ? 0.0 : (double) completed / terminalDecided;
-        List<FailCode> failTop = failCodes.entrySet().stream()
-                .sorted(Map.Entry.<Long, Long>comparingByValue(Comparator.reverseOrder()))
-                .limit(10)
-                .map(e -> new FailCode(e.getKey(), e.getValue()))
-                .toList();
-        return new TaskSummary(tasks.size(), completed, failed, cancelled, inFlight, pending,
-                completionRate, execCount == 0 ? 0 : execSum / execCount, failTop);
-    }
-
-    /** 窗口前初始态的回溯上限：超过该回溯仍无事件的设备视为非 RUNNING（保守低估，防全表装载）。 */
+    private static final int FETCH_SIZE = 256;
     private static final int UTILIZATION_LOOKBACK_DAYS = 7;
+    private final JdbcTemplate jdbc;
+
+    public StatsServiceImpl(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
 
     @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public TaskSummary taskSummary(Long appId, long fromMillis, long toMillis) {
+        StringBuilder filter = new StringBuilder(" from \"wcs_task\" where \"is_valid\" = true");
+        List<Object> args = new ArrayList<>();
+        appendFilters(filter, args, appId, "create_time", fromMillis, toMillis);
+        TaskCounts counts = new TaskCounts();
+        stream("select count(*) total,"
+                + " coalesce(sum(case when \"status\"='" + TaskStatus.COMPLETED + "' then 1 else 0 end),0) completed,"
+                + " coalesce(sum(case when \"status\"='" + TaskStatus.FAILED + "' then 1 else 0 end),0) failed,"
+                + " coalesce(sum(case when \"status\"='" + TaskStatus.CANCELLED + "' then 1 else 0 end),0) cancelled,"
+                + " coalesce(sum(case when \"status\" in ('" + TaskStatus.DISPATCHED + "','" + TaskStatus.EXECUTING
+                + "') then 1 else 0 end),0) in_flight"
+                + filter, args, rs -> {
+            counts.total = rs.getLong("total");
+            counts.completed = rs.getLong("completed");
+            counts.failed = rs.getLong("failed");
+            counts.cancelled = rs.getLong("cancelled");
+            counts.inFlight = rs.getLong("in_flight");
+        });
+        counts.pending = counts.total - counts.completed - counts.failed - counts.cancelled - counts.inFlight;
+        stream("select \"dispatch_time\", \"finish_time\"" + filter
+                + " and \"status\"='" + TaskStatus.COMPLETED
+                + "' and \"dispatch_time\" is not null and \"finish_time\" is not null",
+                args, rs -> {
+                    counts.execSum += Duration.between(timestamp(rs, "dispatch_time"),
+                            timestamp(rs, "finish_time")).toMillis();
+                    counts.execCount++;
+                });
+        List<FailCode> failTop = new ArrayList<>(10);
+        stream("select coalesce(\"error_code\",0) error_code, count(*) code_count, min(\"id\") first_id"
+                + filter + " and \"status\"='" + TaskStatus.FAILED + "' group by coalesce(\"error_code\",0)"
+                + " order by code_count desc, first_id asc limit 10", args,
+                rs -> failTop.add(new FailCode(rs.getLong("error_code"), rs.getLong("code_count"))));
+        long decided = counts.completed + counts.failed;
+        return new TaskSummary(counts.total, counts.completed, counts.failed, counts.cancelled,
+                counts.inFlight, counts.pending, decided == 0 ? 0.0 : (double) counts.completed / decided,
+                counts.execCount == 0 ? 0 : counts.execSum / counts.execCount, List.copyOf(failTop));
+    }
+
+    @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public List<DeviceUtilization> deviceUtilization(Long appId, long fromMillis, long toMillis) {
-        LocalDateTime windowFrom = fromMillis > 0 ? ReconcileSupport.toLocalDateTime(fromMillis)
-                : LocalDateTime.now().minusDays(1);
-        LocalDateTime windowTo = toMillis > 0 ? ReconcileSupport.toLocalDateTime(toMillis) : LocalDateTime.now();
-        if (!windowTo.isAfter(windowFrom)) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime from = fromMillis > 0 ? ReconcileSupport.toLocalDateTime(fromMillis) : now.minusDays(1);
+        LocalDateTime to = toMillis > 0 ? ReconcileSupport.toLocalDateTime(toMillis) : now;
+        if (!to.isAfter(from)) {
             return List.of();
         }
-        // 取 [windowFrom-回溯, windowTo] 事件：窗口前事件只用于确定初始态，回溯有界防长期运行下全表装载。
-        QueryWrapper<ConnectionLogEntity> wrapper = new QueryWrapper<ConnectionLogEntity>()
-                .eq("\"event\"", "STATE_CHANGE")
-                .ge("\"create_time\"", windowFrom.minusDays(UTILIZATION_LOOKBACK_DAYS))
-                .le("\"create_time\"", windowTo)
-                .orderByAsc("\"app_id\"").orderByAsc("\"create_time\"").orderByAsc("\"id\"");
+        long windowMillis = Duration.between(from, to).toMillis();
+        StringBuilder sql = new StringBuilder("select \"app_id\", \"app_code\", \"state\", \"create_time\" "
+                + "from \"wcs_connection_log\" where \"event\" = 'STATE_CHANGE' "
+                + "and \"create_time\" >= ? and \"create_time\" <= ?");
+        List<Object> args = new ArrayList<>(List.of(from.minusDays(UTILIZATION_LOOKBACK_DAYS), to));
         if (appId != null) {
-            wrapper.eq("\"app_id\"", appId);
+            sql.append(" and \"app_id\" = ?");
+            args.add(appId);
         }
-        List<ConnectionLogEntity> logs = connectionLogMapper.selectList(wrapper);
-
-        Map<Long, List<ConnectionLogEntity>> byApp = new LinkedHashMap<>();
-        for (ConnectionLogEntity row : logs) {
-            byApp.computeIfAbsent(row.getApp_id(), k -> new ArrayList<>()).add(row);
-        }
-        long windowMillis = Duration.between(windowFrom, windowTo).toMillis();
+        sql.append(" order by \"app_id\" asc, \"create_time\" asc, \"id\" asc");
         List<DeviceUtilization> out = new ArrayList<>();
-        for (Map.Entry<Long, List<ConnectionLogEntity>> e : byApp.entrySet()) {
-            long runningMillis = replayRunning(e.getValue(), windowFrom, windowTo);
-            String appCode = e.getValue().get(e.getValue().size() - 1).getApp_code();
-            out.add(new DeviceUtilization(e.getKey(), appCode, runningMillis, windowMillis,
-                    windowMillis == 0 ? 0.0 : (double) runningMillis / windowMillis));
+        DeviceReplay[] current = new DeviceReplay[1];
+        stream(sql.toString(), args, rs -> {
+            long rowAppId = rs.getLong("app_id");
+            if (current[0] == null || current[0].appId != rowAppId) {
+                if (current[0] != null) {
+                    out.add(current[0].finish(to, windowMillis));
+                }
+                current[0] = new DeviceReplay(rowAppId, from);
+            }
+            current[0].accept(rs.getString("app_code"), rs.getString("state"),
+                    timestamp(rs, "create_time"), from);
+        });
+        if (current[0] != null) {
+            out.add(current[0].finish(to, windowMillis));
         }
+        // 稳定排序保留原查询的 app_id 升序并列规则。
         out.sort(Comparator.comparingDouble(DeviceUtilization::utilization).reversed());
         return out;
     }
 
-    /** 重放状态迁移：state 列为迁移后的目标态，累计处于 RUNNING 的时长（裁剪到窗口）。 */
-    private long replayRunning(List<ConnectionLogEntity> events, LocalDateTime from, LocalDateTime to) {
-        boolean running = false;
-        LocalDateTime cursor = from;
-        long runningMillis = 0;
-        for (ConnectionLogEntity ev : events) {
-            LocalDateTime at = ev.getCreate_time();
+    @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public List<AlarmTop> alarmTop(Long appId, long fromMillis, long toMillis, int topN) {
+        StringBuilder filter = new StringBuilder(" from \"wcs_alarm\" where \"is_valid\" = true");
+        List<Object> args = new ArrayList<>();
+        appendFilters(filter, args, appId, "raised_time", fromMillis, toMillis);
+        String sql = "with filtered as (select \"id\", coalesce(\"fault_code\",0) code,"
+                + " \"level\", \"message\", \"raised_time\"" + filter + "), ranked as ("
+                + " select code, \"level\", \"message\","
+                + " count(*) over(partition by code) code_count,"
+                + " row_number() over(partition by code order by \"raised_time\" desc,\"id\" desc) latest_rank,"
+                + " first_value(\"raised_time\") over(partition by code order by \"raised_time\",\"id\") first_raised,"
+                + " first_value(\"id\") over(partition by code order by \"raised_time\",\"id\") first_id"
+                + " from filtered) select code,code_count,\"level\",\"message\" from ranked"
+                + " where latest_rank=1 order by code_count desc,first_raised asc,first_id asc limit ?";
+        args.add(topN <= 0 ? 10 : topN);
+        List<AlarmTop> result = new ArrayList<>();
+        stream(sql, args, rs -> result.add(new AlarmTop(rs.getLong("code"), rs.getLong("code_count"),
+                rs.getString("level"), rs.getString("message"))));
+        return result;
+    }
+
+    private static void appendFilters(StringBuilder sql, List<Object> args, Long appId,
+                                      String timeColumn, long fromMillis, long toMillis) {
+        if (appId != null) {
+            sql.append(" and \"app_id\" = ?");
+            args.add(appId);
+        }
+        if (fromMillis > 0) {
+            sql.append(" and \"").append(timeColumn).append("\" >= ?");
+            args.add(ReconcileSupport.toLocalDateTime(fromMillis));
+        }
+        if (toMillis > 0) {
+            sql.append(" and \"").append(timeColumn).append("\" <= ?");
+            args.add(ReconcileSupport.toLocalDateTime(toMillis));
+        }
+    }
+
+    private void stream(String sql, List<Object> args, RowCallbackHandler row) {
+        jdbc.query(connection -> {
+            PreparedStatement statement = connection.prepareStatement(sql,
+                    ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+            statement.setFetchSize(FETCH_SIZE);
+            for (int i = 0; i < args.size(); i++) {
+                statement.setObject(i + 1, args.get(i));
+            }
+            return statement;
+        }, row);
+    }
+
+    private static LocalDateTime timestamp(ResultSet rs, String column) throws SQLException {
+        Timestamp value = rs.getTimestamp(column);
+        return value == null ? null : value.toLocalDateTime();
+    }
+
+    private static final class TaskCounts {
+        long total, completed, failed, cancelled, inFlight, pending, execSum, execCount;
+    }
+
+    private static final class DeviceReplay {
+        final long appId;
+        String appCode;
+        boolean running;
+        LocalDateTime cursor;
+        long runningMillis;
+
+        DeviceReplay(long appId, LocalDateTime from) {
+            this.appId = appId;
+            cursor = from;
+        }
+
+        void accept(String code, String state, LocalDateTime at, LocalDateTime from) {
+            appCode = code;
             if (at == null) {
-                continue;
+                return;
             }
             if (at.isBefore(from)) {
-                running = "RUNNING".equals(ev.getState()); // 窗口前事件只决定初始态
-                continue;
+                running = "RUNNING".equals(state);
+                return;
             }
             if (running) {
                 runningMillis += Duration.between(cursor, at).toMillis();
             }
-            running = "RUNNING".equals(ev.getState());
+            running = "RUNNING".equals(state);
             cursor = at;
         }
-        if (running) {
-            runningMillis += Duration.between(cursor, to).toMillis();
-        }
-        return Math.max(0, runningMillis);
-    }
 
-    @Override
-    public List<AlarmTop> alarmTop(Long appId, long fromMillis, long toMillis, int topN) {
-        QueryWrapper<AlarmEntity> wrapper = new QueryWrapper<AlarmEntity>().eq("\"is_valid\"", true);
-        if (appId != null) {
-            wrapper.eq("\"app_id\"", appId);
+        DeviceUtilization finish(LocalDateTime to, long windowMillis) {
+            if (running) {
+                runningMillis += Duration.between(cursor, to).toMillis();
+            }
+            long bounded = Math.max(0, runningMillis);
+            return new DeviceUtilization(appId, appCode, bounded, windowMillis,
+                    windowMillis == 0 ? 0.0 : (double) bounded / windowMillis);
         }
-        if (fromMillis > 0) {
-            wrapper.ge("\"raised_time\"", ReconcileSupport.toLocalDateTime(fromMillis));
-        }
-        if (toMillis > 0) {
-            wrapper.le("\"raised_time\"", ReconcileSupport.toLocalDateTime(toMillis));
-        }
-        // 显式排序（latestMessage 取每码最后一条）：PG 无 order by 不保证插入序
-        wrapper.orderByAsc("\"raised_time\"").orderByAsc("\"id\"");
-        List<AlarmEntity> alarms = alarmMapper.selectList(wrapper);
-        Map<Long, List<AlarmEntity>> byCode = new LinkedHashMap<>();
-        for (AlarmEntity a : alarms) {
-            byCode.computeIfAbsent(a.getFault_code() == null ? 0L : a.getFault_code(), k -> new ArrayList<>()).add(a);
-        }
-        int limit = topN <= 0 ? 10 : topN;
-        return byCode.entrySet().stream()
-                .sorted(Comparator.comparingInt((Map.Entry<Long, List<AlarmEntity>> e) -> e.getValue().size())
-                        .reversed())
-                .limit(limit)
-                .map(e -> {
-                    AlarmEntity latest = e.getValue().get(e.getValue().size() - 1);
-                    return new AlarmTop(e.getKey(), e.getValue().size(), latest.getLevel(), latest.getMessage());
-                })
-                .toList();
     }
 }

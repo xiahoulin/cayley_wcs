@@ -123,37 +123,37 @@ public class OpcUaStackerSimulator {
         }
     }
 
-    /** 协议点位字段定义：group(From_WCS/To_WCS)、field、是否 REAL。 */
-    public record Field(String group, String field, boolean real) {
+    /** 原生类型和方向与堆垛机协议一致，服务端按方向开放请求写入及响应读取。 */
+    public record Field(String group, String field, String nativeType, String direction) {
     }
 
     public static final List<Field> FIELDS = List.of(
-            new Field("From_WCS", "WCS_Heart", false),
-            new Field("From_WCS", "cmd_TaskType", false),
-            new Field("From_WCS", "cmd_ResetFault", false),
-            new Field("From_WCS", "cmd_TakeCoor_Row", false),
-            new Field("From_WCS", "cmd_TakeCoor_Column", false),
-            new Field("From_WCS", "cmd_TakeCoor_Floor", false),
-            new Field("From_WCS", "cmd_PutCoor_Row", false),
-            new Field("From_WCS", "cmd_PutCoor_Column", false),
-            new Field("From_WCS", "cmd_PutCoor_Floor", false),
-            new Field("From_WCS", "cmd_PortNum", false),
-            new Field("From_WCS", "cmd_TaskNum", false),
-            new Field("From_WCS", "cmd_ConfirmTask", false),
-            new Field("To_WCS", "PLC_Heart", false),
-            new Field("To_WCS", "status_Mode", false),
-            new Field("To_WCS", "status_Task", false),
-            new Field("To_WCS", "status_TaskTypeFeedback", false),
-            new Field("To_WCS", "status_CurrentColumnNum", false),
-            new Field("To_WCS", "status_CurrentFloorNum", false),
-            new Field("To_WCS", "status_Speed_Lift", true),
-            new Field("To_WCS", "status_Speed_Walk", true),
-            new Field("To_WCS", "status_Speed_Fork", true),
-            new Field("To_WCS", "status_CurrentPos_Walk", true),
-            new Field("To_WCS", "status_CurrentPos_Lift", true),
-            new Field("To_WCS", "status_CurrentPos_Fork", true),
-            new Field("To_WCS", "status_TaskNum", false),
-            new Field("To_WCS", "status_Cargo", false),
-            new Field("To_WCS", "status_ErrorCode", false)
+            new Field("From_WCS", "WCS_Heart", "INT", "request"),
+            new Field("From_WCS", "cmd_TaskType", "INT", "request"),
+            new Field("From_WCS", "cmd_ResetFault", "INT", "request"),
+            new Field("From_WCS", "cmd_TakeCoor_Row", "INT", "request"),
+            new Field("From_WCS", "cmd_TakeCoor_Column", "INT", "request"),
+            new Field("From_WCS", "cmd_TakeCoor_Floor", "INT", "request"),
+            new Field("From_WCS", "cmd_PutCoor_Row", "INT", "request"),
+            new Field("From_WCS", "cmd_PutCoor_Column", "INT", "request"),
+            new Field("From_WCS", "cmd_PutCoor_Floor", "INT", "request"),
+            new Field("From_WCS", "cmd_PortNum", "INT", "request"),
+            new Field("From_WCS", "cmd_TaskNum", "UINT", "request"),
+            new Field("From_WCS", "cmd_ConfirmTask", "INT", "request"),
+            new Field("To_WCS", "PLC_Heart", "INT", "response"),
+            new Field("To_WCS", "status_Mode", "INT", "response"),
+            new Field("To_WCS", "status_Task", "INT", "response"),
+            new Field("To_WCS", "status_TaskTypeFeedback", "INT", "response"),
+            new Field("To_WCS", "status_CurrentColumnNum", "INT", "response"),
+            new Field("To_WCS", "status_CurrentFloorNum", "INT", "response"),
+            new Field("To_WCS", "status_Speed_Lift", "REAL", "response"),
+            new Field("To_WCS", "status_Speed_Walk", "REAL", "response"),
+            new Field("To_WCS", "status_Speed_Fork", "REAL", "response"),
+            new Field("To_WCS", "status_CurrentPos_Walk", "REAL", "response"),
+            new Field("To_WCS", "status_CurrentPos_Lift", "REAL", "response"),
+            new Field("To_WCS", "status_CurrentPos_Fork", "REAL", "response"),
+            new Field("To_WCS", "status_TaskNum", "UINT", "response"),
+            new Field("To_WCS", "status_Cargo", "INT", "response"),
+            new Field("To_WCS", "status_ErrorCode", "ARRAY[60] OF INT", "response")
     );
 }

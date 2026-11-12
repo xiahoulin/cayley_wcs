@@ -1,9 +1,12 @@
 package com.cayleywcs.simulator.opcua;
 
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.ubyte;
+import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.ushort;
+import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 import com.cayleywcs.simulator.OpcUaStackerSimulator;
 import com.cayleywcs.simulator.StackerDeviceState;
+import com.cayleywcs.adapter.PointTypeRegistry;
 import java.util.List;
 import org.eclipse.milo.opcua.sdk.server.OpcUaServer;
 import org.eclipse.milo.opcua.sdk.server.api.DataItem;
@@ -53,14 +56,16 @@ public class StackerNamespace extends ManagedNamespaceWithLifecycle {
             String sid = "WCS_Task." + f.group() + "." + f.field();
             UaVariableNode node = new UaVariableNode.UaVariableNodeBuilder(getNodeContext())
                     .setNodeId(newNodeId(sid))
-                    .setAccessLevel(ubyte(3))       // CurrentRead | CurrentWrite
-                    .setUserAccessLevel(ubyte(3))
+                    .setAccessLevel(ubyte(access(f)))
+                    .setUserAccessLevel(ubyte(access(f)))
                     .setBrowseName(newQualifiedName(f.field()))
                     .setDisplayName(LocalizedText.english(f.field()))
-                    .setDataType(f.real() ? Identifiers.Double : Identifiers.Int64)
+                    .setDataType(dataType(f))
+                    .setValueRank(f.nativeType().startsWith("ARRAY") ? 1 : -1)
+                    .setArrayDimensions(f.nativeType().startsWith("ARRAY") ? new org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.UInteger[]{uint(60)} : null)
                     .setTypeDefinition(Identifiers.BaseDataVariableType)
                     .build();
-            node.setValue(new DataValue(new Variant(f.real() ? (double) 0 : (long) 0)));
+            node.setValue(new DataValue(new Variant(readDevice(f))));
             node.getFilterChain().addLast(AttributeFilters.getValue(
                     ctx -> new DataValue(new Variant(readDevice(f)))));
             UaVariableNode boundNode = node;
@@ -71,7 +76,7 @@ public class StackerNamespace extends ManagedNamespaceWithLifecycle {
                         if (!"WCS_Heart".equals(f.field())) {
                             log.info("[OPC UA写入] node={} dataValue={}", boundNode.getNodeId().toParseableString(), value);
                         }
-                        device.set(f.field(), value.getValue().getValue());
+                        device.set(f.field(), PointTypeRegistry.encode("opcua", f.nativeType(), value.getValue().getValue()));
                     }));
             getNodeManager().addNode(node);
             folder.addOrganizes(node);
@@ -80,8 +85,30 @@ public class StackerNamespace extends ManagedNamespaceWithLifecycle {
 
     private Object readDevice(OpcUaStackerSimulator.Field f) {
         Object v = device.get(f.field());
+        if (f.nativeType().startsWith("ARRAY")) {
+            List<Object> values = PointTypeRegistry.sequence(v);
+            if (values.size() != 60) { throw new IllegalStateException("仿真故障数组必须为60元素"); }
+            return values.stream().map(value -> ((Number) value).shortValue()).toArray(Short[]::new);
+        }
         Number n = v instanceof Number num ? num : 0;
-        return f.real() ? (Object) n.doubleValue() : (Object) n.longValue();
+        return switch (f.nativeType()) {
+            case "REAL" -> n.floatValue();
+            case "UINT" -> ushort(n.intValue());
+            default -> n.shortValue();
+        };
+    }
+
+    private static int access(OpcUaStackerSimulator.Field field) {
+        // 请求节点可写入并读回确认，响应节点保持真实服务端只读，拒写由 OPC UA 服务端返回。
+        return "request".equals(field.direction()) ? 3 : 1;
+    }
+
+    private static NodeId dataType(OpcUaStackerSimulator.Field field) {
+        return switch (field.nativeType()) {
+            case "REAL" -> Identifiers.Float;
+            case "UINT" -> Identifiers.UInt16;
+            default -> Identifiers.Int16;
+        };
     }
 
     @Override

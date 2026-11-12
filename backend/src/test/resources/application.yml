@@ -14,10 +14,15 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
+    local-cache-scope: STATEMENT
   global-config:
     banner: false
 
 cayleywcs:
+  telemetry:
+    reconcile-ms: 3600000
+    tick-ms: 3600000
+    storage-tick-ms: 3600000
   auth:
     jwt-secret: test-cayleywcs-secret-with-enough-length
     access-token-minutes: 120

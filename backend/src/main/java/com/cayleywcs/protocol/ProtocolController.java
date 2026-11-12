@@ -6,6 +6,8 @@ import com.cayleywcs.common.api.PageData;
 import com.cayleywcs.common.api.PageSearch;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
+import com.cayleywcs.protocol.entity.ProtocolRevisionEntity;
+import com.cayleywcs.adapter.PointTypeRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
@@ -35,6 +37,11 @@ public class ProtocolController {
     @Operation(summary = "协议全量（下拉用）")
     public ApiResponse<List<ProtocolEntity>> all() {
         return ApiResponse.success(protocolService.listAll());
+    }
+
+    @PostMapping("/protocol/templates")
+    public ApiResponse<List<ProtocolEntity>> templates() {
+        return ApiResponse.success(protocolService.listTemplates());
     }
 
     @PostMapping("/protocol/detail")
@@ -76,7 +83,33 @@ public class ProtocolController {
     }
 
     @PostMapping("/protocol/point/delete")
-    public ApiResponse<Boolean> deletePoint(@RequestBody IdRequest request) {
-        return ApiResponse.success(protocolService.deletePoint(request.id()));
+    public ApiResponse<Boolean> deletePoint(@RequestBody PublishRequest request) {
+        return ApiResponse.success(protocolService.deletePoint(request.id(), request.row_version()));
+    }
+
+    public record PublishRequest(Long id, Long row_version) { }
+    public record TypeRequest(String protocol_type) { }
+    public record TypePairRequest(String source_type, String target_type) { }
+    public record CloneRequest(Long id, Long app_id) { }
+
+    @PostMapping("/protocol/clone")
+    public ApiResponse<ProtocolEntity> cloneDraft(@RequestBody CloneRequest request) {
+        return ApiResponse.success(protocolService.cloneDraft(request.id(), request.app_id()));
+    }
+    @PostMapping("/protocol/publish")
+    public ApiResponse<ProtocolEntity> publish(@RequestBody PublishRequest request) {
+        return ApiResponse.success(protocolService.publish(request.id(), request.row_version()));
+    }
+    @PostMapping("/protocol/revisions")
+    public ApiResponse<List<ProtocolRevisionEntity>> revisions(@RequestBody IdRequest request) {
+        return ApiResponse.success(protocolService.revisions(request.id()));
+    }
+    @PostMapping("/protocol/type/options")
+    public ApiResponse<List<String>> typeOptions(@RequestBody TypeRequest request) {
+        return ApiResponse.success(PointTypeRegistry.options(request.protocol_type()));
+    }
+    @PostMapping("/protocol/type/matrix")
+    public ApiResponse<List<java.util.Map<String, Object>>> typeMatrix(@RequestBody TypePairRequest request) {
+        return ApiResponse.success(PointTypeRegistry.pairMatrix(request.source_type(), request.target_type()));
     }
 }

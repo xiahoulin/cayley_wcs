@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 协议适配器统一 SPI（需求 5）。到连接阶段，所有协议（OPC UA/Modbus/S7/TCP/MQTT/HTTP）都用这套接口处理连接与数据。
+ * 协议适配器统一 SPI。到连接阶段，所有协议（OPC UA/Modbus/S7/TCP/MQTT/HTTP）都用这套接口处理连接与数据。
  */
 public interface ProtocolAdapter {
 
@@ -22,7 +22,7 @@ public interface ProtocolAdapter {
     /** 心跳/保活，存活返回 true。 */
     boolean heartbeat();
 
-    /** 读取一组点位，统一返回 field_name -> value 的 Map（与 Jackson 版本无关）。 */
+    /** 按响应方向采集业务与内部反馈点位，统一返回 field_name -> value 的 Map。 */
     Map<String, Object> readAll(List<ProtocolPointEntity> points);
 
     Object read(ProtocolPointEntity point);

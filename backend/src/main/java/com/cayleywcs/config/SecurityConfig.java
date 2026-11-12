@@ -1,6 +1,7 @@
 package com.cayleywcs.config;
 
-import com.cayleywcs.application.security.AppKeyAuthFilter;
+import com.cayleywcs.openapi.ApplicationTokenFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import com.cayleywcs.auth.JwtAuthenticationFilter;
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
-    private static final String DEFAULT_ALLOWED_ORIGIN_PATTERNS = "http://127.0.0.1:*,http://localhost:*";
+    static final String DEFAULT_ALLOWED_ORIGIN_PATTERNS = "http://127.0.0.1:*,http://localhost:*";
 
     private final List<String> allowedOriginPatterns;
 
@@ -30,7 +31,7 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter,
-                                            AppKeyAuthFilter appKeyAuthFilter) throws Exception {
+                                            ApplicationTokenFilter applicationTokenFilter) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -49,17 +50,25 @@ public class SecurityConfig {
                                 "/health",
                                 "/login",
                                 "/refresh-token",
-                                // 开放接口走独立 AppKey 鉴权（AppKeyAuthFilter），此处对 Spring Security 放行
+                                "/system/token",
+                                // 开放接口由独立应用令牌过滤器认证。
                                 "/open/**",
-                                "/ws/**",
+                                "/ws/monitor",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated())
-                .addFilterBefore(appKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(applicationTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    FilterRegistrationBean<ApplicationTokenFilter> applicationTokenRegistration(ApplicationTokenFilter filter) {
+        FilterRegistrationBean<ApplicationTokenFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -76,7 +85,7 @@ public class SecurityConfig {
         return source;
     }
 
-    private static List<String> parseAllowedOriginPatterns(String value) {
+    static List<String> parseAllowedOriginPatterns(String value) {
         List<String> patterns = Arrays.stream(value.split(","))
                 .map(String::trim)
                 .filter(pattern -> !pattern.isBlank())

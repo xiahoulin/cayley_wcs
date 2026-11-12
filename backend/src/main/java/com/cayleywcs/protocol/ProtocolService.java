@@ -4,6 +4,7 @@ import com.cayleywcs.common.api.PageData;
 import com.cayleywcs.common.api.PageSearch;
 import com.cayleywcs.protocol.entity.ProtocolEntity;
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
+import com.cayleywcs.protocol.entity.ProtocolRevisionEntity;
 import java.util.List;
 
 public interface ProtocolService {
@@ -11,6 +12,7 @@ public interface ProtocolService {
     PageData<ProtocolEntity> page(PageSearch pageSearch);
 
     List<ProtocolEntity> listAll();
+    List<ProtocolEntity> listTemplates();
 
     ProtocolEntity getById(Long id);
 
@@ -27,4 +29,10 @@ public interface ProtocolService {
     ProtocolPointEntity updatePoint(ProtocolPointEntity entity);
 
     boolean deletePoint(Long id);
+    boolean deletePoint(Long id, Long rowVersion);
+
+    ProtocolEntity cloneDraft(Long id);
+    ProtocolEntity cloneDraft(Long id, Long appId);
+    ProtocolEntity publish(Long id, Long rowVersion);
+    List<ProtocolRevisionEntity> revisions(Long id);
 }

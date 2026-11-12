@@ -1,0 +1,477 @@
+{
+  "task_id": "TASK-20261013-008BD7B2",
+  "scope": "WCS point access flag removal; deployed current Docker and actual network/OPC UA tests",
+  "backend_tests": {
+    "totals": {
+      "tests": 333,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 4
+    },
+    "transport": [
+      {
+        "name": "com.cayleywcs.adapter.ExternalMqttTransportTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.adapter.ExternalPlcTransportTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.adapter.OpcUaNativeTransportTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.adapter.PointMessageTransportTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "changed_module": [
+      {
+        "name": "com.cayleywcs.adapter.AdapterPointDirectionTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.PointRwRemovalMigrationTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.ProtocolContractPublicationTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.task.TaskPayloadExecutionIntegrationTest",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "frontend_build": {
+    "type_check": "passed",
+    "production_build": "passed"
+  },
+  "deployment": {
+    "services": [
+      {
+        "name": "cayleywcs-backend",
+        "changed": true,
+        "running": true,
+        "image": "cayley_wcs-backend:direction-io-20261013"
+      },
+      {
+        "name": "cayleywcs-frontend",
+        "changed": true,
+        "running": true,
+        "image": "cayley_wcs-frontend:direction-io-20261013"
+      },
+      {
+        "name": "cayleywcs-postgres",
+        "changed": false,
+        "running": true,
+        "image": "postgres:17"
+      },
+      {
+        "name": "cayleywcs-redis",
+        "changed": false,
+        "running": true,
+        "image": "redis:7.4"
+      },
+      {
+        "name": "cayleywms-backend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-backend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywms-frontend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-frontend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywms-postgres",
+        "changed": false,
+        "running": true,
+        "image": "postgres:17"
+      },
+      {
+        "name": "cayleywms-redis",
+        "changed": false,
+        "running": true,
+        "image": "redis:7.4"
+      },
+      {
+        "name": "cayleywms-bot-service",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-bot-service:continuations20-20261002"
+      }
+    ],
+    "backend_sha256": "ca84734fa098d0a6d42afbeb6f6bbe6aab0416d3b64d6c815d3a050cbc248783",
+    "frontend_port": 5186,
+    "only_wcs_app_containers_recreated": true,
+    "database_backup_sha256": "7a3be02a57d5fc90d6a3d8816e756f8c630408af9a2308b4b612cc9ab2990577"
+  },
+  "current_postgres": {
+    "version": "20",
+    "rw_column_count": 0,
+    "point_rw_type_count": 0,
+    "point_rw_item_count": 0,
+    "snapshot_rw_key_count": 0
+  },
+  "actual_management_api": {
+    "status": "passed",
+    "checks": [
+      "Existing application revision, epoch, publication identity and binding fingerprint unchanged",
+      "All current point and published revision API objects omit rw",
+      "Clone, update and publish complete HTTP contract without rw",
+      "Pinned OPC UA connection recovered automatically after Docker upgrade",
+      "Business response points actually read via OPC UA",
+      "cmd_TaskType: management request/internal read rejected by direction and purpose",
+      "PLC_Heart: management request/internal read rejected by direction and purpose",
+      "cmd_TaskNum: management request/internal read rejected by direction and purpose",
+      "Automatic mode still blocks maintenance write",
+      "Business request point actually writes in maintenance mode without rw",
+      "status_Task: management response/internal write rejected by direction and purpose",
+      "cmd_ConfirmTask: management response/internal write rejected by direction and purpose",
+      "Invalid integer payload still rejected before write",
+      "Restored application mode without changing fixed publication or binding"
+    ],
+    "point_count": 327,
+    "revision_count": 10,
+    "cloned_http_protocol_id": 27,
+    "new_revision_id": 11,
+    "app_id": 3,
+    "maintenance_app_id": 21,
+    "maintenance_connection_closed": true,
+    "existing_published_identities_unchanged": true,
+    "original_mode_restored": true,
+    "actual_transport": "PLC4X OPC UA -> Eclipse Milo"
+  },
+  "actual_browser": {
+    "status": "passed",
+    "url": "http://127.0.0.1:5186",
+    "protocol_id": 28,
+    "protocol_code": "HTTP-TYPE-UI-mv694ile",
+    "checks": [
+      "cmd_TaskType: complete lists under BOOL",
+      "cmd_TaskType: save and reopen retained INT16/INT16",
+      "numeric_value: complete lists under BOOL",
+      "numeric_value: save and reopen retained FLOAT64/FLOAT64",
+      "text_value: complete lists under BOOL",
+      "text_value: save and reopen retained STRING/TEXT",
+      "array_value: complete lists under BOOL",
+      "array_value: save and reopen retained ARRAY<INT16>/ARRAY[0..2] OF INT16",
+      "Point editor and persisted API have no rw configuration",
+      "Actual API persisted all four point types and one update each",
+      "OPC UA unsupported UInt64 remains excluded by backend options"
+    ],
+    "page_errors": [],
+    "logical_scalar_types": [
+      "BOOL",
+      "STRING",
+      "INT8",
+      "UINT8",
+      "INT16",
+      "UINT16",
+      "INT32",
+      "UINT32",
+      "INT64",
+      "UINT64",
+      "FLOAT32",
+      "FLOAT64",
+      "DECIMAL"
+    ],
+    "points": [
+      {
+        "id": 371,
+        "field_name": "cmd_TaskType",
+        "logical_type": "INT16",
+        "data_type": "INT16",
+        "constraints": {
+          "min": "1",
+          "max": "3"
+        },
+        "row_version": 1
+      },
+      {
+        "id": 372,
+        "field_name": "numeric_value",
+        "logical_type": "FLOAT64",
+        "data_type": "FLOAT64",
+        "constraints": {},
+        "row_version": 1
+      },
+      {
+        "id": 373,
+        "field_name": "text_value",
+        "logical_type": "STRING",
+        "data_type": "TEXT",
+        "constraints": {
+          "max_length": 32,
+          "encoding": "UTF-8"
+        },
+        "row_version": 1
+      },
+      {
+        "id": 374,
+        "field_name": "array_value",
+        "logical_type": "ARRAY<INT16>",
+        "data_type": "ARRAY[0..2] OF INT16",
+        "constraints": {
+          "length": 3,
+          "element_type": "INT16"
+        },
+        "row_version": 1
+      }
+    ],
+    "api_interception": false,
+    "test_protocol_published": false,
+    "test_protocol_bound_to_device": false
+  },
+  "mock_browser": {
+    "checks": 14,
+    "requests": 70,
+    "status": "passed",
+    "api_interception": true
+  },
+  "public_http_stacker": {
+    "checks": [
+      "published_http_matches_opcua",
+      "token_flow",
+      "payload_dispatch",
+      "idempotent_repeat",
+      "changed_request_409",
+      "legacy_flat_4241",
+      "internal_point_4241",
+      "milo_completion_result_before_clear",
+      "stacker_chain_two_segments"
+    ],
+    "task": {
+      "id": 102046,
+      "task_no": "POINT-PAYLOAD-20251013-e64778",
+      "app_id": 3,
+      "wms_ref": "POINT-CONTRACT-20251013",
+      "priority": 0,
+      "status": "completed",
+      "handshake_step": "DONE",
+      "error_code": 0,
+      "retry_count": 0,
+      "max_retry": 0,
+      "create_time": "2026-10-13T05:40:36.543643",
+      "last_update_time": "2026-10-13T05:40:43.427752",
+      "dispatch_time": "2026-10-13T05:40:38.449145",
+      "finish_time": "2026-10-13T05:40:43.427602",
+      "payload": {
+        "cmd_PortNum": 0,
+        "cmd_PutCoor_Column": 0,
+        "cmd_PutCoor_Floor": 0,
+        "cmd_PutCoor_Row": 0,
+        "cmd_TakeCoor_Column": 1,
+        "cmd_TakeCoor_Floor": 1,
+        "cmd_TakeCoor_Row": 1,
+        "cmd_TaskType": 4
+      },
+      "result": {
+        "capturedAt": 1791870042410,
+        "quality": "good",
+        "payload": {
+          "status_Cargo": 1,
+          "status_CurrentColumnNum": 0,
+          "status_CurrentFloorNum": 0,
+          "status_CurrentPos_Fork": 0.0,
+          "status_CurrentPos_Lift": 0.0,
+          "status_CurrentPos_Walk": 0.0,
+          "status_ErrorCode": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "status_Mode": 2,
+          "status_Speed_Fork": 0.0,
+          "status_Speed_Lift": 0.0,
+          "status_Speed_Walk": 0.0,
+          "status_Task": 2,
+          "status_TaskNum": 13,
+          "status_TaskTypeFeedback": 4
+        }
+      }
+    },
+    "chain": {
+      "id": 5,
+      "chain_no": "POINT-CHAIN-20251013-ed4753",
+      "status": "completed",
+      "priority": 0,
+      "select_strategy": "idle_first",
+      "wms_ref": "POINT-CONTRACT-20251013",
+      "payload": {},
+      "error_message": "",
+      "create_time": "2026-10-13T05:40:43.510187",
+      "last_update_time": "2026-10-13T05:41:00.999437",
+      "finish_time": "2026-10-13T05:41:00.999432",
+      "segments": [
+        {
+          "seq": 1,
+          "appId": 3,
+          "payload": {
+            "cmd_PortNum": 0,
+            "cmd_PutCoor_Column": 0,
+            "cmd_PutCoor_Floor": 0,
+            "cmd_PutCoor_Row": 0,
+            "cmd_TakeCoor_Column": 1,
+            "cmd_TakeCoor_Floor": 1,
+            "cmd_TakeCoor_Row": 1,
+            "cmd_TaskType": 4
+          }
+        },
+        {
+          "seq": 2,
+          "appId": 3,
+          "payload": {
+            "cmd_PortNum": 0,
+            "cmd_PutCoor_Column": 0,
+            "cmd_PutCoor_Floor": 0,
+            "cmd_PutCoor_Row": 0,
+            "cmd_TakeCoor_Column": 1,
+            "cmd_TakeCoor_Floor": 1,
+            "cmd_TakeCoor_Row": 1,
+            "cmd_TaskType": 4
+          }
+        }
+      ]
+    }
+  },
+  "wms_joint": {
+    "checks": [
+      "real_docker_token_and_new_payload",
+      "wms_inbound_2_posted",
+      "wms_move_entire_container",
+      "wms_outbound_2_posted",
+      "milo_opcua_three_handshakes",
+      "persistent_matching_final_results"
+    ],
+    "warehouse_id": 13,
+    "container_id": 47,
+    "inbound_id": 29,
+    "outbound_id": 14,
+    "wms_tasks": {
+      "putaway": {
+        "id": 8,
+        "task_no": "WA8",
+        "status": "completed",
+        "wcs_task_id": 102049,
+        "completed_by": "auto"
+      },
+      "move": {
+        "id": 9,
+        "task_no": "WA9",
+        "status": "completed",
+        "wcs_task_id": 102050,
+        "completed_by": "auto"
+      },
+      "pick": {
+        "id": 10,
+        "task_no": "WA10",
+        "status": "completed",
+        "wcs_task_id": 102051,
+        "completed_by": "auto"
+      }
+    },
+    "inbound_posted": 2,
+    "outbound_posted": 2
+  },
+  "document": {
+    "path": "E:/workspace/cayley_ai/cayley_project/cayley_wcs/docs/礁盘工业WCS开放API接口文档.docx",
+    "sha256": "18bb555b0536908ec34b9de670e4a0c87c1173a74b1c05d033a53518e3841220",
+    "pages": 36,
+    "navigation_entries": 29,
+    "tables": 40,
+    "original_target_locked": false,
+    "original_name_restored": true,
+    "backup_verified": true
+  },
+  "limitations": [
+    "Four optional PostgreSQL JUnit tests skipped; real PostgreSQL V19 to V20 rehearsal19 checks and deployed database assertions passed."
+  ],
+  "test_data_retained": true
+}

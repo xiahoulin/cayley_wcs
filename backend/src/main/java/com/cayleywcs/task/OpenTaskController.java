@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 开放接口：WMS/上位系统下发任务（经 AppKeyAuthFilter 鉴权，路径 /open/**）。
@@ -30,9 +32,15 @@ public class OpenTaskController {
     }
 
     @PostMapping("/dispatch")
-    @Operation(summary = "WMS 下发任务（AppKey 鉴权 + 绑定授权，幂等）")
-    public ApiResponse<TaskEntity> dispatch(@RequestBody TaskService.DispatchRequest request, HttpServletRequest http) {
+    @Operation(summary = "对接应用下发任务（access_token + 设备授权，业务编号幂等）")
+    public ApiResponse<Map<String,Object>> dispatchHttp(@RequestBody Map<String,Object> body, HttpServletRequest http) {
+        var accepted=dispatch(RequestPayloads.parse(body, Set.of("appId","taskNo","priority","wmsRef","payload"),
+                TaskService.DispatchRequest.class), http);
+        return ApiResponse.success(TaskPublicView.of(accepted.data()));
+    }
+
+    public ApiResponse<TaskEntity> dispatch(TaskService.DispatchRequest request, HttpServletRequest http) {
         accessGuard.assertCanCommand(http, request.appId(), "task/dispatch");
-        return ApiResponse.success(taskService.dispatch(request));
+        return ApiResponse.success(taskService.dispatch(request, accessGuard.resolveCaller(http)));
     }
 }

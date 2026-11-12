@@ -11,6 +11,9 @@ import com.cayleywcs.common.exception.ErrorCode;
 import com.cayleywcs.common.exception.WcsException;
 import com.cayleywcs.common.support.Audits;
 import com.cayleywcs.system.CurrentUserProvider;
+import com.cayleywcs.application.entity.ApplicationEntity;
+import com.cayleywcs.application.mapper.ApplicationMapper;
+import com.cayleywcs.protocol.contract.ProtocolContractService;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,12 +24,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BindingServiceImpl implements BindingService {
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
     private final AppBindingMapper bindingMapper;
     private final CurrentUserProvider currentUserProvider;
+    private final ApplicationMapper applicationMapper;
+    private final ProtocolContractService contracts;
 
-    public BindingServiceImpl(AppBindingMapper bindingMapper, CurrentUserProvider currentUserProvider) {
+    public BindingServiceImpl(AppBindingMapper bindingMapper, CurrentUserProvider currentUserProvider,
+                              ApplicationMapper applicationMapper, ProtocolContractService contracts) {
         this.bindingMapper = bindingMapper;
         this.currentUserProvider = currentUserProvider;
+        this.applicationMapper = applicationMapper;
+        this.contracts = contracts;
     }
 
     @Override
@@ -36,9 +45,10 @@ public class BindingServiceImpl implements BindingService {
 
     @Override
     public List<AppBindingEntity> listAll() {
-        return bindingMapper.selectList(new QueryWrapper<AppBindingEntity>()
-                .eq("\"is_valid\"", true)
-                .orderByDesc("\"id\""));
+        var query=new QueryWrapper<AppBindingEntity>().eq("\"is_valid\"",true);
+        var user=currentUserProvider.systemUser();
+        if (!(Long.valueOf(0).equals(user.userId()) && "system".equals(user.userRole()))) query.eq("\"tenant_id\"",user.tenantId());
+        return bindingMapper.selectList(query.orderByDesc("\"id\""));
     }
 
     @Override
@@ -47,13 +57,18 @@ public class BindingServiceImpl implements BindingService {
         if (entity == null || !Boolean.TRUE.equals(entity.getIs_valid())) {
             throw new WcsException(ErrorCode.NOT_FOUND, "binding not found: " + id);
         }
+        var user=currentUserProvider.systemUser();
+        if (!(Long.valueOf(0).equals(user.userId()) && "system".equals(user.userRole())) && !java.util.Objects.equals(entity.getTenant_id(),user.tenantId()))
+            throw new WcsException(ErrorCode.NOT_FOUND,"绑定不存在或不可访问");
         return entity;
     }
 
     @Override
     @Transactional
     public AppBindingEntity create(AppBindingEntity entity) {
+        if(lifecycle!=null) lifecycle.references();
         validatePair(entity.getUpstream_app_id(), entity.getDownstream_app_id());
+        var match = checkedMatch(entity.getUpstream_app_id(), entity.getDownstream_app_id());
         var user = currentUserProvider.currentUser();
         Long tenant = user.tenantId();
         String scope = (entity.getScope() == null || entity.getScope().isBlank()) ? "dispatch" : entity.getScope();
@@ -70,12 +85,14 @@ public class BindingServiceImpl implements BindingService {
             row.setEnabled(enabled);
             row.setScope(scope);
             row.setRemark(entity.getRemark());
+            pin(row, match);
             Audits.touch(row);
             bindingMapper.updateById(row);
             return row;
         }
         entity.setScope(scope);
         entity.setEnabled(enabled);
+        pin(entity, match);
         Audits.fillCreate(entity, user);
         bindingMapper.insert(entity);
         return entity;
@@ -84,28 +101,31 @@ public class BindingServiceImpl implements BindingService {
     @Override
     @Transactional
     public AppBindingEntity update(AppBindingEntity entity) {
+        if(lifecycle!=null) lifecycle.references();
         AppBindingEntity existing = getById(entity.getId());
         validatePair(entity.getUpstream_app_id(), entity.getDownstream_app_id());
+        var match = checkedMatch(entity.getUpstream_app_id(), entity.getDownstream_app_id());
         rejectDuplicate(entity.getUpstream_app_id(), entity.getDownstream_app_id(), existing.getTenant_id(), entity.getId());
         entity.setCreator(existing.getCreator());
         entity.setCreate_time(existing.getCreate_time());
         entity.setTenant_id(existing.getTenant_id());
         entity.setIs_valid(true);
+        pin(entity, match);
+        if (entity.getRow_version() == null || !entity.getRow_version().equals(existing.getRow_version())) {
+            throw new WcsException(ErrorCode.CONFLICT, "绑定已更新，请刷新后重试");
+        }
         if (entity.getScope() == null || entity.getScope().isBlank()) {
             entity.setScope("dispatch");
         }
         Audits.touch(entity);
-        bindingMapper.updateById(entity);
+        if (bindingMapper.updateById(entity) != 1) throw new WcsException(ErrorCode.CONFLICT, "绑定并发更新冲突");
         return bindingMapper.selectById(entity.getId());
     }
 
     @Override
     @Transactional
     public boolean delete(Long id) {
-        AppBindingEntity existing = bindingMapper.selectById(id);
-        if (existing == null || !Boolean.TRUE.equals(existing.getIs_valid())) {
-            return false;
-        }
+        AppBindingEntity existing = getById(id);
         existing.setIs_valid(false);
         Audits.touch(existing);
         return bindingMapper.updateById(existing) == 1;
@@ -129,8 +149,17 @@ public class BindingServiceImpl implements BindingService {
         if (tenantId != null) { // dispatch 鉴权按调用方租户隔离；null 表示不限租户（内部/测试）。
             wrapper.eq("\"tenant_id\"", tenantId);
         }
-        Long hit = bindingMapper.selectCount(wrapper);
-        return hit != null && hit > 0;
+        AppBindingEntity row = bindingMapper.selectOne(wrapper.last("limit 1"));
+        if (row == null) return false;
+        try {
+            var match = checkedMatch(upstreamAppId, downstreamAppId, tenantId);
+            return row.getContract_fingerprint() != null
+                    && row.getContract_fingerprint().equals(match.fingerprint())
+                    && java.util.Objects.equals(row.getUpstream_revision_id(), match.upstreamSnapshotId())
+                    && java.util.Objects.equals(row.getDownstream_revision_id(), match.downstreamSnapshotId());
+        } catch (WcsException | IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     @Override
@@ -165,6 +194,7 @@ public class BindingServiceImpl implements BindingService {
         }
         return bindingMapper.selectList(wrapper)
                 .stream()
+                .filter(row -> isAllowed(upstreamAppId, row.getDownstream_app_id(), tenantId))
                 .map(AppBindingEntity::getDownstream_app_id)
                 .distinct()
                 .toList();
@@ -173,6 +203,7 @@ public class BindingServiceImpl implements BindingService {
     @Override
     @Transactional
     public List<Long> grant(Long upstreamAppId, List<Long> downstreamAppIds, String scope) {
+        if(lifecycle!=null) lifecycle.references();
         if (upstreamAppId == null) {
             throw new WcsException(ErrorCode.BAD_REQUEST, "upstream_app_id 必填");
         }
@@ -188,6 +219,9 @@ public class BindingServiceImpl implements BindingService {
             }
         }
         // 仅当前租户、该上位侧的全部绑定（含已软删，便于复用唯一槽位）。
+        Map<Long, ProtocolContractService.Match> checked = new LinkedHashMap<>();
+        for (Long id : desired) checked.put(id, checkedMatch(upstreamAppId, id));
+        // 全部匹配成功后才开始写授权，任意一项失配保持原集合不变。
         // 按 tenant 过滤与唯一索引 (上位,下位,租户) 对齐，避免误删/复活其他租户的授权行。
         List<AppBindingEntity> existing = bindingMapper.selectList(new QueryWrapper<AppBindingEntity>()
                 .eq("\"upstream_app_id\"", upstreamAppId)
@@ -206,10 +240,12 @@ public class BindingServiceImpl implements BindingService {
                 created.setScope(effectiveScope);
                 created.setEnabled(true);
                 created.setRemark("按应用授权");
+                pin(created, checked.get(downstreamId));
                 Audits.fillCreate(created, user);
                 bindingMapper.insert(created);
             } else {
-                boolean changed = false;
+                boolean changed = !java.util.Objects.equals(row.getContract_fingerprint(), checked.get(downstreamId).fingerprint());
+                pin(row, checked.get(downstreamId));
                 if (!Boolean.TRUE.equals(row.getEnabled()) || !Boolean.TRUE.equals(row.getIs_valid())) {
                     row.setEnabled(true);
                     row.setIs_valid(true);
@@ -243,6 +279,33 @@ public class BindingServiceImpl implements BindingService {
         if (upstreamId.equals(downstreamId)) {
             throw new WcsException(ErrorCode.BAD_REQUEST, "不允许自绑定：应用不能指挥自己 (" + upstreamId + ")");
         }
+    }
+
+    private ProtocolContractService.Match checkedMatch(Long upstreamId, Long downstreamId) {
+        return checkedMatch(upstreamId,downstreamId,currentUserProvider.systemUser().tenantId());
+    }
+
+    private ProtocolContractService.Match checkedMatch(Long upstreamId, Long downstreamId,Long tenant) {
+        validatePair(upstreamId, downstreamId);
+        ApplicationEntity up = applicationMapper.selectById(upstreamId);
+        ApplicationEntity down = applicationMapper.selectById(downstreamId);
+        if (tenant==null) tenant=currentUserProvider.systemUser().tenantId();
+        if (up == null || down == null || !Boolean.TRUE.equals(up.getIs_valid()) || !Boolean.TRUE.equals(down.getIs_valid())
+                || !java.util.Objects.equals(up.getTenant_id(), down.getTenant_id())
+                || !java.util.Objects.equals(up.getTenant_id(), tenant)) {
+            throw new WcsException(ErrorCode.NOT_FOUND, "应用不存在或不可访问");
+        }
+        if (!Boolean.TRUE.equals(up.getEnabled()) || !Boolean.TRUE.equals(down.getEnabled())) {
+            throw new WcsException(ErrorCode.FORBIDDEN, "上下游应用必须启用");
+        }
+        return contracts.requireMatch(up, down);
+    }
+
+    private static void pin(AppBindingEntity row, ProtocolContractService.Match match) {
+        if (row.getRow_version()==null) row.setRow_version(0L);
+        row.setUpstream_revision_id(match.upstreamSnapshotId());
+        row.setDownstream_revision_id(match.downstreamSnapshotId());
+        row.setContract_fingerprint(match.fingerprint());
     }
 
     private void rejectDuplicate(Long upstreamId, Long downstreamId, Long tenantId, Long excludeId) {

@@ -35,6 +35,11 @@ public class ApplicationController {
         return ApiResponse.success(applicationService.listAll());
     }
 
+    @PostMapping("/application/adapter/options")
+    public ApiResponse<List<com.cayleywcs.adapter.ApplicationAdapterCatalog.Option>> adapterOptions() {
+        return ApiResponse.success(com.cayleywcs.adapter.ApplicationAdapterCatalog.OPTIONS);
+    }
+
     @PostMapping("/application/detail")
     public ApiResponse<ApplicationEntity> detail(@RequestBody IdRequest request) {
         return ApiResponse.success(applicationService.getById(request.id()));

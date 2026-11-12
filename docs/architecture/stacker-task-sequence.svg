@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2000" viewBox="0 0 1600 2000" role="img" aria-labelledby="title description">
+<title id="title">HTTP 到 OPC UA 堆垛机任务执行时序</title><desc id="description">当前代码正常任务流程：异步受理、按设备调度、原生任务号预约、参数写入、执行确认、轮询完成、先保存响应结果、完成确认、清零空闲、保存终态和释放任务号，最后查询或回调。</desc>
+<defs>
+<marker id="blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#2e537d"/></marker>
+<marker id="orange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#d97016"/></marker>
+<marker id="teal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#237d87"/></marker>
+</defs><g font-family="Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif">
+<rect width="1600" height="2000" fill="#ffffff"/>
+<text x="800" y="45" font-size="34" fill="#172d47" font-weight="700" text-anchor="middle">HTTP 到 OPC UA 堆垛机任务执行时序</text>
+<rect x="30" y="78" width="240" height="94" rx="10" fill="#edf3fa" stroke="#bbcbdd" stroke-width="1.5"/>
+<text x="150" y="114" font-size="29" fill="#173b61" font-weight="700" text-anchor="middle">对接应用</text>
+<text x="150" y="148" font-size="25" fill="#596d84" font-weight="400" text-anchor="middle">WMS / 其他应用</text>
+<line x1="150" y1="172" x2="150" y2="1860" stroke="#aab9cb" stroke-width="1.7" stroke-dasharray="7 7"/>
+<rect x="310" y="78" width="270" height="94" rx="10" fill="#edf3fa" stroke="#bbcbdd" stroke-width="1.5"/>
+<text x="445" y="114" font-size="29" fill="#173b61" font-weight="700" text-anchor="middle">WCS 接入与通知</text>
+<text x="445" y="148" font-size="25" fill="#596d84" font-weight="400" text-anchor="middle">HTTP API / 回调</text>
+<line x1="445" y1="172" x2="445" y2="1860" stroke="#aab9cb" stroke-width="1.7" stroke-dasharray="7 7"/>
+<rect x="670" y="78" width="240" height="94" rx="10" fill="#edf3fa" stroke="#bbcbdd" stroke-width="1.5"/>
+<text x="790" y="114" font-size="29" fill="#173b61" font-weight="700" text-anchor="middle">PostgreSQL</text>
+<text x="790" y="148" font-size="25" fill="#596d84" font-weight="400" text-anchor="middle">任务与持久结果</text>
+<line x1="790" y1="172" x2="790" y2="1860" stroke="#aab9cb" stroke-width="1.7" stroke-dasharray="7 7"/>
+<rect x="980" y="78" width="280" height="94" rx="10" fill="#edf3fa" stroke="#bbcbdd" stroke-width="1.5"/>
+<text x="1120" y="114" font-size="29" fill="#173b61" font-weight="700" text-anchor="middle">WCS 调度与握手</text>
+<text x="1120" y="148" font-size="25" fill="#596d84" font-weight="400" text-anchor="middle">设备互斥与驱动</text>
+<line x1="1120" y1="172" x2="1120" y2="1860" stroke="#aab9cb" stroke-width="1.7" stroke-dasharray="7 7"/>
+<rect x="1330" y="78" width="240" height="94" rx="10" fill="#edf3fa" stroke="#bbcbdd" stroke-width="1.5"/>
+<text x="1450" y="114" font-size="29" fill="#173b61" font-weight="700" text-anchor="middle">堆垛机 PLC</text>
+<text x="1450" y="148" font-size="25" fill="#596d84" font-weight="400" text-anchor="middle">OPC UA</text>
+<line x1="1450" y1="172" x2="1450" y2="1860" stroke="#aab9cb" stroke-width="1.7" stroke-dasharray="7 7"/>
+<rect x="22" y="190" width="1556" height="34" rx="5" fill="#eaf0f6"/>
+<text x="42" y="216" font-size="28" fill="#37516e" font-weight="700" text-anchor="start">01  调用与任务受理</text>
+<rect x="39" y="236" width="517" height="34" rx="4" fill="#ffffff"/>
+<text x="297.5" y="265" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">HTTP 下发单任务；请求点位 payload</text>
+<line x1="150" y1="280" x2="445" y2="280" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="287" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">1</text>
+<rect x="390.5" y="299" width="454" height="34" rx="4" fill="#ffffff"/>
+<text x="617.5" y="328" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">校验授权与点位；保存待派工任务</text>
+<line x1="445" y1="343" x2="790" y2="343" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="350" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">2</text>
+<rect x="30" y="362" width="575" height="34" rx="4" fill="#ffffff"/>
+<text x="317.5" y="391" font-size="29" fill="#237d87" font-weight="400" text-anchor="middle">返回受理结果 errcode=0 与任务编号 id</text>
+<line x1="445" y1="406" x2="150" y2="406" stroke="#237d87" stroke-width="2.7" stroke-dasharray="8 5" marker-end="url(#teal)"/>
+<text x="20" y="413" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">3</text>
+<rect x="22" y="442" width="1556" height="34" rx="5" fill="#eaf0f6"/>
+<text x="42" y="468" font-size="28" fill="#37516e" font-weight="700" text-anchor="start">02  后台按设备异步调度</text>
+<rect x="779.5" y="488" width="351" height="34" rx="4" fill="#ffffff"/>
+<text x="955" y="517" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">读取本设备的待派工任务</text>
+<line x1="1120" y1="532" x2="790" y2="532" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="539" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">4</text>
+<rect x="1051.5" y="551" width="467" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="580" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">新分配任务号前确认设备物理空闲</text>
+<line x1="1120" y1="595" x2="1450" y2="595" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="602" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">5</text>
+<rect x="712" y="614" width="486" height="34" rx="4" fill="#ffffff"/>
+<text x="955" y="643" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">复验版本与授权；预约原生任务号 N</text>
+<line x1="1120" y1="658" x2="790" y2="658" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="665" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">6</text>
+<rect x="1079" y="677" width="412" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="706" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">检查联机自动、无任务、无故障</text>
+<line x1="1120" y1="721" x2="1450" y2="721" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="728" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">7</text>
+<rect x="22" y="751" width="1556" height="34" rx="5" fill="#eaf0f6"/>
+<text x="42" y="777" font-size="28" fill="#37516e" font-weight="700" text-anchor="start">03  参数写入与执行握手</text>
+<rect x="736" y="797" width="438" height="34" rx="4" fill="#ffffff"/>
+<text x="955" y="826" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">保存参数写入前的任务版本占位</text>
+<line x1="1120" y1="841" x2="790" y2="841" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="848" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">8</text>
+<rect x="1026" y="867" width="518" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="896" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">依次写坐标、货口、任务号 N、任务类型</text>
+<line x1="1120" y1="911" x2="1450" y2="911" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="918" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">9</text>
+<rect x="1093.5" y="930" width="383" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="959" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">回读命令区任务号并核对 N</text>
+<line x1="1120" y1="974" x2="1450" y2="974" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="981" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">10</text>
+<rect x="699" y="1000" width="512" height="34" rx="4" fill="#ffffff"/>
+<text x="955" y="1029" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">先保存执行意图与任务版本，再写确认</text>
+<line x1="1120" y1="1044" x2="790" y2="1044" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="1051" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">11</text>
+<rect x="1052.5" y="1063" width="465" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1092" font-size="29" fill="#d97016" font-weight="600" text-anchor="middle">执行确认点 cmd_ConfirmTask=1</text>
+<line x1="1120" y1="1107" x2="1450" y2="1107" stroke="#d97016" stroke-width="2.7"  marker-end="url(#orange)"/>
+<text x="20" y="1114" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">12</text>
+<rect x="1033" y="1126" width="504" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1155" font-size="29" fill="#237d87" font-weight="400" text-anchor="middle">设备受理：任务状态 status_Task=1</text>
+<line x1="1450" y1="1170" x2="1120" y2="1170" stroke="#237d87" stroke-width="2.7" stroke-dasharray="8 5" marker-end="url(#teal)"/>
+<text x="20" y="1177" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">13</text>
+<rect x="1021" y="1196" width="528" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1225" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">执行中置确认点0，轮询任务状态等完成</text>
+<line x1="1120" y1="1240" x2="1450" y2="1240" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="1247" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">14</text>
+<rect x="1033" y="1259" width="504" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1288" font-size="29" fill="#237d87" font-weight="400" text-anchor="middle">设备完成：任务状态 status_Task=2</text>
+<line x1="1450" y1="1303" x2="1120" y2="1303" stroke="#237d87" stroke-width="2.7" stroke-dasharray="8 5" marker-end="url(#teal)"/>
+<text x="20" y="1310" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">15</text>
+<rect x="22" y="1333" width="1556" height="34" rx="5" fill="#eaf0f6"/>
+<text x="42" y="1359" font-size="28" fill="#37516e" font-weight="700" text-anchor="start">04  结果保存、完成确认与终态通知</text>
+<rect x="1058" y="1379" width="454" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1408" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">采集、验证响应点位及反馈任务号</text>
+<line x1="1120" y1="1423" x2="1450" y2="1423" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="1430" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">16</text>
+<rect x="752.5" y="1442" width="405" height="34" rx="4" fill="#ffffff"/>
+<text x="955" y="1471" font-size="29" fill="#d97016" font-weight="600" text-anchor="middle">先持久保存采集结果 result</text>
+<line x1="1120" y1="1486" x2="790" y2="1486" stroke="#d97016" stroke-width="2.7"  marker-end="url(#orange)"/>
+<text x="20" y="1493" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">17</text>
+<rect x="1052.5" y="1505" width="465" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1534" font-size="29" fill="#d97016" font-weight="600" text-anchor="middle">完成确认点 cmd_ConfirmTask=2</text>
+<line x1="1120" y1="1549" x2="1450" y2="1549" stroke="#d97016" stroke-width="2.7"  marker-end="url(#orange)"/>
+<text x="20" y="1556" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">18</text>
+<rect x="1013" y="1575" width="544" height="34" rx="4" fill="#ffffff"/>
+<text x="1285" y="1604" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">补发确认2并清零，回读任务状态0后完成</text>
+<line x1="1120" y1="1619" x2="1450" y2="1619" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="1626" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">19</text>
+<rect x="648" y="1638" width="614" height="34" rx="4" fill="#ffffff"/>
+<text x="955" y="1667" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">保存已完成状态 completed；释放任务号占用</text>
+<line x1="1120" y1="1682" x2="790" y2="1682" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="1689" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">20</text>
+<rect x="390.5" y="1701" width="454" height="34" rx="4" fill="#ffffff"/>
+<text x="617.5" y="1730" font-size="29" fill="#2e537d" font-weight="400" text-anchor="middle">读取持久结果；扫描回调投递待办</text>
+<line x1="445" y1="1745" x2="790" y2="1745" stroke="#2e537d" stroke-width="2.7"  marker-end="url(#blue)"/>
+<text x="20" y="1752" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">21</text>
+<rect x="50" y="1764" width="495" height="34" rx="4" fill="#ffffff"/>
+<text x="297.5" y="1793" font-size="29" fill="#237d87" font-weight="400" text-anchor="middle">查询响应或签名 Webhook 通知终态</text>
+<line x1="445" y1="1808" x2="150" y2="1808" stroke="#237d87" stroke-width="2.7" stroke-dasharray="8 5" marker-end="url(#teal)"/>
+<text x="20" y="1815" font-size="24" fill="#8797aa" font-weight="500" text-anchor="start">22</text>
+<rect x="30" y="1900" width="1540" height="77" rx="8" fill="#f2f6fa"/>
+<text x="60" y="1930" font-size="27" fill="#475c73" font-weight="400" text-anchor="start">业务任务号 taskNo 由接入应用提供；原生设备任务号 N 由 WCS 分配并占用到安全收尾。</text>
+<text x="60" y="1963" font-size="27" fill="#475c73" font-weight="400" text-anchor="start">图示为正常任务的典型交互；HTTP 返回代表受理，调度开始与响应返回可能并行。</text>
+</g></svg>

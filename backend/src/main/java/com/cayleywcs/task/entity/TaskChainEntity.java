@@ -16,6 +16,16 @@ import java.util.Map;
 @TableName(value = "\"wcs_task_chain\"", autoResultMap = true)
 public class TaskChainEntity extends BaseEntity {
     private String chain_no;
+    private String held_reason;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<Map<String,Object>> original_segments;
+    public String getHeld_reason() { return held_reason; }
+    public void setHeld_reason(String value) { held_reason=value; }
+    public List<Map<String,Object>> getOriginal_segments() { return original_segments; }
+    public void setOriginal_segments(List<Map<String,Object>> value) { original_segments=value; }
+    private String request_fingerprint;
+    public String getRequest_fingerprint() { return request_fingerprint; }
+    public void setRequest_fingerprint(String value) { request_fingerprint=value; }
     private Long upstream_app_id;
     private String status;
 

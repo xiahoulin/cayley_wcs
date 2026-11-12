@@ -1,0 +1,434 @@
+{
+  "task_id": "TASK-20261012-8BE172B8",
+  "status": "passed",
+  "deployment": {
+    "runtime_checks": [
+      "expired_token_rejected_in_postgresql",
+      "wcs_webhook_received_by_wms_and_http200",
+      "openapi_schema_matches_envelope"
+    ],
+    "callback_delivery": {
+      "id": 72,
+      "biz_id": 102032,
+      "status": "ok",
+      "response": "HTTP 200",
+      "wms_callback_seen": true
+    },
+    "images": {
+      "cayleywms-backend": "sha256:96118d5ea6d925d7f683f9a79b01833f8bdf6cabd9f99ead7d02d2d9fa95eb5b",
+      "cayleywcs-backend": "sha256:4bea4585e454e90033f4c03303e780873ff4dd0b8c93e7753803c59c3db9d641",
+      "cayleywms-frontend": "sha256:35a96ac9c72347b1e7169940dec056672a3fbf1b97ec542b0fdea095b4eccbf6"
+    },
+    "unchanged_containers": [
+      "cayleywms-postgres",
+      "cayleywcs-postgres",
+      "cayleywms-redis",
+      "cayleywcs-redis",
+      "cayleywms-bot-service",
+      "cayleywcs-frontend"
+    ],
+    "open_routes": [
+      "/system/token",
+      "/open/task/query",
+      "/open/task/dispatch",
+      "/open/snapshot",
+      "/open/chain/query",
+      "/open/chain/dispatch",
+      "/open/alarm/query"
+    ]
+  },
+  "restart": {
+    "persistent_token_after_restart": true,
+    "public_schema_private_fields_removed": true,
+    "protected_query_after_restart": true,
+    "wcs_image": "sha256:4bea4585e454e90033f4c03303e780873ff4dd0b8c93e7753803c59c3db9d641"
+  },
+  "wcs_tests": {
+    "tests": 127,
+    "passed": 123,
+    "skipped": 4,
+    "failures": 0,
+    "errors": 0,
+    "command": "mvn test",
+    "cases": [
+      {
+        "class": "com.cayleywcs.alarm.AlarmFlowTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.application.security.AppKeySignV2Test",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.ArchitectureConventionsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.binding.BindingTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.common.api.DatabasePaginationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.common.api.PageSnapshotPostgresTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "class": "com.cayleywcs.config.PostgresIndexMigrationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "class": "com.cayleywcs.config.SchedulerIsolationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.config.WcsMetricsIntegrationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.connection.ConnectionManagerTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.connection.SelfHealingTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.device.DeviceHandlerHardeningTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.device.DeviceHandlerRegistryTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.device.NewDeviceSimEndToEndTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.device.V10SeedTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.monitor.MonitorPusherTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.monitor.MonitorWebSocketIntegrationTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.openapi.ApplicationTokenIntegrationTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.openapi.ReconcileAuthTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.openapi.ReconcileTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.SchemaSeedTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.simulator.StackerSimEndToEndTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.stats.RecoveryAndStatsTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.stats.StatsCursorPostgresTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "class": "com.cayleywcs.stats.StatsSnapshotPostgresTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "class": "com.cayleywcs.stats.StatsWindowEquivalenceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.task.orchestrate.ChainOrchestrationTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.task.orchestrate.DispatchStrategyTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.task.StackerHandshakeHardeningTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.task.StackerHandshakeReentryTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.task.StackerHandshakeTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.task.TaskEngineConcurrencyTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.webhook.WebhookFlowTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywcs.webhook.WebhookShutdownTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "wms_tests": {
+    "tests": 12,
+    "passed": 12,
+    "failures": 0,
+    "command": "mvn -Dtest=CayleyWcsTokenTest,WcsIntegrationFlowTest test",
+    "cases": [
+      {
+        "class": "com.cayleywms.wcs.CayleyWcsTokenTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.cayleywms.wcs.WcsIntegrationFlowTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "wcs_live_checks": [
+    "two_tokens_coexist",
+    "unknown_token_rejected",
+    "wrong_secret_rejected",
+    "single_task_idempotency",
+    "chain_idempotency",
+    "stacker_simulation_completed",
+    "three_segment_chain_completed",
+    "snapshot",
+    "alarm_query"
+  ],
+  "joint": {
+    "checks": [
+      "docker_wms_gets_token",
+      "docker_wms_dispatches_to_docker_wcs",
+      "stacker_handshake_completes",
+      "callback_or_reconcile_finalizes",
+      "inbound_posted_once"
+    ],
+    "task_id": 3,
+    "remote_task_id": 102032,
+    "status": "completed",
+    "completed_by": "auto",
+    "inbound_id": 26,
+    "posted_qty": 2,
+    "callback_delivery": {
+      "id": 72,
+      "biz_id": 102032,
+      "status": "ok",
+      "response": "HTTP 200",
+      "wms_callback_seen": true
+    }
+  },
+  "document": {
+    "status": "passed",
+    "routes": [
+      "/system/token",
+      "/open/task/dispatch",
+      "/open/task/query",
+      "/open/chain/dispatch",
+      "/open/chain/query",
+      "/open/alarm/query",
+      "/open/snapshot"
+    ],
+    "valid_json_examples": 19,
+    "models": [
+      "Task",
+      "TaskChain",
+      "Alarm",
+      "ChainSegment",
+      "ConnectionSnapshot",
+      "ReconcileResult",
+      "SnapshotResult",
+      "设备扩展参数"
+    ],
+    "table_count": 47,
+    "pages": 35,
+    "native_toc_entries": 42,
+    "native_toc_page_numbers_verified": true,
+    "native_toc_jumps": 3,
+    "source_and_live_fields_match": true,
+    "public_excluded_terms": 0,
+    "sha256": "8efb457cd473bd3b06426c4b07e81506a9ad51a5402e212949498c92d3f40ced"
+  },
+  "visual": {
+    "pages": 35,
+    "all_pages_inspected_at_original_pixels": true,
+    "inspected_before_last_fix": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36
+    ],
+    "changed_after_final_fix": [
+      3,
+      27,
+      35
+    ],
+    "changed_pages_reinspected": true,
+    "unchanged_pages_verified_by_pixel_hash": 32,
+    "no_clipping_or_overlap": true,
+    "no_orphan_table_headers": true,
+    "no_blank_body_pages": true,
+    "sha256": "8efb457cd473bd3b06426c4b07e81506a9ad51a5402e212949498c92d3f40ced"
+  },
+  "published_document": "docs/礁盘工业WCS开放API接口文档.docx"
+}

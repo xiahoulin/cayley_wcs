@@ -1,0 +1,44 @@
+{
+  "task_id": "TASK-20261013-6CF1B1A6",
+  "document": {
+    "path": "E:/workspace/cayley_ai/cayley_project/cayley_wcs/docs/礁盘工业WCS开放API接口文档.docx",
+    "sha256": "dbcdda72868fc8e5453628b3a05e2e31d06396cfa1a5bd4afb0e8bd37dd21c16",
+    "input_sha256": "e2d9109005d4b4aff3bd662b9443dc7599616272890a1040edfe27e8c9673800",
+    "pages": 37,
+    "tables": 40,
+    "navigation_entries": 29,
+    "revision": "2.3",
+    "original_name_restored": true,
+    "backup_verified": true
+  },
+  "scope": "Chinese explanation followed by a space and the English identifier, without explanatory parentheses",
+  "changed_body_paragraphs": 32,
+  "changed_table_paragraphs": 74,
+  "total_changed_positions": 106,
+  "removed_explanation_parentheses": 178,
+  "narrative_items_checked": 908,
+  "remaining_explanation_parentheses": 0,
+  "spacing_errors": 0,
+  "interface_content_preserved": {
+    "code_paragraphs": 524,
+    "call_formats": 7,
+    "definition_and_header_cells_independently_checked": 772,
+    "field_encoding_types_required_rules_enumerations": "unchanged",
+    "machine_type_and_json_parentheses": "preserved"
+  },
+  "checks": {
+    "terms_and_spacing": "passed",
+    "structure_and_styles": "passed",
+    "real_navigation_and_toc_pages": "passed",
+    "all_37_pages_visual_qa": "passed",
+    "markdown_guide_and_json_example": "passed",
+    "published_file_hash": "passed"
+  },
+  "examples": [
+    "最后更新时间 last_update_time",
+    "已处理时间水位 sinceMillis",
+    "服务端查询时间 serverTimeMillis",
+    "本次最大条数 limit"
+  ],
+  "source_backup_saved": true
+}

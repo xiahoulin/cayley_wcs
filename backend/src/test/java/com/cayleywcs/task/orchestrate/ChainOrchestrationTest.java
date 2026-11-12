@@ -12,9 +12,12 @@ import com.cayleywcs.simulator.DeviceSimRegistry;
 import com.cayleywcs.task.TaskStatus;
 import com.cayleywcs.task.entity.TaskChainEntity;
 import com.cayleywcs.task.entity.TaskEntity;
+import com.cayleywcs.support.PublishedDeviceFixtures;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -40,6 +43,20 @@ class ChainOrchestrationTest {
     private DeviceSimRegistry simRegistry;
     @Autowired
     private OpenChainController openChainController;
+    @Autowired com.cayleywcs.protocol.ProtocolService fixtureProtocols;
+    @Autowired com.cayleywcs.application.mapper.ApplicationMapper fixtureApps;
+    @Autowired com.cayleywcs.binding.BindingService fixtureBindings;
+
+    @BeforeEach void publishedFixtures() {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(new com.cayleywcs.auth.JwtUser(1L,"admin","admin","admin",1L,1L),null,List.of()));
+        for(String code:List.of("STACKER01","CONVEYOR_SIM","LIFT_SIM")) {
+            ApplicationEntity app=byCode(code);if(connectionManager.isOpen(app.getId()))connectionManager.close(app.getId());
+            PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,app.getId(),switch(code){case "CONVEYOR_SIM"->"conveyor";case "LIFT_SIM"->"lift";default->"stacker";});
+        }
+        ApplicationEntity up=byCode("WMS-MAIN");PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,up.getId(),"none");
+        fixtureBindings.grant(up.getId(),List.of(byCode("STACKER01").getId(),byCode("CONVEYOR_SIM").getId(),byCode("LIFT_SIM").getId()),"dispatch");
+    }
+    @AfterEach void clearIdentity() {org.springframework.security.core.context.SecurityContextHolder.clearContext();}
 
     private ApplicationEntity byCode(String appCode) {
         return applicationService.listAll().stream()
@@ -176,11 +193,11 @@ class ChainOrchestrationTest {
         // query 收敛：设备身份看不到 WMS 下发的链
         var deviceView = openChainController.query(
                 new OpenChainController.ChainReconcileQuery(0, 500), asDevice);
-        assertThat(deviceView.data().rows().stream().map(TaskChainEntity::getChain_no))
+        assertThat(deviceView.data().rows().stream().map(row -> row.get("chain_no")))
                 .doesNotContain("CHAIN-AUTH-2");
         var wmsView = openChainController.query(
                 new OpenChainController.ChainReconcileQuery(0, 500), asWms);
-        assertThat(wmsView.data().rows().stream().map(TaskChainEntity::getChain_no))
+        assertThat(wmsView.data().rows().stream().map(row -> row.get("chain_no")))
                 .contains("CHAIN-AUTH-2");
     }
 

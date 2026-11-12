@@ -44,8 +44,11 @@ public final class Plc4xConnectionStrings {
 
     private static String s7(AdapterContext ctx) {
         String host = ctx.connParam("host", "127.0.0.1");
+        long port = ctx.connParamLong("port", 102);
         long rack = ctx.connParamLong("rack", 0);
         long slot = ctx.connParamLong("slot", 1);
-        return "s7://" + host + "?remote-rack=" + rack + "&remote-slot=" + slot;
+        String controller = ctx.connParam("controllerType", "");
+        return "s7://" + host + ":" + port + "?remote-rack=" + rack + "&remote-slot=" + slot
+                + (controller.isBlank() ? "" : "&controller-type=" + controller);
     }
 }

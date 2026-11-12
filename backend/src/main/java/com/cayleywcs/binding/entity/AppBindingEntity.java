@@ -1,6 +1,7 @@
 package com.cayleywcs.binding.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import com.cayleywcs.common.entity.BaseEntity;
 
 /**
@@ -15,6 +16,20 @@ public class AppBindingEntity extends BaseEntity {
     private String scope;
     private Boolean enabled;
     private String remark;
+    private Long upstream_revision_id;
+    private Long downstream_revision_id;
+    private String contract_fingerprint;
+    @Version
+    private Long row_version;
+
+    public Long getUpstream_revision_id() { return upstream_revision_id; }
+    public void setUpstream_revision_id(Long value) { upstream_revision_id = value; }
+    public Long getDownstream_revision_id() { return downstream_revision_id; }
+    public void setDownstream_revision_id(Long value) { downstream_revision_id = value; }
+    public String getContract_fingerprint() { return contract_fingerprint; }
+    public void setContract_fingerprint(String value) { contract_fingerprint = value; }
+    public Long getRow_version() { return row_version; }
+    public void setRow_version(Long value) { row_version = value; }
 
     public Long getUpstream_app_id() {
         return upstream_app_id;

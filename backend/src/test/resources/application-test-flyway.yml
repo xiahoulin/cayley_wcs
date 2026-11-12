@@ -2,3 +2,5 @@ spring:
   flyway:
     enabled: true
     clean-disabled: true
+    postgresql:
+      transactional-lock: false

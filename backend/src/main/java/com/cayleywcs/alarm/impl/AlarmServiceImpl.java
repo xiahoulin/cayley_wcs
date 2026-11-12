@@ -13,10 +13,13 @@ import com.cayleywcs.common.support.ReconcileSupport;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AlarmServiceImpl implements AlarmService {
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final AlarmMapper alarmMapper;
 
     public AlarmServiceImpl(AlarmMapper alarmMapper) {
@@ -26,6 +29,11 @@ public class AlarmServiceImpl implements AlarmService {
     @Override
     @Transactional
     public AlarmEntity raise(Long appId, long faultCode, String level, String message, String suggestion) {
+        if (lifecycle != null) {
+            lifecycle.references();
+            if (jdbc.queryForObject("select count(*) from wcs_application where id=?", Long.class, appId) == 0)
+                return null; // A delayed device event must not recreate an alarm after application deletion.
+        }
         AlarmEntity active = alarmMapper.selectOne(new QueryWrapper<AlarmEntity>()
                 .eq("\"is_valid\"", true)
                 .eq("\"app_id\"", appId)
@@ -105,7 +113,7 @@ public class AlarmServiceImpl implements AlarmService {
     @Transactional
     public void clearCommAlarms(Long appId) {
         // 只清通讯类(-1)：-2 配置/-3 编排/-4 任务停滞是任务/配置侧问题，并不随连接恢复而解决，
-        // 若一并清除会把停滞死锁等状态变成完全静默（M11 审查 P1 的组成环节）。
+        // 若一并清除会把停滞死锁等状态变成完全静默。
         clearWhere(new QueryWrapper<AlarmEntity>()
                 .eq("\"is_valid\"", true)
                 .eq("\"app_id\"", appId)
@@ -114,11 +122,14 @@ public class AlarmServiceImpl implements AlarmService {
     }
 
     @Override
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public PageData<AlarmEntity> page(PageSearch pageSearch) {
-        List<AlarmEntity> rows = alarmMapper.selectList(new QueryWrapper<AlarmEntity>()
-                .eq("\"is_valid\"", true)
-                .orderByDesc("\"id\""));
-        return PageSupport.slice(rows, pageSearch);
+        return PageSupport.database(pageSearch,
+                () -> alarmMapper.selectCount(new QueryWrapper<AlarmEntity>().eq("\"is_valid\"", true)),
+                window -> alarmMapper.selectList(new QueryWrapper<AlarmEntity>()
+                        .eq("\"is_valid\"", true)
+                        .orderByDesc("\"id\"")
+                        .last("limit " + window.size() + " offset " + window.offset())));
     }
 
     @Override

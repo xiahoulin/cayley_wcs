@@ -1,0 +1,114 @@
+{
+  "taskId": "TASK-20261112-648E769C",
+  "passed": true,
+  "retainedApplications": [
+    {
+      "id": 26,
+      "code": "SENSOR_1_2",
+      "name": "仙工 AGV 01 · 红外温度传感器"
+    },
+    {
+      "id": 25,
+      "code": "SENSOR_1_1",
+      "name": "仙工 AGV 01 · 噪声传感器"
+    },
+    {
+      "id": 24,
+      "code": "SENSOR_1_80",
+      "name": "仙工 AGV 01 · 振动传感器"
+    },
+    {
+      "id": 23,
+      "code": "SEER_AGV_01",
+      "name": "仙工 AGV 01"
+    },
+    {
+      "id": 4,
+      "code": "WMS-MAIN",
+      "name": "上位 WMS 主系统"
+    },
+    {
+      "id": 3,
+      "code": "PALLET_SIM",
+      "name": "堆垛机 OPC UA 仿真（既有 PALLET_SIM）"
+    }
+  ],
+  "applicationsBefore": 25,
+  "applicationsAfter": 6,
+  "deleted": {
+    "wcs_webhook_delivery": 631,
+    "wcs_webhook_cursor": 1,
+    "wcs_webhook": 1,
+    "wcs_device_task_number_lease": 0,
+    "wcs_task": 97,
+    "wcs_task_chain": 5,
+    "wcs_app_binding": 13,
+    "wcs_dashboard_point_selection": 0,
+    "wcs_open_token": 105,
+    "wcs_alarm": 9,
+    "wcs_connection_log": 53,
+    "wcs_message_log": 0,
+    "wcs_contract_migration_audit": 33,
+    "wcs_telemetry_latest": 0,
+    "wcs_telemetry_cycle": 0,
+    "wcs_sensor_application": 0,
+    "wcs_sensor_gateway": 0,
+    "wcs_device_task_number": 11,
+    "wcs_fault_code": 104,
+    "wcs_protocol_point": 165,
+    "wcs_protocol_revision": 6,
+    "wcs_protocol": 12,
+    "wcs_application": 19
+  },
+  "narrowedWebhookScopes": 2,
+  "protectedTableChecks": 28,
+  "retainedTaskIds": [
+    102018,
+    102026,
+    102027
+  ],
+  "remainingChains": 0,
+  "remainingTaskNumberLeases": 0,
+  "orphanChecks": {
+    "token_orphans": 0,
+    "counter_orphans": 0,
+    "binding_orphans": 0,
+    "protocol_orphans": 0
+  },
+  "credentialsConnectionSettingsVersionsPreserved": true,
+  "containersImagesMountsPreserved": true,
+  "onlyBackendRestarted": true,
+  "schemaVersion": "24",
+  "redis": {
+    "existingKeysDeleted": 1,
+    "namespace": "cayleywcs:*",
+    "emptyImmediatelyAfterCleanup": true,
+    "keysAfterLiveValidation": 0
+  },
+  "backup": {
+    "bytes": 176969,
+    "sha256": "efd34bf4b85d0a4518492d396e805c1e8fba98908e84f4f6a188c3fc1445ed78",
+    "catalogVerified": true,
+    "restorable": true,
+    "cleanupRehearsedAgain": true,
+    "deletedCountsMatchProduction": true,
+    "protectedTableChecks": 28
+  },
+  "liveAcceptance": {
+    "passed": true,
+    "deletedDetailRequestsRejected": 19,
+    "requests": 1233,
+    "liveSamples": 202,
+    "elapsedSeconds": 120.78,
+    "simulatorHeartbeatValues": [
+      "0",
+      "1"
+    ],
+    "restartCount": 0,
+    "redisKeysAfterValidation": 0,
+    "onlyRetainedAppsInMonitor": true,
+    "agvTimestampsAdvanced": true
+  },
+  "sensorHardware": "Original defaults retained; DR164 endpoint remains unconfigured",
+  "wmsMainConfiguration": "Original configuration retained; no protocol publication or new authorization performed"
+}

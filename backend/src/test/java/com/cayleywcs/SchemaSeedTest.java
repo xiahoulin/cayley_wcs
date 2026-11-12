@@ -50,7 +50,9 @@ class SchemaSeedTest {
                         + "(select \"id\" from \"wcs_protocol\" where \"protocol_code\"='STACKER_OPCUA')", String.class);
 
         assertThat(adminUsers).isEqualTo(1);
-        assertThat(protocolTypes).isEqualTo(7); // opcua/modbus_tcp/s7/tcp/mqtt/http/sim
+        assertThat(protocolTypes).isEqualTo(7); // V24: transport types are independent of application adapters.
+        assertThat(jdbcTemplate.queryForObject("select count(*) from wcs_dict_item where type_code='protocol_type' and item_code in ('seer_tcp','sensor_gateway')",Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from wcs_application where adapter_type is null",Integer.class)).isZero();
         assertThat(stacker).isEqualTo(1);
         assertThat(points).isEqualTo(27); // STACKER_STD：12 命令区 + 15 状态区（6.18 修订版）
         assertThat(faults).isEqualTo(48); // STACKER_STD 1-48
@@ -72,5 +74,13 @@ class SchemaSeedTest {
         FaultInfo unknown = faultCodeResolver.resolve(protocolId, 9999);
         assertThat(unknown.known()).isFalse();
         assertThat(unknown.message()).contains("9999");
+    }
+    @Test void schemaContainsExplicitHttpTemplatesAndRevisionMigrationTables() {
+        Integer templates=jdbcTemplate.queryForObject("select count(distinct template_code) from wcs_protocol_point where protocol_id=(select id from wcs_protocol where protocol_code='HTTP_DEVICE_CONTRACT' and tenant_id=1) and point_scope='business'",Integer.class);
+        assertThat(templates).isEqualTo(4);
+        Integer unknownDirections=jdbcTemplate.queryForObject("select count(*) from wcs_protocol_point where protocol_id=(select id from wcs_protocol where protocol_code='HTTP_DEVICE_CONTRACT' and tenant_id=1) and direction not in ('request','response')",Integer.class);
+        assertThat(unknownDirections).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from wcs_protocol_revision",Integer.class)).isNotNegative();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from wcs_contract_migration_audit",Integer.class)).isNotNegative();
     }
 }

@@ -13,6 +13,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import com.cayleywcs.task.TaskPublicView;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,7 +51,7 @@ public class OpenReconcileController {
 
     @PostMapping("/task/query")
     @Operation(summary = "增量拉任务（按 last_update_time 水位线；越权收敛到授权范围）")
-    public ApiResponse<ReconcileResult<TaskEntity>> queryTasks(@RequestBody ReconcileQuery q, HttpServletRequest http) {
+    public ApiResponse<ReconcileResult<Map<String,Object>>> queryTasks(@RequestBody ReconcileQuery q, HttpServletRequest http) {
         long now = System.currentTimeMillis();
         List<TaskEntity> rows;
         if (q.appId() != null) {
@@ -57,12 +60,12 @@ public class OpenReconcileController {
         } else {
             rows = taskService.queryReconcile(accessGuard.visibleAppIds(http, "task/query"), q.sinceMillis(), q.limit());
         }
-        return ApiResponse.success(new ReconcileResult<>(now, rows.size(), rows));
+        return ApiResponse.success(new ReconcileResult<>(now, rows.size(), rows.stream().map(TaskPublicView::of).toList()));
     }
 
     @PostMapping("/alarm/query")
     @Operation(summary = "增量拉报警（按 last_update_time 水位线；越权收敛到授权范围）")
-    public ApiResponse<ReconcileResult<AlarmEntity>> queryAlarms(@RequestBody ReconcileQuery q, HttpServletRequest http) {
+    public ApiResponse<ReconcileResult<Map<String,Object>>> queryAlarms(@RequestBody ReconcileQuery q, HttpServletRequest http) {
         long now = System.currentTimeMillis();
         List<AlarmEntity> rows;
         if (q.appId() != null) {
@@ -71,7 +74,7 @@ public class OpenReconcileController {
         } else {
             rows = alarmService.queryReconcile(accessGuard.visibleAppIds(http, "alarm/query"), q.sinceMillis(), q.limit());
         }
-        return ApiResponse.success(new ReconcileResult<>(now, rows.size(), rows));
+        return ApiResponse.success(new ReconcileResult<>(now, rows.size(), rows.stream().map(OpenPublicViews::alarm).toList()));
     }
 
     @PostMapping("/snapshot")
@@ -83,9 +86,26 @@ public class OpenReconcileController {
         accessGuard.assertCanQuery(http, q.appId(), "snapshot");
         long now = System.currentTimeMillis();
         ConnectionSnapshot conn = connectionManager.isOpen(q.appId()) ? connectionManager.snapshot(q.appId()) : null;
-        return ApiResponse.success(new SnapshotResult(now, conn,
-                alarmService.listActive(q.appId()),
-                taskService.queryReconcile(q.appId(), 0, 50)));
+        Map<String,Object> publicConnection=null;
+        if (conn!=null) {
+            publicConnection=new LinkedHashMap<>();
+            publicConnection.put("appId",conn.appId()); publicConnection.put("appCode",conn.appCode());
+            publicConnection.put("state",conn.state()); publicConnection.put("lastHeartbeatAt",conn.lastHeartbeatAt());
+            publicConnection.put("protocolType",conn.protocolType()); publicConnection.put("deviceType",conn.deviceType());
+            publicConnection.put("quality","bad"); publicConnection.put("capturedAt",conn.lastHeartbeatAt());
+            publicConnection.put("payload",null);
+            if ("RUNNING".equals(conn.state())) {
+                try {
+                    publicConnection.put("payload",connectionManager.validatedResponsePayload(q.appId()));
+                    publicConnection.put("quality","good"); publicConnection.put("capturedAt",now);
+                } catch (WcsException ex) {
+                    publicConnection.put("errorCode",ex.getCode()); publicConnection.put("errorMessage",ex.getMessage());
+                }
+            }
+        }
+        return ApiResponse.success(new SnapshotResult(now, publicConnection,
+                alarmService.listActive(q.appId()).stream().map(OpenPublicViews::alarm).toList(),
+                taskService.queryReconcile(q.appId(), 0, 50).stream().map(TaskPublicView::of).toList()));
     }
 
     public record ReconcileQuery(Long appId, long sinceMillis, int limit) {
@@ -97,7 +117,7 @@ public class OpenReconcileController {
     public record ReconcileResult<T>(long serverTimeMillis, int count, List<T> rows) {
     }
 
-    public record SnapshotResult(long serverTimeMillis, ConnectionSnapshot connection,
-                                 List<AlarmEntity> alarms, List<TaskEntity> tasks) {
+    public record SnapshotResult(long serverTimeMillis, Map<String,Object> connection,
+                                 List<Map<String,Object>> alarms, List<Map<String,Object>> tasks) {
     }
 }

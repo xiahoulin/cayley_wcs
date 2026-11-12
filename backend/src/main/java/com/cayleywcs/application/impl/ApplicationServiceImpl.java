@@ -23,9 +23,13 @@ import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.cayleywcs.application.ApplicationConfigurationService;
+import com.cayleywcs.protocol.contract.ProtocolContractService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class ApplicationServiceImpl implements ApplicationService {
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
     /** 不参与设备调度的类型（上位系统），无需已注册 handler。 */
     private static final String DEVICE_TYPE_NONE = "none";
 
@@ -36,6 +40,13 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final CurrentUserProvider currentUserProvider;
     // ObjectProvider 延迟解析，切断构造环：本类 → Registry → StackerHandler → ConnectionManager → 本接口
     private final ObjectProvider<DeviceHandlerRegistry> handlerRegistryProvider;
+    private ApplicationConfigurationService configuration;
+    private ProtocolContractService contracts;
+    @Autowired private com.cayleywcs.application.ResourceDeletionService deletion;
+    @Autowired
+    void setConfiguration(ApplicationConfigurationService configuration,ProtocolContractService contracts) {
+        this.configuration=configuration; this.contracts=contracts;
+    }
 
     public ApplicationServiceImpl(ApplicationMapper applicationMapper, CurrentUserProvider currentUserProvider,
                                   ObjectProvider<DeviceHandlerRegistry> handlerRegistryProvider) {
@@ -54,9 +65,10 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public List<ApplicationEntity> listAll() {
-        return applicationMapper.selectList(new QueryWrapper<ApplicationEntity>()
-                .eq("\"is_valid\"", true)
-                .orderByDesc("\"id\""));
+        var query=new QueryWrapper<ApplicationEntity>().eq("\"is_valid\"",true);
+        var user=currentUserProvider.systemUser();
+        if (!(Long.valueOf(0).equals(user.userId()) && "system".equals(user.userRole()))) query.eq("\"tenant_id\"",user.tenantId());
+        return applicationMapper.selectList(query.orderByDesc("\"id\""));
     }
 
     @Override
@@ -65,6 +77,10 @@ public class ApplicationServiceImpl implements ApplicationService {
         if (entity == null || !Boolean.TRUE.equals(entity.getIs_valid())) {
             throw new WcsException(ErrorCode.NOT_FOUND, "application not found: " + id);
         }
+        var user=currentUserProvider.systemUser();
+        if (!(Long.valueOf(0).equals(user.userId()) && "system".equals(user.userRole()))
+                && !java.util.Objects.equals(entity.getTenant_id(),user.tenantId()))
+            throw new WcsException(ErrorCode.NOT_FOUND,"应用不存在或不可访问");
         return entity;
     }
 
@@ -82,6 +98,11 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     @Transactional
     public ApplicationEntity create(ApplicationEntity entity) {
+        entity.setId(null);
+        if(entity.getProtocol_id()!=null || entity.getProtocol_revision_id()!=null)
+            throw new WcsException(ErrorCode.BAD_REQUEST,"请先注册应用取得 AppID，再在该应用下创建协议并选择已发布版本");
+        entity.setAdapter_type(com.cayleywcs.adapter.ApplicationAdapterCatalog.type(entity));
+        if("seer_agv".equals(entity.getAdapter_type())) com.cayleywcs.adapter.seer.SeerConnectionSettings.validate(entity.getConn_params());
         validateDeviceType(entity.getDevice_type());
         if (entity.getApp_key() == null || entity.getApp_key().isBlank()) {
             entity.setApp_key("ak_" + randomToken(18));
@@ -96,39 +117,44 @@ public class ApplicationServiceImpl implements ApplicationService {
             entity.setEnabled(true);
         }
         Audits.fillCreate(entity, currentUserProvider.currentUser());
+        entity.setConfiguration_state("awaiting_contract");entity.setConfiguration_epoch(0L);entity.setDesired_state("closed");
         applicationMapper.insert(entity);
         return entity;
     }
 
     @Override
-    @Transactional
     public ApplicationEntity update(ApplicationEntity entity) {
+        return configuration.update(entity.getId(),()->updateLocked(entity));
+    }
+
+    private ApplicationEntity updateLocked(ApplicationEntity entity) {
         validateDeviceType(entity.getDevice_type());
         ApplicationEntity existing = getById(entity.getId());
+        if (entity.getAdapter_type() == null) entity.setAdapter_type(existing.getAdapter_type());
+        if("seer_agv".equals(entity.getAdapter_type())) com.cayleywcs.adapter.seer.SeerConnectionSettings.validate(entity.getConn_params());
+        entity.setTenant_id(existing.getTenant_id());
+        configuration.prepareChange(existing,entity);
         // app_key / app_secret 不通过普通更新修改，沿用既有值（改密走 resetSecret）。
         entity.setApp_key(existing.getApp_key());
         entity.setApp_secret(existing.getApp_secret());
         // work_mode/dispatch_strategy/failure_policy/task_stale_seconds/desired_state 由专用接口独占：
-        // 实体已标注 @TableField(updateStrategy=NEVER)，此处 updateById 永不写这些列，无需读快照沿用（对抗审查 P2）。
+        // 实体已标注 @TableField(updateStrategy=NEVER)，此处 updateById 永不写这些列，无需读快照沿用。
         entity.setCreator(existing.getCreator());
         entity.setCreate_time(existing.getCreate_time());
         entity.setTenant_id(existing.getTenant_id());
         entity.setIs_valid(true);
         Audits.touch(entity);
         applicationMapper.updateById(entity);
+        if("seer_agv".equals(entity.getAdapter_type()) && "open".equals(existing.getDesired_state())
+                && java.util.Objects.equals(existing.getProtocol_revision_id(),entity.getProtocol_revision_id())
+                && !java.util.Objects.equals(existing.getConn_params(),entity.getConn_params()))
+            configuration.reopenAfterCommit(entity.getId());
         return applicationMapper.selectById(entity.getId());
     }
 
     @Override
-    @Transactional
     public boolean delete(Long id) {
-        ApplicationEntity existing = applicationMapper.selectById(id);
-        if (existing == null || !Boolean.TRUE.equals(existing.getIs_valid())) {
-            return false;
-        }
-        existing.setIs_valid(false);
-        Audits.touch(existing);
-        return applicationMapper.updateById(existing) == 1;
+        return deletion.deleteApplication(id);
     }
 
     @Override
@@ -143,16 +169,16 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public ApplicationEntity validateForConnect(Long appId) {
-        ApplicationEntity app = applicationMapper.selectById(appId);
-        if (app == null || !Boolean.TRUE.equals(app.getIs_valid())) {
-            throw new WcsException(ErrorCode.NOT_FOUND, "application not found: " + appId);
-        }
+        ApplicationEntity app = getById(appId);
+        if ("none".equals(app.getDevice_type()) || "upstream".equals(app.getDirection()))
+            throw new WcsException(ErrorCode.PROTOCOL_UNSUPPORTED,"上位应用不建立下位设备连接");
         if (!Boolean.TRUE.equals(app.getEnabled())) {
             throw new WcsException(ErrorCode.APPKEY_INVALID, "application disabled: " + app.getApp_code());
         }
         if (app.getApp_key() == null || app.getApp_key().isBlank()) {
             throw new WcsException(ErrorCode.APPKEY_INVALID, "application app_key missing: " + app.getApp_code());
         }
+        if(app.getProtocol_id()==null)throw new WcsException(4223,"应用尚未配置协议，请先维护点位并选择已发布版本");
         return app;
     }
 
@@ -176,6 +202,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     @Transactional
     public void updateDesiredState(Long appId, String desiredState) {
+        if (lifecycle != null) lifecycle.references();
+        getById(appId);
         if (!DESIRED_STATES.contains(desiredState)) {
             throw new WcsException(ErrorCode.BAD_REQUEST, "非法期望态: " + desiredState);
         }

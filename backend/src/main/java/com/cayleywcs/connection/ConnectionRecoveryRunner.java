@@ -5,10 +5,12 @@ import com.cayleywcs.application.ApplicationService;
 import com.cayleywcs.application.entity.ApplicationEntity;
 import com.cayleywcs.common.exception.ErrorCode;
 import com.cayleywcs.common.exception.WcsException;
+import com.cayleywcs.config.WcsMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +32,7 @@ public class ConnectionRecoveryRunner implements ApplicationRunner {
     private final ApplicationService applicationService;
     private final ConnectionManager connectionManager;
     private final AlarmService alarmService;
+    @Autowired private WcsMetrics metrics;
 
     public ConnectionRecoveryRunner(ApplicationService applicationService, ConnectionManager connectionManager,
                                     AlarmService alarmService) {
@@ -47,9 +50,9 @@ public class ConnectionRecoveryRunner implements ApplicationRunner {
     }
 
     @Scheduled(initialDelayString = "${cayleywcs.connection.recovery-reconcile-interval-ms:30000}",
-            fixedDelayString = "${cayleywcs.connection.recovery-reconcile-interval-ms:30000}")
+            fixedDelayString = "${cayleywcs.connection.recovery-reconcile-interval-ms:30000}", scheduler = "taskScheduler")
     public void reconcile() {
-        reconcileOnce();
+        WcsMetrics.tick(metrics, "connection-recovery", this::reconcileOnce);
     }
 
     /** 单轮对账（公开供测试驱动）。返回本轮成功建连数。 */

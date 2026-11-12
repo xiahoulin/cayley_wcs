@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.cayleywcs.alarm.entity.AlarmEntity;
 import com.cayleywcs.alarm.mapper.AlarmMapper;
 import com.cayleywcs.common.entity.BaseEntity;
+import com.cayleywcs.config.WcsMetrics;
 import com.cayleywcs.task.entity.TaskChainEntity;
 import com.cayleywcs.task.entity.TaskEntity;
 import com.cayleywcs.task.mapper.TaskChainMapper;
@@ -23,6 +24,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -38,6 +40,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class WebhookScanner {
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate lifecycleJdbc;
     private static final Logger log = LoggerFactory.getLogger(WebhookScanner.class);
     private static final String SRC_TASK = "task";
     private static final String SRC_ALARM = "alarm";
@@ -53,6 +57,7 @@ public class WebhookScanner {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final int batch;
     private final long lagMs;
+    @Autowired private WcsMetrics metrics;
 
     public WebhookScanner(WebhookMapper webhookMapper, WebhookCursorMapper cursorMapper,
                           WebhookDeliveryMapper deliveryMapper, TaskMapper taskMapper,
@@ -70,9 +75,9 @@ public class WebhookScanner {
     }
 
     @Scheduled(initialDelayString = "${cayleywcs.webhook.scan-interval-ms:3000}",
-            fixedDelayString = "${cayleywcs.webhook.scan-interval-ms:3000}")
+            fixedDelayString = "${cayleywcs.webhook.scan-interval-ms:3000}", scheduler = "taskScheduler")
     public void tick() {
-        runOnce();
+        WcsMetrics.tick(metrics, "webhook-scanner", this::runOnce);
     }
 
     /** 单轮扫描（公开供测试驱动）。 */
@@ -98,7 +103,7 @@ public class WebhookScanner {
         WebhookCursorEntity cursor = getOrCreateCursor(wh, source);
         LocalDateTime wmTs = cursor.getWatermark_time();
         long lastId = cursor.getLast_id() == null ? 0 : cursor.getLast_id();
-        // 滞后上界（对抗审查 P2）：只处理 lut <= now()-lag 的行——保证一行被处理前已「稳定」lag 时长，
+        // 滞后上界：只处理 lut <= now()-lag 的行——保证一行被处理前已「稳定」lag 时长，
         // 使「事务先取 now(低 lut) 后延迟提交」的行在提交时仍 > 游标、不被越过丢失。lag 内的新行下轮再处理。
         LocalDateTime upper = LocalDateTime.now().minus(Duration.ofMillis(lagMs));
 
@@ -151,7 +156,7 @@ public class WebhookScanner {
         cursor = new WebhookCursorEntity();
         cursor.setWebhook_id(wh.getId());
         cursor.setSource(source);
-        // 起点=订阅时刻（webhook 创建时间），只投递注册后发生的事件，不回放全部历史（对抗审查 P2 洪泛）。
+        // 起点=订阅时刻（webhook 创建时间），只投递注册后发生的事件，不回放全部历史。
         cursor.setWatermark_time(wh.getCreate_time() == null ? LocalDateTime.now() : wh.getCreate_time());
         cursor.setLast_id(0L);
         cursor.setLast_update_time(LocalDateTime.now());
@@ -167,6 +172,16 @@ public class WebhookScanner {
     }
 
     private void insertDelivery(WebhookEntity wh, String eventType, Long bizId, Map<String, Object> payload) {
+        try { lifecycle.referenceWrite(() -> {
+            Object owner=payload.get("appId");
+            if(owner instanceof Number n && lifecycleJdbc.queryForObject("select count(*) from wcs_application where id=?",Long.class,n.longValue())==0) return null;
+            insertDeliveryLocked(wh,eventType,bizId,payload);return null;
+        }); } catch (DuplicateKeyException ex) {
+            // Catch after rollback: PostgreSQL cannot continue inside an aborted transaction.
+        }
+    }
+
+    private void insertDeliveryLocked(WebhookEntity wh, String eventType, Long bizId, Map<String, Object> payload) {
         WebhookDeliveryEntity d = new WebhookDeliveryEntity();
         d.setWebhook_id(wh.getId());
         d.setEvent_type(eventType);
@@ -182,11 +197,7 @@ public class WebhookScanner {
         d.setLast_update_time(now);
         d.setIs_valid(true);
         d.setTenant_id(tenant(wh));
-        try {
-            deliveryMapper.insert(d);
-        } catch (DuplicateKeyException ex) {
-            // 该 (webhook, event, biz) 已入队/已投递：幂等去重
-        }
+        deliveryMapper.insert(d);
     }
 
     private Map<String, Object> payload(String source, String eventType, BaseEntity row) {
@@ -203,6 +214,7 @@ public class WebhookScanner {
                 m.put("errorCode", t.getError_code());
                 m.put("chainId", t.getChain_id());
                 m.put("wmsRef", t.getWms_ref());
+                m.put("result",t.getResult());
             }
             case SRC_ALARM -> {
                 AlarmEntity a = (AlarmEntity) row;
@@ -235,7 +247,7 @@ public class WebhookScanner {
             default -> null;
         };
         // 链无具体上位（upstream=0/null，管理端/旁路下发）：不绑定单一设备 → 广播给所有订阅链事件者，
-        // 避免 scope 非空的 webhook 永远收不到旁路链事件（对抗审查 P3）。
+        // 避免 scope 非空的 webhook 永远收不到旁路链事件。
         if (SRC_CHAIN.equals(source) && (appId == null || appId == 0)) {
             return true;
         }

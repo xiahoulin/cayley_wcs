@@ -3,6 +3,8 @@ import { post, type PageData } from './client'
 // ===== 类型 =====
 export interface Protocol {
   id?: number
+  app_id?: number
+  legacy_template?: boolean
   protocol_code: string
   protocol_name: string
   target_system: string
@@ -11,21 +13,45 @@ export interface Protocol {
   version?: string
   status?: string
   remark?: string
+  lifecycle_state?: 'draft' | 'published' | 'retired'
+  row_version?: number
+  published_revision_id?: number
 }
 
 export interface ProtocolPoint {
   id?: number
   protocol_id: number
-  point_group: string
   field_name: string
   symbol_name: string
   address: string
   data_type: string
-  rw: string
   value_range: string
   sort?: number
   description?: string
+  template_code?: string
+  template_version?: number
+  operation?: string
+  direction?: 'request' | 'response'
+  point_scope?: 'business' | 'internal'
+  logical_type?: string
+  required?: boolean
+  nullable?: boolean
+  default_value?: unknown
+  constraints?: Record<string, unknown>
+  scale?: number | string
+  row_version?: number
 }
+
+export interface ProtocolRevision {
+  id: number
+  protocol_id: number
+  protocol_type?: string
+  revision?: number
+  version?: string
+  fingerprint?: string
+  points?: ProtocolPoint[]
+}
+
 
 export interface Application {
   id?: number
@@ -33,9 +59,11 @@ export interface Application {
   app_name: string
   app_key?: string
   app_secret?: string
-  protocol_id: number
+  protocol_id?: number | null
+  protocol_revision_id?: number | null
   direction: string
   device_type?: string
+  adapter_type?: string
   work_mode?: string
   dispatch_strategy?: string
   failure_policy?: string
@@ -46,6 +74,9 @@ export interface Application {
   status?: string
   remark?: string
 }
+
+export interface ApplicationAdapterOption { code: string; name: string; protocolType: string; deviceTypes: string[] }
+export const applicationAdapterOptions = () => post<ApplicationAdapterOption[]>('/application/adapter/options')
 
 export interface DictType {
   id?: number
@@ -89,6 +120,10 @@ export interface Task {
   retry_count?: number
   dispatch_time?: string
   finish_time?: string
+  payload?: Record<string, unknown>
+  result?: PointResult | null
+  native_task_num?: number
+  protocol_revision_id?: number
 }
 
 export interface TaskChain {
@@ -112,6 +147,28 @@ export interface Webhook {
   scope_app_ids: number[]
   enabled?: boolean
   remark?: string
+}
+
+export interface MatchDifference {
+  field: string
+  direction: string
+  reason: string
+  expected?: unknown
+  actual?: unknown
+}
+export interface BindingMatch {
+  compatible: boolean
+  fingerprint?: string
+  upstreamSnapshotId?: number
+  downstreamSnapshotId?: number
+  differences: MatchDifference[]
+}
+
+export interface PointResult {
+  payload: Record<string, unknown>
+  quality: string
+  capturedAt: number | string
+  error?: string
 }
 
 export interface WebhookDelivery {
@@ -152,7 +209,10 @@ export interface ConnectionSnapshot {
   state: string
   lastHeartbeatAt: number
   retryCount: number
-  latest: Record<string, unknown>
+  payload: Record<string, unknown>
+  quality?: string
+  capturedAt?: number | string
+  protocolRevisionId?: number
 }
 
 export interface SlotUsage { max: number; used: number }
@@ -181,31 +241,44 @@ export const dictItems = (typeCode: string) => post<DictItem[]>('/dict/item/list
 export const protocolList = (pageIndex = 1, pageSize = 50) =>
   post<PageData<Protocol>>('/protocol/list', { pageIndex, pageSize })
 export const protocolAll = () => post<Protocol[]>('/protocol/all')
+export const protocolTemplates = () => post<Protocol[]>('/protocol/templates')
+export const protocolDetail = (id: number) => post<Protocol>('/protocol/detail', { id })
 export const protocolCreate = (p: Protocol) => post<Protocol>('/protocol/create', p)
 export const protocolUpdate = (p: Protocol) => post<Protocol>('/protocol/update', p)
 export const protocolDelete = (id: number) => post<boolean>('/protocol/delete', { id })
 export const protocolPoints = (id: number) => post<ProtocolPoint[]>('/protocol/point/list', { id })
+export const protocolPointCreate = (p: ProtocolPoint) => post<ProtocolPoint>('/protocol/point/create', p)
+export const protocolPointUpdate = (p: ProtocolPoint) => post<ProtocolPoint>('/protocol/point/update', p)
+export const protocolPointDelete = (id: number, row_version: number) => post<boolean>('/protocol/point/delete', { id, row_version })
+export const protocolClone = (id: number, app_id?: number) => post<Protocol>('/protocol/clone', { id, app_id })
+export const protocolPublish = (id: number, row_version: number) => post<Protocol>('/protocol/publish', { id, row_version })
+export const protocolRevisions = (id: number) => post<ProtocolRevision[]>('/protocol/revisions', { id })
+export const protocolTypeOptions = (protocol_type: string) => post<string[]>('/protocol/type/options', { protocol_type })
 
 // ===== 应用 =====
 export const applicationList = (pageIndex = 1, pageSize = 50) =>
   post<PageData<Application>>('/application/list', { pageIndex, pageSize })
-export const applicationAll = () => post<Application[]>('/application/all')
+export const applicationAll = (signal?: AbortSignal) => post<Application[]>('/application/all', {}, signal)
 export const applicationCreate = (a: Application) => post<Application>('/application/create', a)
 export const applicationUpdate = (a: Application) => post<Application>('/application/update', a)
 export const applicationDelete = (id: number) => post<boolean>('/application/delete', { id })
 export const applicationResetSecret = (id: number) => post<Application>('/application/reset-secret', { id })
 
 // ===== 连接治理 =====
-export const connectionStatus = () => post<ConnectionStatus>('/connection/status')
+export const connectionStatus = (signal?: AbortSignal) => post<ConnectionStatus>('/connection/status', {}, signal)
 export const connectionOpen = (id: number) => post<ConnectionSnapshot>('/connection/open', { id })
 export const connectionClose = (id: number) => post<boolean>('/connection/close', { id })
 export const connectionReconnect = (id: number) => post<ConnectionSnapshot>('/connection/reconnect', { id })
+export const connectionRead = (appId: number, payload: Record<string, null>) => post<PointResult>('/connection/read', { appId, payload })
+export const connectionWrite = (appId: number, payload: Record<string, unknown>) => post<PointResult>('/connection/write', { appId, payload })
 
 // ===== 上下位绑定授权 =====
 export const bindingAll = () => post<AppBinding[]>('/binding/all')
 export const bindingCreate = (b: AppBinding) => post<AppBinding>('/binding/create', b)
 export const bindingUpdate = (b: AppBinding) => post<AppBinding>('/binding/update', b)
 export const bindingDelete = (id: number) => post<boolean>('/binding/delete', { id })
+export const bindingCheck = (upstream_app_id: number, downstream_app_id: number) =>
+  post<BindingMatch>('/binding/check', { upstream_app_id, downstream_app_id })
 // 按应用授权：查/设 某上位侧应用可指挥的下位侧应用集合
 export const bindingGranted = (upstreamAppId: number) =>
   post<number[]>('/binding/granted', { upstreamAppId })
@@ -213,7 +286,7 @@ export const bindingGrant = (upstreamAppId: number, downstreamAppIds: number[], 
   post<number[]>('/binding/grant', { upstreamAppId, downstreamAppIds, scope })
 
 // ===== 报警 =====
-export const alarmActive = () => post<Alarm[]>('/alarm/active', {})
+export const alarmActive = (signal?: AbortSignal) => post<Alarm[]>('/alarm/active', {}, signal)
 export const alarmList = (pageIndex = 1, pageSize = 100) =>
   post<PageData<Alarm>>('/alarm/list', { pageIndex, pageSize })
 export const alarmAck = (id: number, ackBy = 'admin') => post<Alarm>('/alarm/ack', { id, ackBy })
@@ -246,8 +319,11 @@ export const taskReprioritize = (id: number, priority: number) => post<boolean>(
 export const taskRetry = (id: number) => post<boolean>('/task/retry', { id })
 
 // ===== 任务链 =====
-export const chainList = (pageIndex = 1, pageSize = 100) =>
-  post<PageData<TaskChain>>('/chain/list', { pageIndex, pageSize })
+export const chainList = (pageIndex = 1, pageSize = 100, signal?: AbortSignal) =>
+  post<PageData<TaskChain>>('/chain/list', { pageIndex, pageSize }, signal)
+
+export const monitorWsTicket = (signal?: AbortSignal) =>
+  post<{ ticket: string; expiresAtMillis: number }>('/monitor/ws-ticket', {}, signal)
 export const chainDetail = (id: number) => post<{ chain: TaskChain; tasks: Task[] }>('/chain/detail', { id })
 export const chainCancel = (id: number) => post<boolean>('/chain/cancel', { id })
 

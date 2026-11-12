@@ -20,6 +20,7 @@ const router = createRouter({
         { path: 'binding-grant', component: () => import('../views/BindingGrantView.vue') },
         { path: 'binding-detail', component: () => import('../views/BindingDetailView.vue') },
         { path: 'connection', component: () => import('../views/ConnectionView.vue') },
+        { path: 'agv', redirect: '/connection' },
         { path: 'webhook', component: () => import('../views/WebhookView.vue') },
         { path: 'dict', component: () => import('../views/DictView.vue') },
       ],

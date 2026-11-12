@@ -132,4 +132,32 @@ class AppKeySignV2Test {
         assertThat(v1).isNotEqualTo(v2); // body 纳入使签名不同
         assertThat(signer.verify(v2, v2)).isTrue();
     }
+
+    @Test
+    void applicationEvictionIsExactAndPreservesOtherReplayProtection() throws Exception {
+        var filter=filter(1);
+        assertThat(sendNonce(filter,"eviction").getRequest()).isNotNull();
+        filter.evictApplication(APP_KEY+"_other");
+        assertThat(sendNonce(filter,"eviction").getRequest()).isNull();
+        filter.evictApplication(APP_KEY);
+        assertThat(sendNonce(filter,"eviction").getRequest()).isNotNull();
+    }
+
+    private MockFilterChain sendNonce(AppKeyAuthFilter filter,String nonce) throws Exception {
+        var request=request("{}","x","1",nonce);
+        request.removeHeader("X-Sign");
+        request.addHeader("X-Sign",signer.sign(SECRET,APP_KEY,ts(request),nonce,"POST",URI));
+        var chain=new MockFilterChain();filter.doFilter(request,new MockHttpServletResponse(),chain);return chain;
+    }
+
+    @Test
+    void redisFailureDoesNotUndoCommittedDeletionAndIsRetried() {
+        @SuppressWarnings("unchecked") ObjectProvider<StringRedisTemplate> provider=mock(ObjectProvider.class);
+        var redis=mock(StringRedisTemplate.class);when(provider.getIfAvailable()).thenReturn(redis);
+        when(redis.scan(org.mockito.ArgumentMatchers.any())).thenThrow(new org.springframework.data.redis.RedisConnectionFailureException("offline"));
+        var filter=new AppKeyAuthFilter(mock(ApplicationService.class),signer,provider,true,300);
+        org.assertj.core.api.Assertions.assertThatCode(()->filter.evictApplication(APP_KEY)).doesNotThrowAnyException();
+        filter.retryEvictions();
+        org.mockito.Mockito.verify(redis,org.mockito.Mockito.times(2)).scan(org.mockito.ArgumentMatchers.any());
+    }
 }

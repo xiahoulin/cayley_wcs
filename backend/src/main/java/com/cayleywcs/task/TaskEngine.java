@@ -3,6 +3,7 @@ package com.cayleywcs.task;
 import com.cayleywcs.alarm.AlarmService;
 import com.cayleywcs.connection.ConnectionManager;
 import com.cayleywcs.connection.ConnectionSnapshot;
+import com.cayleywcs.config.WcsMetrics;
 import com.cayleywcs.device.DeviceHandler;
 import com.cayleywcs.device.DeviceHandlerRegistry;
 import com.cayleywcs.task.entity.TaskEntity;
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +38,20 @@ public class TaskEngine {
     private final AlarmService alarmService;
     private final Set<Long> busy = ConcurrentHashMap.newKeySet();
     private final ExecutorService workerPool;
+    private WcsMetrics metrics;
+    private TaskExecutionService execution;
+    private com.cayleywcs.connection.DeviceExecutionCoordinator coordinator;
+
+    @Autowired
+    void setExecution(TaskExecutionService execution,com.cayleywcs.connection.DeviceExecutionCoordinator coordinator) {
+        this.execution=execution; this.coordinator=coordinator;
+    }
+
+    @Autowired
+    void setMetrics(WcsMetrics metrics) {
+        this.metrics = metrics;
+        metrics.registerTaskWorker(busy);
+    }
 
     public TaskEngine(ConnectionManager connectionManager, TaskService taskService,
                       DeviceHandlerRegistry handlerRegistry, AlarmService alarmService,
@@ -52,8 +68,12 @@ public class TaskEngine {
         });
     }
 
-    @Scheduled(fixedDelayString = "${cayleywcs.task.engine-interval-ms:1000}")
+    @Scheduled(fixedDelayString = "${cayleywcs.task.engine-interval-ms:1000}", scheduler = "taskScheduler")
     public void tick() {
+        WcsMetrics.tick(metrics, "task-engine", this::tickOnce);
+    }
+
+    private void tickOnce() {
         for (ConnectionSnapshot snap : connectionManager.snapshots()) {
             if (!"RUNNING".equals(snap.state())) {
                 continue;
@@ -85,10 +105,16 @@ public class TaskEngine {
                 log.warn("app {} 设备类型 {} 无已注册 handler，任务 {} 暂停调度", appId, deviceType, task.getTask_no());
                 return;
             }
-            handler.advance(task);
+            Runnable advance=()->{
+                if (execution != null && !execution.prepare(task)) return;
+                handler.advance(task);
+            };
+            if (coordinator != null) coordinator.runTask(task,advance); else advance.run();
             if (!taskService.save(task)) {
                 // 乐观锁冲突（管理端取消/改优先级等并发写赢了）：丢弃本步，下轮以 DB 最新状态重读推进。
                 log.warn("task {} 保存冲突(version)，丢弃本步，下轮重读", task.getTask_no());
+            } else if (execution != null) {
+                execution.releaseIfCompleted(task);
             }
         } catch (RuntimeException ex) {
             log.warn("task engine error for app {}: {}", appId, ex.getMessage());
@@ -99,7 +125,7 @@ public class TaskEngine {
 
     @PreDestroy
     public void shutdown() {
-        // 优雅停机（对抗审查 P1）：先拒新任务，等在飞 advance 走完（设备写+落库原子完成）再放行销毁——
+        // 优雅停机：先拒新任务，等在飞 advance 走完（设备写+落库原子完成）再放行销毁——
         // TaskEngine 依赖 ConnectionManager，Spring 先销毁本类；若不等待，随后的连接拆除会使在飞
         // readPoint 抛异常。异常路径已不落终态（状态机放弃本步），此处等待进一步保证设备写不被中断。
         workerPool.shutdown();

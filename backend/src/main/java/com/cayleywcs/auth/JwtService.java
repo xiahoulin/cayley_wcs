@@ -63,6 +63,11 @@ public class JwtService {
     }
 
     public Optional<JwtUser> parse(String token) {
+        return parseSession(token).map(TokenSession::user);
+    }
+
+    /** WS 短期握手票据需沿用原 JWT 到期时刻，不能让长连接越过授权有效期。 */
+    public Optional<TokenSession> parseSession(String token) {
         try {
             String[] parts = token.split("\\.");
             if (parts.length != 3) {
@@ -81,17 +86,21 @@ public class JwtService {
             if (exp == null || exp.longValue() < Instant.now().getEpochSecond()) {
                 return Optional.empty();
             }
-            return Optional.of(new JwtUser(
+            JwtUser user = new JwtUser(
                     asLong(claims.get("sub")),
                     (String) claims.get("user_num"),
                     (String) claims.get("user_name"),
                     (String) claims.get("user_role"),
                     asLong(claims.get("tenant_id")),
                     asLong(claims.get("userrole_id"))
-            ));
+            );
+            return Optional.of(new TokenSession(user, exp.longValue() * 1000L));
         } catch (Exception ex) {
             return Optional.empty();
         }
+    }
+
+    public record TokenSession(JwtUser user, long expiresAtMillis) {
     }
 
     private String sign(Map<String, Object> claims) {

@@ -60,6 +60,7 @@ public class IdleFirstStrategy implements DeviceSelectionStrategy {
         }
         try {
             ApplicationEntity app = applicationService.getById(appId);
+            if ("agv".equals(app.getDevice_type()) || com.cayleywcs.telemetry.profile.SensorPointCatalog.isSensor(app.getDevice_type())) return false;
             String mode = app.getWork_mode();
             return mode == null || mode.isBlank() || "normal".equals(mode);
         } catch (RuntimeException ex) {

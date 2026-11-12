@@ -73,7 +73,7 @@ class StackerSimEndToEndTest {
 
         // 6) 故障注入 → 读到故障码
         device.injectFault(8);
-        assertThat(intOf(manager.readPoint(APP_ID, "status_ErrorCode"))).isEqualTo(8);
+        assertThat(intOf(((java.util.List<?>)manager.readPoint(APP_ID, "status_ErrorCode")).getFirst())).isEqualTo(8);
 
         manager.shutdown();
     }
@@ -109,8 +109,9 @@ class StackerSimEndToEndTest {
                 "status_CurrentColumnNum", "status_CurrentFloorNum", "status_ErrorCode"}) {
             ProtocolPointEntity p = new ProtocolPointEntity();
             p.setField_name(f);
-            p.setData_type("INT");
-            p.setRw(f.startsWith("cmd_") || f.equals("WCS_Heart") ? "W" : "R");
+            p.setData_type("status_ErrorCode".equals(f)?"ARRAY[60] OF INT":"INT");
+            p.setDirection(f.startsWith("cmd_") || f.equals("WCS_Heart") ? "request" : "response");
+            p.setPoint_scope(java.util.Set.of("WCS_Heart", "PLC_Heart", "cmd_TaskNum", "cmd_ConfirmTask").contains(f) ? "internal" : "business");
             list.add(p);
         }
         return list;

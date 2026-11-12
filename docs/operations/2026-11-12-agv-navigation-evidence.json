@@ -1,0 +1,553 @@
+{
+  "task_id": "TASK-20261112-DBAB1D0A",
+  "passed": true,
+  "software_tests": {
+    "suites": [
+      {
+        "name": "com.cayleywcs.adapter.ApplicationAdapterRoutingTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.685"
+      },
+      {
+        "name": "com.cayleywcs.agv.AgvNavigationIntegrationTest",
+        "tests": "3",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "12.073"
+      },
+      {
+        "name": "com.cayleywcs.agv.AgvTelemetryIntegrationTest",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "22.339"
+      },
+      {
+        "name": "com.cayleywcs.agv.ReadOnlyTransportTest",
+        "tests": "19",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "2.146"
+      },
+      {
+        "name": "com.cayleywcs.agv.SeerNavigationTest",
+        "tests": "9",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.353"
+      },
+      {
+        "name": "com.cayleywcs.agv.SeerPointCatalogTest",
+        "tests": "1",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "0.017"
+      },
+      {
+        "name": "com.cayleywcs.agv.UnifiedDeviceStateIntegrationTest",
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "12.47"
+      },
+      {
+        "name": "com.cayleywcs.application.ResourceDeletionTest",
+        "tests": "21",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "6.116"
+      }
+    ],
+    "summary": {
+      "tests": 60,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    }
+  },
+  "postgres_http_tests": {
+    "tests": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "migration": {
+    "task_id": "TASK-20261112-DBAB1D0A",
+    "scope": "Read-only current PG backup; isolated PG actual Flyway upgrade to V27, no Spring device workers",
+    "source_version": "26",
+    "target_version": "27",
+    "postgres_image": "postgres:17",
+    "dump_sha256": "e9c4611830513bdfe7bef8ddbffe3fa3986d91fc45ce486d48caf01b24ff1ebd",
+    "dump_bytes": 123169,
+    "backend_jar_sha256": "c80c068bcc1c06b81b082158b4037a4c2c385a9cf83373c7d9e1435094718e7d",
+    "counts_before": {
+      "flyway_schema_history": 26,
+      "wcs_alarm": 95,
+      "wcs_app_binding": 1,
+      "wcs_application": 6,
+      "wcs_connection_log": 299,
+      "wcs_contract_migration_audit": 6,
+      "wcs_dashboard_point_selection": 1,
+      "wcs_device_task_number": 2,
+      "wcs_device_task_number_lease": 0,
+      "wcs_dict_item": 62,
+      "wcs_dict_type": 13,
+      "wcs_fault_code": 48,
+      "wcs_message_log": 0,
+      "wcs_open_token": 35,
+      "wcs_protocol": 6,
+      "wcs_protocol_point": 123,
+      "wcs_protocol_revision": 6,
+      "wcs_resource_lifecycle_lock": 1,
+      "wcs_sensor_application": 3,
+      "wcs_sensor_gateway": 1,
+      "wcs_task": 3,
+      "wcs_task_chain": 0,
+      "wcs_telemetry_cycle": 0,
+      "wcs_telemetry_latest": 0,
+      "wcs_user": 1,
+      "wcs_userrole": 1,
+      "wcs_webhook": 10,
+      "wcs_webhook_cursor": 14,
+      "wcs_webhook_delivery": 239
+    },
+    "counts_after": {
+      "flyway_schema_history": 27,
+      "wcs_agv_navigation_command": 0,
+      "wcs_alarm": 95,
+      "wcs_app_binding": 1,
+      "wcs_application": 6,
+      "wcs_connection_log": 299,
+      "wcs_contract_migration_audit": 6,
+      "wcs_dashboard_point_selection": 1,
+      "wcs_device_task_number": 2,
+      "wcs_device_task_number_lease": 0,
+      "wcs_dict_item": 62,
+      "wcs_dict_type": 13,
+      "wcs_fault_code": 48,
+      "wcs_message_log": 0,
+      "wcs_open_token": 35,
+      "wcs_protocol": 6,
+      "wcs_protocol_point": 123,
+      "wcs_protocol_revision": 6,
+      "wcs_resource_lifecycle_lock": 1,
+      "wcs_sensor_application": 3,
+      "wcs_sensor_gateway": 1,
+      "wcs_task": 3,
+      "wcs_task_chain": 0,
+      "wcs_telemetry_cycle": 0,
+      "wcs_telemetry_latest": 0,
+      "wcs_user": 1,
+      "wcs_userrole": 1,
+      "wcs_webhook": 10,
+      "wcs_webhook_cursor": 14,
+      "wcs_webhook_delivery": 239
+    },
+    "checks": [
+      {
+        "name": "flyway_upgraded_26_to_27",
+        "passed": true
+      },
+      {
+        "name": "wcs_task_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_task_chain_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_application_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_protocol_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_protocol_point_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_protocol_revision_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_app_binding_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_dict_type_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_dict_item_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_device_task_number_unchanged",
+        "passed": true
+      },
+      {
+        "name": "wcs_device_task_number_lease_unchanged",
+        "passed": true
+      },
+      {
+        "name": "point_columns_unchanged",
+        "passed": true
+      },
+      {
+        "name": "all_existing_table_counts_unchanged_except_flyway",
+        "passed": true
+      },
+      {
+        "name": "only_new_table_is_empty_navigation_journal",
+        "passed": true
+      },
+      {
+        "name": "repeat_migration_does_not_change_rows_or_times",
+        "passed": true
+      },
+      {
+        "name": "source_business_tables_unchanged_by_rehearsal",
+        "passed": true
+      }
+    ],
+    "summary": {
+      "checks": 17,
+      "passed": 17,
+      "failed": 0
+    },
+    "private_data": "Dump, original business rows and generated isolated credentials remain outside repository; evidence excludes all request payloads and secrets"
+  },
+  "deployment": {
+    "task_id": "TASK-20261112-DBAB1D0A",
+    "checks": [
+      {
+        "name": "flyway_upgraded_26_to_27",
+        "passed": true
+      },
+      {
+        "name": "navigation_journal_initially_empty",
+        "passed": true
+      },
+      {
+        "name": "wcs_alarm_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_app_binding_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_application_configuration_credentials_and_intent_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_connection_log_existing_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_contract_migration_audit_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_dashboard_point_selection_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_device_task_number_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_device_task_number_lease_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_dict_item_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_dict_type_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_fault_code_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_message_log_existing_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_open_token_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_protocol_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_protocol_point_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_protocol_revision_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_resource_lifecycle_lock_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_sensor_application_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_sensor_gateway_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_task_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_task_chain_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_telemetry_cycle_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_telemetry_latest_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_user_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_userrole_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_webhook_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_webhook_cursor_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_webhook_delivery_all_rows_preserved",
+        "passed": true
+      },
+      {
+        "name": "redis_keys_and_values_preserved",
+        "passed": true
+      },
+      {
+        "name": "cayleywcs-postgres_same_container",
+        "passed": true
+      },
+      {
+        "name": "cayleywcs-redis_same_container",
+        "passed": true
+      },
+      {
+        "name": "backend_new_image_running",
+        "passed": true
+      },
+      {
+        "name": "backend_Env_preserved",
+        "passed": true
+      },
+      {
+        "name": "backend_Cmd_preserved",
+        "passed": true
+      },
+      {
+        "name": "backend_Entrypoint_preserved",
+        "passed": true
+      },
+      {
+        "name": "backend_Mounts_preserved",
+        "passed": true
+      },
+      {
+        "name": "backend_ports_preserved",
+        "passed": true
+      },
+      {
+        "name": "frontend_new_image_running",
+        "passed": true
+      },
+      {
+        "name": "frontend_Env_preserved",
+        "passed": true
+      },
+      {
+        "name": "frontend_Cmd_preserved",
+        "passed": true
+      },
+      {
+        "name": "frontend_Entrypoint_preserved",
+        "passed": true
+      },
+      {
+        "name": "frontend_Mounts_preserved",
+        "passed": true
+      },
+      {
+        "name": "frontend_ports_preserved",
+        "passed": true
+      },
+      {
+        "name": "running_jar_is_tested_artifact",
+        "passed": true
+      }
+    ],
+    "backup_sha256": "d640c0cf08d0af47280efc106da6ecc6e9a4c68a0e887b7fe590746cb9d544db",
+    "backup_bytes": 123192,
+    "counts_before": {
+      "flyway_schema_history": 26,
+      "wcs_alarm": 95,
+      "wcs_app_binding": 1,
+      "wcs_application": 6,
+      "wcs_connection_log": 301,
+      "wcs_contract_migration_audit": 6,
+      "wcs_dashboard_point_selection": 1,
+      "wcs_device_task_number": 2,
+      "wcs_device_task_number_lease": 0,
+      "wcs_dict_item": 62,
+      "wcs_dict_type": 13,
+      "wcs_fault_code": 48,
+      "wcs_message_log": 0,
+      "wcs_open_token": 35,
+      "wcs_protocol": 6,
+      "wcs_protocol_point": 123,
+      "wcs_protocol_revision": 6,
+      "wcs_resource_lifecycle_lock": 1,
+      "wcs_sensor_application": 3,
+      "wcs_sensor_gateway": 1,
+      "wcs_task": 3,
+      "wcs_task_chain": 0,
+      "wcs_telemetry_cycle": 0,
+      "wcs_telemetry_latest": 0,
+      "wcs_user": 1,
+      "wcs_userrole": 1,
+      "wcs_webhook": 10,
+      "wcs_webhook_cursor": 14,
+      "wcs_webhook_delivery": 239
+    },
+    "counts_after": {
+      "flyway_schema_history": 27,
+      "wcs_agv_navigation_command": 0,
+      "wcs_alarm": 95,
+      "wcs_app_binding": 1,
+      "wcs_application": 6,
+      "wcs_connection_log": 305,
+      "wcs_contract_migration_audit": 6,
+      "wcs_dashboard_point_selection": 1,
+      "wcs_device_task_number": 2,
+      "wcs_device_task_number_lease": 0,
+      "wcs_dict_item": 62,
+      "wcs_dict_type": 13,
+      "wcs_fault_code": 48,
+      "wcs_message_log": 0,
+      "wcs_open_token": 35,
+      "wcs_protocol": 6,
+      "wcs_protocol_point": 123,
+      "wcs_protocol_revision": 6,
+      "wcs_resource_lifecycle_lock": 1,
+      "wcs_sensor_application": 3,
+      "wcs_sensor_gateway": 1,
+      "wcs_task": 3,
+      "wcs_task_chain": 0,
+      "wcs_telemetry_cycle": 0,
+      "wcs_telemetry_latest": 0,
+      "wcs_user": 1,
+      "wcs_userrole": 1,
+      "wcs_webhook": 10,
+      "wcs_webhook_cursor": 14,
+      "wcs_webhook_delivery": 239
+    },
+    "summary": {
+      "checks": 46,
+      "passed": 46,
+      "failed": 0
+    }
+  },
+  "activation": {
+    "passed": true,
+    "appId": 23,
+    "revisionId": 18,
+    "protocolId": 40,
+    "configurationEpoch": 4,
+    "currentPoints": 45,
+    "retainedApps": 6,
+    "ownedProtocols": 7,
+    "otherApplicationsUnchanged": true,
+    "previousProtocolRetained": true,
+    "connectionIntentPreserved": true,
+    "realStatus": "RUNNING",
+    "actualMotionCommandsSent": 0
+  },
+  "soak": {
+    "passed": true,
+    "elapsedSeconds": 121.0,
+    "successfulSamples": 58,
+    "httpRequests": 348,
+    "failures": [],
+    "c2Compilations": [
+      "[26.439s][info][jit,compilation] 15110       4       org.apache.ibatis.scripting.xmltags.DynamicContext$ContextMap::get (63 bytes)"
+    ],
+    "simulatorHeartbeatValues": [
+      "0",
+      "1"
+    ],
+    "backendContainerId": "1313fb9c0104da09b67aeca3b4a16f04371e907cd2ef89f957a63fa9384efe8a",
+    "restartCount": 0,
+    "applicationOwnershipValidated": true,
+    "unconfiguredWmsRevisionPreserved": true,
+    "agvReceiptTimeAdvances": true
+  },
+  "final_frontend": {
+    "passed": true,
+    "scope": "frontend retry wording only",
+    "backendDatabaseRedisNotRestarted": true,
+    "portsAndEnvironmentPreserved": true,
+    "frontendImage": "cayley_wcs-frontend:agv-navigation-20261112-ui1",
+    "indexSha256": "de6b296f7d74290e9ad5455c6a8696227b818c901e833265942a66c2f5625456"
+  },
+  "current_counts": {
+    "applications": 6,
+    "protocols": 7,
+    "points": 168,
+    "revisions": 7,
+    "tasks": 3,
+    "bindings": 1
+  },
+  "ui": {
+    "applicationIpDisplayed": true,
+    "protocolVersion18Displayed": true,
+    "navigationEntryDisplayed": true,
+    "stationIdInputDisplayed": true,
+    "emptyTargetDisablesSend": true,
+    "filledTargetEnablesSend": true,
+    "targetClearedWithoutSending": true,
+    "dialogLayoutInspected": true
+  },
+  "actualMotionCommandsSent": 0,
+  "jvm_root_cause": "Existing C2 recurrence remains unresolved; this bounded business validation does not claim a JVM fix."
+}

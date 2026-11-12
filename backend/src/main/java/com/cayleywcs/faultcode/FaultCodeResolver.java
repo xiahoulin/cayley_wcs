@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
 /**
- * 故障码解析（需求 6）：命中返回维护的信息，未维护返回统一兜底 {@link FaultInfo#unknown}。
+ * 故障码解析：命中返回维护的信息，未维护返回统一兜底 {@link FaultInfo#unknown}。
  * 进程内缓存，故障码 CRUD 时调用 {@link #invalidate} 失效。
  */
 @Component
@@ -19,15 +19,19 @@ public class FaultCodeResolver {
         this.faultCodeMapper = faultCodeMapper;
     }
 
-    public FaultInfo resolve(Long protocolId, long code) {
+    public synchronized FaultInfo resolve(Long protocolId, long code) {
         if (protocolId == null) {
             return FaultInfo.unknown(code);
         }
         return cache.computeIfAbsent(key(protocolId, code), k -> load(protocolId, code));
     }
 
-    public void invalidate() {
+    public synchronized void invalidate() {
         cache.clear();
+    }
+
+    public synchronized void invalidateProtocols(java.util.Collection<Long> protocolIds) {
+        cache.keySet().removeIf(key -> protocolIds.stream().anyMatch(id -> key.startsWith(id + ":")));
     }
 
     private FaultInfo load(Long protocolId, long code) {

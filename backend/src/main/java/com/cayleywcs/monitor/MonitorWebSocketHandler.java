@@ -18,7 +18,11 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
     private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        if (expired(session)) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         sessions.add(session);
     }
 
@@ -34,6 +38,15 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
                 sessions.remove(session);
                 continue;
             }
+            if (expired(session)) {
+                sessions.remove(session);
+                try {
+                    session.close(CloseStatus.POLICY_VIOLATION);
+                } catch (IOException ex) {
+                    log.debug("ws expiry close failed: {}", ex.getMessage());
+                }
+                continue;
+            }
             try {
                 synchronized (session) {
                     session.sendMessage(message);
@@ -47,5 +60,10 @@ public class MonitorWebSocketHandler extends TextWebSocketHandler {
 
     public int sessionCount() {
         return sessions.size();
+    }
+
+    private static boolean expired(WebSocketSession session) {
+        Object until = session.getAttributes().get(MonitorWsHandshakeInterceptor.AUTHORIZED_UNTIL);
+        return !(until instanceof Long time) || time <= System.currentTimeMillis();
     }
 }

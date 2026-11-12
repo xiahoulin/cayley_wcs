@@ -1,0 +1,3543 @@
+{
+  "task_id": "TASK-20261013-FCBCC0C5",
+  "generated_at": "2026-10-13T17:15:34.564899+09:00",
+  "scope": "Read-only XLSX, current source and online Docker PostgreSQL fact conformance audit; no production writes or device manipulation.",
+  "source_workbook": {
+    "path": "E:\\workspace\\cayley_ai\\cayley_project\\cayley_wcs\\docs\\堆垛机通讯协议-opcua对接版.xlsx",
+    "sha256": "efa5c1f5a43f9d170d93f3561436ba4c84c44b4629081e592fbb735bdb852913",
+    "sheets": [
+      "堆垛机标准协议",
+      "WCS对接流程"
+    ]
+  },
+  "online": {
+    "app": {
+      "app_id": 3,
+      "app_code": "PALLET_SIM",
+      "device_type": "stacker",
+      "protocol_id": 3,
+      "protocol_revision_id": 2,
+      "protocol_code": "PALLET_SIM_OPCUA",
+      "heartbeat_interval_ms": 1000
+    },
+    "protocols": [
+      {
+        "protocol_id": 1,
+        "protocol_code": "STACKER_STD",
+        "lifecycle_state": "draft",
+        "published_revision_id": null
+      },
+      {
+        "protocol_id": 2,
+        "protocol_code": "STACKER_OPCUA",
+        "lifecycle_state": "draft",
+        "published_revision_id": null
+      },
+      {
+        "protocol_id": 3,
+        "protocol_code": "PALLET_SIM_OPCUA",
+        "lifecycle_state": "published",
+        "published_revision_id": 2
+      }
+    ],
+    "published_snapshot_point_count": 27,
+    "current_draft_point_count": 27,
+    "physical_protocol_points": [
+      {
+        "protocol_id": 1,
+        "field_name": "WCS_Heart",
+        "address": "DB100.DBW0",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":1,\"enum\":[0,1]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_TaskType",
+        "address": "DB100.DBW2",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":1,\"max\":6,\"enum\":[1,2,3,4,5,6]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_ResetFault",
+        "address": "DB100.DBW4",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":1,\"enum\":[0,1]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_TakeCoor_Row",
+        "address": "DB100.DBW6",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_TakeCoor_Column",
+        "address": "DB100.DBW8",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":7}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_TakeCoor_Floor",
+        "address": "DB100.DBW10",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":9}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_PutCoor_Row",
+        "address": "DB100.DBW12",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_PutCoor_Column",
+        "address": "DB100.DBW14",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":7}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_PutCoor_Floor",
+        "address": "DB100.DBW16",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":9}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_PortNum",
+        "address": "DB100.DBW18",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_TaskNum",
+        "address": "DB100.DBW20",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":1,\"max\":65534,\"reserved_values\":[0,65535]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "cmd_ConfirmTask",
+        "address": "DB100.DBW22",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2,\"enum\":[0,1,2]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "PLC_Heart",
+        "address": "DB100.DBW24",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":1,\"enum\":[0,1]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_Mode",
+        "address": "DB100.DBW26",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":4,\"enum\":[0,1,2,3,4]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_Task",
+        "address": "DB100.DBW28",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2,\"enum\":[0,1,2]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_TaskTypeFeedback",
+        "address": "DB100.DBW30",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":6,\"enum\":[0,1,2,3,4,5,6]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_CurrentColumnNum",
+        "address": "DB100.DBW32",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":7}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_CurrentFloorNum",
+        "address": "DB100.DBW34",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":9}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_Speed_Lift",
+        "address": "DB100.DBD36",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm/s\"}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_Speed_Walk",
+        "address": "DB100.DBD40",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm/s\"}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_Speed_Fork",
+        "address": "DB100.DBD44",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm/s\"}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_CurrentPos_Walk",
+        "address": "DB100.DBD48",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm\"}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_CurrentPos_Lift",
+        "address": "DB100.DBD52",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm\"}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_CurrentPos_Fork",
+        "address": "DB100.DBD56",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm\"}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_TaskNum",
+        "address": "DB100.DBW60",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":65534}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_Cargo",
+        "address": "DB100.DBW62",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2,\"enum\":[0,1,2]}"
+      },
+      {
+        "protocol_id": 1,
+        "field_name": "status_ErrorCode",
+        "address": "DB100.DBW64",
+        "logical_type": "ARRAY<INT16>",
+        "data_type": "ARRAY[1..60] OF INT",
+        "constraints": "{\"dimensions\":[60],\"length\":60,\"element_type\":\"INT16\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "WCS_Heart",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"WCS_Heart\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":1,\"enum\":[0,1]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_TaskType",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_TaskType\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":1,\"max\":6,\"enum\":[1,2,3,4,5,6]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_ResetFault",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_ResetFault\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":1,\"enum\":[0,1]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_TakeCoor_Row",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_TakeCoor_Row\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_TakeCoor_Column",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_TakeCoor_Column\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":7}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_TakeCoor_Floor",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_TakeCoor_Floor\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":9}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_PutCoor_Row",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_PutCoor_Row\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_PutCoor_Column",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_PutCoor_Column\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":7}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_PutCoor_Floor",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_PutCoor_Floor\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":9}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_PortNum",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_PortNum\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_TaskNum",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_TaskNum\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":1,\"max\":65534,\"reserved_values\":[0,65535]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "cmd_ConfirmTask",
+        "address": "ns=3;s=\"WCS_Task\".\"From_WCS\".\"cmd_ConfirmTask\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2,\"enum\":[0,1,2]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "PLC_Heart",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"PLC_Heart\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":1,\"enum\":[0,1]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_Mode",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_Mode\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":4,\"enum\":[0,1,2,3,4]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_Task",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_Task\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2,\"enum\":[0,1,2]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_TaskTypeFeedback",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_TaskTypeFeedback\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":6,\"enum\":[0,1,2,3,4,5,6]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_CurrentColumnNum",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_CurrentColumnNum\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":7}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_CurrentFloorNum",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_CurrentFloorNum\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":9}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_Speed_Lift",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_Speed_Lift\"",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm/s\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_Speed_Walk",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_Speed_Walk\"",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm/s\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_Speed_Fork",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_Speed_Fork\"",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm/s\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_CurrentPos_Walk",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_CurrentPos_Walk\"",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_CurrentPos_Lift",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_CurrentPos_Lift\"",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_CurrentPos_Fork",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_CurrentPos_Fork\"",
+        "logical_type": "FLOAT32",
+        "data_type": "REAL",
+        "constraints": "{\"unit\":\"mm\"}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_TaskNum",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_TaskNum\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":65534}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_Cargo",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_Cargo\"",
+        "logical_type": "INT16",
+        "data_type": "INT",
+        "constraints": "{\"min\":0,\"max\":2,\"enum\":[0,1,2]}"
+      },
+      {
+        "protocol_id": 2,
+        "field_name": "status_ErrorCode",
+        "address": "ns=3;s=\"WCS_Task\".\"To_WCS\".\"status_ErrorCode\"",
+        "logical_type": "ARRAY<INT16>",
+        "data_type": "ARRAY[1..60] OF INT",
+        "constraints": "{\"dimensions\":[60],\"length\":60,\"element_type\":\"INT16\"}"
+      }
+    ]
+  },
+  "summary": {
+    "reference_points": 27,
+    "published_points": 27,
+    "field_direction_symbol_mapping_matches": 27,
+    "native_type_exact_matches": 25,
+    "native_type_reference_conflicts": 2,
+    "fault_definitions": 48,
+    "fault_definitions_semantically_match": 48,
+    "conclusion": "not_fully_conformant"
+  },
+  "point_comparison": [
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 2,
+        "raw_field": "WCS_Heart",
+        "field": "WCS_Heart",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.WCS_Heart",
+        "type": "INT",
+        "plc_address": "DB100.DBW0",
+        "direction": "request",
+        "description": "0↔1,5秒交替"
+      },
+      "published_point": {
+        "id": 55,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "WCS_Heart",
+        "symbol_name": "WCS_Heartbeat",
+        "address": "ns=2;s=WCS_Task.From_WCS.WCS_Heart",
+        "data_type": "INT",
+        "value_range": "0/1",
+        "scale": 1,
+        "sort": 0,
+        "description": "WCS心跳，0↔1每5秒交替",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "control",
+        "direction": "request",
+        "point_scope": "internal",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/control/request/WCS_Heart",
+        "constraints": {
+          "min": 0,
+          "max": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "WCS_Heart",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 3,
+        "raw_field": "cmd_TaskType",
+        "field": "cmd_TaskType",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_TaskType",
+        "type": "INT",
+        "plc_address": "DB100.DBW2",
+        "direction": "request",
+        "description": "0-无任务\n1-入库\n2-出库\n3-移库\n4-移动（需要取货列，层确定位置）\n5-急停\n6-解警"
+      },
+      "published_point": {
+        "id": 56,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_TaskType",
+        "symbol_name": "命令_任务类型",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_TaskType",
+        "data_type": "INT",
+        "value_range": "0无1入库2出库3移库4移动5急停6解警",
+        "scale": 1,
+        "sort": 1,
+        "description": "4移动需取货列/层确定位置",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_TaskType",
+        "constraints": {
+          "min": 1,
+          "max": 6,
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_TaskType",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 4,
+        "raw_field": "cmd_ResetFault",
+        "field": "cmd_ResetFault",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_ResetFault",
+        "type": "INT",
+        "plc_address": "DB100.DBW4",
+        "direction": "request",
+        "description": ""
+      },
+      "published_point": {
+        "id": 57,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_ResetFault",
+        "symbol_name": "命令_异常处理",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_ResetFault",
+        "data_type": "INT",
+        "value_range": "",
+        "scale": 1,
+        "sort": 2,
+        "description": "异常处理命令",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "control",
+        "direction": "request",
+        "point_scope": "internal",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/control/request/cmd_ResetFault",
+        "constraints": {
+          "min": 0,
+          "max": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_ResetFault",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 5,
+        "raw_field": "cmd_TakeCoor_Row",
+        "field": "cmd_TakeCoor_Row",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_TakeCoor_Row",
+        "type": "INT",
+        "plc_address": "DB100.DBW6",
+        "direction": "request",
+        "description": "1-2"
+      },
+      "published_point": {
+        "id": 58,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_TakeCoor_Row",
+        "symbol_name": "命令_取货地址排",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_TakeCoor_Row",
+        "data_type": "INT",
+        "value_range": "1-2",
+        "scale": 1,
+        "sort": 3,
+        "description": "取货排",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_TakeCoor_Row",
+        "constraints": {
+          "min": 0,
+          "max": 2
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_TakeCoor_Row",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 6,
+        "raw_field": "cmd_TakeCoor_Column",
+        "field": "cmd_TakeCoor_Column",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_TakeCoor_Column",
+        "type": "INT",
+        "plc_address": "DB100.DBW8",
+        "direction": "request",
+        "description": "1-7"
+      },
+      "published_point": {
+        "id": 59,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_TakeCoor_Column",
+        "symbol_name": "命令_取货地址列",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_TakeCoor_Column",
+        "data_type": "INT",
+        "value_range": "1-7",
+        "scale": 1,
+        "sort": 4,
+        "description": "取货列",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_TakeCoor_Column",
+        "constraints": {
+          "min": 0,
+          "max": 7
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_TakeCoor_Column",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 7,
+        "raw_field": "cmd_TakeCoor_Floor",
+        "field": "cmd_TakeCoor_Floor",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_TakeCoor_Floor",
+        "type": "INT",
+        "plc_address": "DB100.DBW10",
+        "direction": "request",
+        "description": "1-9"
+      },
+      "published_point": {
+        "id": 60,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_TakeCoor_Floor",
+        "symbol_name": "命令_取货地址层",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_TakeCoor_Floor",
+        "data_type": "INT",
+        "value_range": "1-9",
+        "scale": 1,
+        "sort": 5,
+        "description": "取货层",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_TakeCoor_Floor",
+        "constraints": {
+          "min": 0,
+          "max": 9
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_TakeCoor_Floor",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 8,
+        "raw_field": "cmd_PutCoor_Row",
+        "field": "cmd_PutCoor_Row",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_PutCoor_Row",
+        "type": "INT",
+        "plc_address": "DB100.DBW12",
+        "direction": "request",
+        "description": "1-2"
+      },
+      "published_point": {
+        "id": 61,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_PutCoor_Row",
+        "symbol_name": "命令_放货地址排",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_PutCoor_Row",
+        "data_type": "INT",
+        "value_range": "1-2",
+        "scale": 1,
+        "sort": 6,
+        "description": "放货排",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_PutCoor_Row",
+        "constraints": {
+          "min": 0,
+          "max": 2
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_PutCoor_Row",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 9,
+        "raw_field": "cmd_PutCoor_Column",
+        "field": "cmd_PutCoor_Column",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_PutCoor_Column",
+        "type": "INT",
+        "plc_address": "DB100.DBW14",
+        "direction": "request",
+        "description": "1-7"
+      },
+      "published_point": {
+        "id": 62,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_PutCoor_Column",
+        "symbol_name": "命令_放货地址列",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_PutCoor_Column",
+        "data_type": "INT",
+        "value_range": "1-7",
+        "scale": 1,
+        "sort": 7,
+        "description": "放货列",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_PutCoor_Column",
+        "constraints": {
+          "min": 0,
+          "max": 7
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_PutCoor_Column",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 10,
+        "raw_field": "cmd_PutCoor_Floor",
+        "field": "cmd_PutCoor_Floor",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_PutCoor_Floor",
+        "type": "INT",
+        "plc_address": "DB100.DBW16",
+        "direction": "request",
+        "description": "1-9"
+      },
+      "published_point": {
+        "id": 63,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_PutCoor_Floor",
+        "symbol_name": "命令_放货地址层",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_PutCoor_Floor",
+        "data_type": "INT",
+        "value_range": "1-9",
+        "scale": 1,
+        "sort": 8,
+        "description": "放货层",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_PutCoor_Floor",
+        "constraints": {
+          "min": 0,
+          "max": 9
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_PutCoor_Floor",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 11,
+        "raw_field": "cmd_PortNum",
+        "field": "cmd_PortNum",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_PortNum",
+        "type": "INT",
+        "plc_address": "DB100.DBW18",
+        "direction": "request",
+        "description": "1-2（凯福升替换项目，只有一个输送线，只发1）"
+      },
+      "published_point": {
+        "id": 64,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_PortNum",
+        "symbol_name": "命令_取放货口",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_PortNum",
+        "data_type": "INT",
+        "value_range": "1-2",
+        "scale": 1,
+        "sort": 9,
+        "description": "凯福升替换项目只有一条输送线，只发1",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "dispatch",
+        "direction": "request",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/dispatch/request/cmd_PortNum",
+        "constraints": {
+          "min": 0,
+          "max": 2
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_PortNum",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 12,
+        "raw_field": "cmd_TaskNum",
+        "field": "cmd_TaskNum",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_TaskNum",
+        "type": "INT",
+        "plc_address": "DB100.DBW20",
+        "direction": "request",
+        "description": "1-65534"
+      },
+      "published_point": {
+        "id": 65,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_TaskNum",
+        "symbol_name": "命令_任务号",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_TaskNum",
+        "data_type": "UINT",
+        "value_range": "1-65534",
+        "scale": 1,
+        "sort": 10,
+        "description": "任务号",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "control",
+        "direction": "request",
+        "point_scope": "internal",
+        "logical_type": "UINT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/control/request/cmd_TaskNum",
+        "constraints": {
+          "min": 1,
+          "max": 65534,
+          "reserved_values": [
+            0,
+            65535
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_TaskNum",
+        "type": "UINT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": false,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "原表INT与1–65534相矛盾；仿真使用UINT，物理草稿保留INT且不能按65534范围发布。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 13,
+        "raw_field": "cmd_ConfirmTask",
+        "field": "cmd_ConfirmTask",
+        "group": "From_WCS",
+        "symbol": "WCS_Task.From_WCS.cmd_ConfirmTask",
+        "type": "INT",
+        "plc_address": "DB100.DBW22",
+        "direction": "request",
+        "description": "0-无意义\n1-执行任务\n2-任务完成确认"
+      },
+      "published_point": {
+        "id": 66,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "cmd_ConfirmTask",
+        "symbol_name": "命令_任务确认",
+        "address": "ns=2;s=WCS_Task.From_WCS.cmd_ConfirmTask",
+        "data_type": "INT",
+        "value_range": "0无意义1执行任务2任务完成确认",
+        "scale": 1,
+        "sort": 11,
+        "description": "任务确认",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "control",
+        "direction": "request",
+        "point_scope": "internal",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/control/request/cmd_ConfirmTask",
+        "constraints": {
+          "min": 0,
+          "max": 2,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "From_WCS",
+        "field": "cmd_ConfirmTask",
+        "type": "INT",
+        "direction": "request"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 14,
+        "raw_field": "PLC_Heart",
+        "field": "PLC_Heart",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.PLC_Heart",
+        "type": "INT",
+        "plc_address": "DB100.DBW24",
+        "direction": "response",
+        "description": "0↔1,5秒交替"
+      },
+      "published_point": {
+        "id": 67,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "PLC_Heart",
+        "symbol_name": "PLC_Heartbeat",
+        "address": "ns=2;s=WCS_Task.To_WCS.PLC_Heart",
+        "data_type": "INT",
+        "value_range": "0/1",
+        "scale": 1,
+        "sort": 100,
+        "description": "PLC心跳，0↔1每5秒交替",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "control",
+        "direction": "response",
+        "point_scope": "internal",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/control/response/PLC_Heart",
+        "constraints": {
+          "min": 0,
+          "max": 1,
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "PLC_Heart",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 15,
+        "raw_field": "status_Mode",
+        "field": "status_Mode",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_Mode",
+        "type": "INT",
+        "plc_address": "DB100.DBW26",
+        "direction": "response",
+        "description": "0-断电\n1-单机手动\n2-联机自动\n3-维护模式\n4-上电"
+      },
+      "published_point": {
+        "id": 68,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_Mode",
+        "symbol_name": "状态_运行模式",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_Mode",
+        "data_type": "INT",
+        "value_range": "0断电1单机手动2联机自动3维护模式4上电",
+        "scale": 1,
+        "sort": 101,
+        "description": "运行模式状态；联机自动=2",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_Mode",
+        "constraints": {
+          "min": 0,
+          "max": 4,
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_Mode",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 16,
+        "raw_field": "status_Task",
+        "field": "status_Task",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_Task",
+        "type": "INT",
+        "plc_address": "DB100.DBW28",
+        "direction": "response",
+        "description": "0-无任务\n1-执行任务\n2-任务完成"
+      },
+      "published_point": {
+        "id": 69,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_Task",
+        "symbol_name": "状态_任务状态",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_Task",
+        "data_type": "INT",
+        "value_range": "0无任务1执行任务2任务完成",
+        "scale": 1,
+        "sort": 102,
+        "description": "任务状态",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_Task",
+        "constraints": {
+          "min": 0,
+          "max": 2,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_Task",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 17,
+        "raw_field": "status_TaskTypeFeedback",
+        "field": "status_TaskTypeFeedback",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_TaskTypeFeedback",
+        "type": "INT",
+        "plc_address": "DB100.DBW30",
+        "direction": "response",
+        "description": "0-待机 \n1-入库\n2-出库\n3-移动\n4-转库\n5-急停\n\n"
+      },
+      "published_point": {
+        "id": 70,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_TaskTypeFeedback",
+        "symbol_name": "状态_任务类型",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_TaskTypeFeedback",
+        "data_type": "INT",
+        "value_range": "0待机1入库2出库3移动4转库5急停",
+        "scale": 1,
+        "sort": 103,
+        "description": "任务类型回读",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_TaskTypeFeedback",
+        "constraints": {
+          "min": 0,
+          "max": 6,
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_TaskTypeFeedback",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "类型一致但取值/语义有扩展：当前0–6，原表0–5；模拟器直接回显请求3/4，原表反馈3=移动、4=转库。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 18,
+        "raw_field": "status_CurrentColumnNum",
+        "field": "status_CurrentColumnNum",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_CurrentColumnNum",
+        "type": "INT",
+        "plc_address": "DB100.DBW32",
+        "direction": "response",
+        "description": "1-7"
+      },
+      "published_point": {
+        "id": 71,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_CurrentColumnNum",
+        "symbol_name": "状态_当前列",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_CurrentColumnNum",
+        "data_type": "INT",
+        "value_range": "1-7",
+        "scale": 1,
+        "sort": 104,
+        "description": "当前列",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_CurrentColumnNum",
+        "constraints": {
+          "min": 0,
+          "max": 7
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_CurrentColumnNum",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 19,
+        "raw_field": "status_CurrentFloorNum",
+        "field": "status_CurrentFloorNum",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_CurrentFloorNum",
+        "type": "INT",
+        "plc_address": "DB100.DBW34",
+        "direction": "response",
+        "description": "1-9"
+      },
+      "published_point": {
+        "id": 72,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_CurrentFloorNum",
+        "symbol_name": "状态_当前层",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_CurrentFloorNum",
+        "data_type": "INT",
+        "value_range": "1-9",
+        "scale": 1,
+        "sort": 105,
+        "description": "当前层",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_CurrentFloorNum",
+        "constraints": {
+          "min": 0,
+          "max": 9
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_CurrentFloorNum",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 20,
+        "raw_field": "status_Speed_Lift",
+        "field": "status_Speed_Lift",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_Speed_Lift",
+        "type": "REAL",
+        "plc_address": "DB100.DBD36",
+        "direction": "response",
+        "description": "mm/s"
+      },
+      "published_point": {
+        "id": 73,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_Speed_Lift",
+        "symbol_name": "状态_提升速度",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_Speed_Lift",
+        "data_type": "REAL",
+        "value_range": "mm/s",
+        "scale": 1,
+        "sort": 106,
+        "description": "提升速度",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "FLOAT32",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_Speed_Lift",
+        "constraints": {
+          "unit": "mm/s"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_Speed_Lift",
+        "type": "REAL",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 21,
+        "raw_field": "status_Speed_Walk",
+        "field": "status_Speed_Walk",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_Speed_Walk",
+        "type": "REAL",
+        "plc_address": "DB100.DBD40",
+        "direction": "response",
+        "description": "mm/s"
+      },
+      "published_point": {
+        "id": 74,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_Speed_Walk",
+        "symbol_name": "状态_行走速度",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_Speed_Walk",
+        "data_type": "REAL",
+        "value_range": "mm/s",
+        "scale": 1,
+        "sort": 107,
+        "description": "行走速度",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "FLOAT32",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_Speed_Walk",
+        "constraints": {
+          "unit": "mm/s"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_Speed_Walk",
+        "type": "REAL",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 22,
+        "raw_field": "status_Speed_Fork",
+        "field": "status_Speed_Fork",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_Speed_Fork",
+        "type": "REAL",
+        "plc_address": "DB100.DBD44",
+        "direction": "response",
+        "description": "mm/s"
+      },
+      "published_point": {
+        "id": 75,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_Speed_Fork",
+        "symbol_name": "状态_货叉速度",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_Speed_Fork",
+        "data_type": "REAL",
+        "value_range": "mm/s",
+        "scale": 1,
+        "sort": 108,
+        "description": "货叉速度",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "FLOAT32",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_Speed_Fork",
+        "constraints": {
+          "unit": "mm/s"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_Speed_Fork",
+        "type": "REAL",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 23,
+        "raw_field": "status_CurrentPos_Walk",
+        "field": "status_CurrentPos_Walk",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_CurrentPos_Walk",
+        "type": "REAL",
+        "plc_address": "DB100.DBD48",
+        "direction": "response",
+        "description": "单位mm"
+      },
+      "published_point": {
+        "id": 76,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_CurrentPos_Walk",
+        "symbol_name": "状态_行走方向测距",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_CurrentPos_Walk",
+        "data_type": "REAL",
+        "value_range": "mm",
+        "scale": 1,
+        "sort": 109,
+        "description": "行走方向测距",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "FLOAT32",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_CurrentPos_Walk",
+        "constraints": {
+          "unit": "mm"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_CurrentPos_Walk",
+        "type": "REAL",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 24,
+        "raw_field": "status_CurrentPos_Lift",
+        "field": "status_CurrentPos_Lift",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_CurrentPos_Lift",
+        "type": "REAL",
+        "plc_address": "DB100.DBD52",
+        "direction": "response",
+        "description": "单位mm"
+      },
+      "published_point": {
+        "id": 77,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_CurrentPos_Lift",
+        "symbol_name": "状态_提升方向测距",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_CurrentPos_Lift",
+        "data_type": "REAL",
+        "value_range": "mm",
+        "scale": 1,
+        "sort": 110,
+        "description": "提升方向测距",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "FLOAT32",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_CurrentPos_Lift",
+        "constraints": {
+          "unit": "mm"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_CurrentPos_Lift",
+        "type": "REAL",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 25,
+        "raw_field": "status_CurrentPos_Fork",
+        "field": "status_CurrentPos_Fork",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_CurrentPos_Fork",
+        "type": "REAL",
+        "plc_address": "DB100.DBD56",
+        "direction": "response",
+        "description": "单位mm"
+      },
+      "published_point": {
+        "id": 78,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_CurrentPos_Fork",
+        "symbol_name": "状态_货叉方向测距",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_CurrentPos_Fork",
+        "data_type": "REAL",
+        "value_range": "mm",
+        "scale": 1,
+        "sort": 111,
+        "description": "货叉方向测距",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "FLOAT32",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_CurrentPos_Fork",
+        "constraints": {
+          "unit": "mm"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_CurrentPos_Fork",
+        "type": "REAL",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 26,
+        "raw_field": "status_TaskNum",
+        "field": "status_TaskNum",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_TaskNum",
+        "type": "INT",
+        "plc_address": "DB100.DBW60",
+        "direction": "response",
+        "description": "1-65534"
+      },
+      "published_point": {
+        "id": 79,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_TaskNum",
+        "symbol_name": "状态_任务号",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_TaskNum",
+        "data_type": "UINT",
+        "value_range": "1-65534",
+        "scale": 1,
+        "sort": 112,
+        "description": "当前任务号",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "UINT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_TaskNum",
+        "constraints": {
+          "min": 0,
+          "max": 65534
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_TaskNum",
+        "type": "UINT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": false,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "原表INT与1–65534相矛盾；仿真使用UINT，物理草稿保留INT且不能按65534范围发布。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 27,
+        "raw_field": "status_Cargo",
+        "field": "status_Cargo",
+        "group": "To_WCS",
+        "symbol": "WCS_Task.To_WCS.status_Cargo",
+        "type": "INT",
+        "plc_address": "DB100.DBW62",
+        "direction": "response",
+        "description": "1=载货台空\n2=载货台有货"
+      },
+      "published_point": {
+        "id": 80,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_Cargo",
+        "symbol_name": "状态_货物状态",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_Cargo",
+        "data_type": "INT",
+        "value_range": "1空/2有货",
+        "scale": 1,
+        "sort": 113,
+        "description": "载货台货物状态",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "INT16",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_Cargo",
+        "constraints": {
+          "min": 0,
+          "max": 2,
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_Cargo",
+        "type": "INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "字段、方向、原生类型匹配；NodeId命名空间按模拟服务端映射。"
+    },
+    {
+      "reference": {
+        "sheet": "堆垛机标准协议",
+        "row": 28,
+        "raw_field": "故障代码",
+        "field": "status_ErrorCode",
+        "group": "To_WCS",
+        "symbol": null,
+        "type": "ARRAY[1..60] OF INT",
+        "plc_address": "DB100.DBW64-DB100.DBW182",
+        "direction": "response",
+        "description": "1行走轴误差过大，请在下限位校准回原\n2断带检测1触发\n3断带检测2触发\n4货仓超长检测1触发\n5货仓超长检测2触发\n6货仓超高检测1触发\n7货仓超高检测2触发\n8里库位检测1触发，库位已占有\n9里库位检测2触发，库位已占有\n10货仓超宽检测1触发\n11货仓超宽检测2触发\n12货仓超宽检测3触发\n13货仓超宽检测4触发\n14货仓货物检测未触发，无货物\n15货仓货物检测触发，货物还在货仓\n16里库位检测1未触发，库位无货物\n17里库位检测2未触发，库位无货物\n18平移轴驱动器错误，丢失“驱动器就绪”信号\n19平移轴已触发下限软限位开关\n20平移轴已触发上限软限位开关\n21平移轴已接近下限硬限位开关\n22平移轴已接近上限硬限位开关\n23平移轴编码器发出报警消息\n24平移轴未回原点\n25平移轴无法启用\n26平移轴未找到参考开关/编码器零位标记\n27平移轴硬限位开关错误\n28升降轴驱动器错误，丢失“驱动器就绪”信号\n29升降轴已触发下限软限位开关\n30升降轴已触发上限软限位开关\n31升降轴已接近下限硬限位开关\n32升降轴已接近上限硬限位开关\n33升降轴编码器发出报警消息\n34升降轴未回原点\n35升降轴无法启用\n36升降轴未找到参考开关/编码器零位标记\n37升降轴硬限位开关错误\n38货叉轴驱动器错误，丢失“驱动器就绪”信号\n39货叉轴已触发下限软限位开关\n40货叉轴已触发上限软限位开关\n41货叉轴已接近下限硬限位开关\n42货叉轴已接近上限硬限位开关\n43货叉轴编码器发出报警消息\n44货叉轴未回原点\n45货叉轴无法启用\n46货叉轴未找到参考开关/编码器零位标记\n47货叉轴硬限位开关错误\n48 3轴已复位\n"
+      },
+      "published_point": {
+        "id": 81,
+        "creator": "system",
+        "create_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "last_update_time": [
+          2026,
+          9,
+          29,
+          2,
+          21,
+          22,
+          958796000
+        ],
+        "is_valid": true,
+        "tenant_id": 1,
+        "protocol_id": 3,
+        "field_name": "status_ErrorCode",
+        "symbol_name": "状态_故障代码",
+        "address": "ns=2;s=WCS_Task.To_WCS.status_ErrorCode",
+        "data_type": "ARRAY[1..60] OF INT",
+        "value_range": "1-48 故障码数组(DBW64-DBW182)",
+        "scale": 1,
+        "sort": 114,
+        "description": "故障代码数组，元素值为 1-48 故障码，0 表示无",
+        "template_code": "stacker",
+        "template_version": 1,
+        "operation": "result",
+        "direction": "response",
+        "point_scope": "business",
+        "logical_type": "ARRAY<INT16>",
+        "required": true,
+        "nullable": false,
+        "row_version": 0,
+        "active_identity": "stacker/1/result/response/status_ErrorCode",
+        "constraints": {
+          "dimensions": [
+            60
+          ],
+          "length": 60,
+          "element_type": "INT16"
+        },
+        "default_value": null
+      },
+      "simulator": {
+        "group": "To_WCS",
+        "field": "status_ErrorCode",
+        "type": "ARRAY[60] OF INT",
+        "direction": "response"
+      },
+      "checks": {
+        "present": true,
+        "name_matches": true,
+        "direction_matches": true,
+        "symbol_path_matches_simulator": true,
+        "native_type_matches_reference": true,
+        "simulator_field_and_direction_matches": true,
+        "simulator_type_matches_published": true
+      },
+      "note": "原表D28仅写中文故障代码，H28未给符号名；当前明确映射为status_ErrorCode，仍为60个Int16。"
+    }
+  ],
+  "fault_comparison": [
+    {
+      "code": 1,
+      "reference": "行走轴误差过大，请在下限位校准回原",
+      "current": {
+        "code": 1,
+        "level": "error",
+        "name": "行走轴误差过大",
+        "message": "行走轴误差过大，请在下限位校准回原",
+        "suggestion": "在下限位校准回原点"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 2,
+      "reference": "断带检测1触发",
+      "current": {
+        "code": 2,
+        "level": "error",
+        "name": "断带检测1触发",
+        "message": "断带检测1触发",
+        "suggestion": "检查提升钢带/链条"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 3,
+      "reference": "断带检测2触发",
+      "current": {
+        "code": 3,
+        "level": "error",
+        "name": "断带检测2触发",
+        "message": "断带检测2触发",
+        "suggestion": "检查提升钢带/链条"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 4,
+      "reference": "货仓超长检测1触发",
+      "current": {
+        "code": 4,
+        "level": "warn",
+        "name": "货仓超长检测1触发",
+        "message": "货仓超长检测1触发",
+        "suggestion": "检查货物外形是否超长"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 5,
+      "reference": "货仓超长检测2触发",
+      "current": {
+        "code": 5,
+        "level": "warn",
+        "name": "货仓超长检测2触发",
+        "message": "货仓超长检测2触发",
+        "suggestion": "检查货物外形是否超长"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 6,
+      "reference": "货仓超高检测1触发",
+      "current": {
+        "code": 6,
+        "level": "warn",
+        "name": "货仓超高检测1触发",
+        "message": "货仓超高检测1触发",
+        "suggestion": "检查货物外形是否超高"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 7,
+      "reference": "货仓超高检测2触发",
+      "current": {
+        "code": 7,
+        "level": "warn",
+        "name": "货仓超高检测2触发",
+        "message": "货仓超高检测2触发",
+        "suggestion": "检查货物外形是否超高"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 8,
+      "reference": "里库位检测1触发，库位已占有",
+      "current": {
+        "code": 8,
+        "level": "warn",
+        "name": "里库位检测1触发",
+        "message": "里库位检测1触发，库位已占有",
+        "suggestion": "该库位已有货，改派或改双重入库"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 9,
+      "reference": "里库位检测2触发，库位已占有",
+      "current": {
+        "code": 9,
+        "level": "warn",
+        "name": "里库位检测2触发",
+        "message": "里库位检测2触发，库位已占有",
+        "suggestion": "该库位已有货，改派或改双重入库"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 10,
+      "reference": "货仓超宽检测1触发",
+      "current": {
+        "code": 10,
+        "level": "warn",
+        "name": "货仓超宽检测1触发",
+        "message": "货仓超宽检测1触发",
+        "suggestion": "检查货物外形是否超宽"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 11,
+      "reference": "货仓超宽检测2触发",
+      "current": {
+        "code": 11,
+        "level": "warn",
+        "name": "货仓超宽检测2触发",
+        "message": "货仓超宽检测2触发",
+        "suggestion": "检查货物外形是否超宽"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 12,
+      "reference": "货仓超宽检测3触发",
+      "current": {
+        "code": 12,
+        "level": "warn",
+        "name": "货仓超宽检测3触发",
+        "message": "货仓超宽检测3触发",
+        "suggestion": "检查货物外形是否超宽"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 13,
+      "reference": "货仓超宽检测4触发",
+      "current": {
+        "code": 13,
+        "level": "warn",
+        "name": "货仓超宽检测4触发",
+        "message": "货仓超宽检测4触发",
+        "suggestion": "检查货物外形是否超宽"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 14,
+      "reference": "货仓货物检测未触发，无货物",
+      "current": {
+        "code": 14,
+        "level": "warn",
+        "name": "货仓货物检测未触发",
+        "message": "货仓货物检测未触发，无货物",
+        "suggestion": "确认载货台是否确实有货"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 15,
+      "reference": "货仓货物检测触发，货物还在货仓",
+      "current": {
+        "code": 15,
+        "level": "warn",
+        "name": "货仓货物检测触发",
+        "message": "货仓货物检测触发，货物还在货仓",
+        "suggestion": "确认货物是否已移出载货台"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 16,
+      "reference": "里库位检测1未触发，库位无货物",
+      "current": {
+        "code": 16,
+        "level": "warn",
+        "name": "里库位检测1未触发",
+        "message": "里库位检测1未触发，库位无货物",
+        "suggestion": "出库前确认库位有货"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 17,
+      "reference": "里库位检测2未触发，库位无货物",
+      "current": {
+        "code": 17,
+        "level": "warn",
+        "name": "里库位检测2未触发",
+        "message": "里库位检测2未触发，库位无货物",
+        "suggestion": "出库前确认库位有货"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 18,
+      "reference": "平移轴驱动器错误，丢失“驱动器就绪”信号",
+      "current": {
+        "code": 18,
+        "level": "error",
+        "name": "平移轴驱动器错误",
+        "message": "平移轴驱动器错误，丢失驱动器就绪信号",
+        "suggestion": "检查平移轴驱动器"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 19,
+      "reference": "平移轴已触发下限软限位开关",
+      "current": {
+        "code": 19,
+        "level": "error",
+        "name": "平移轴下限软限位",
+        "message": "平移轴已触发下限软限位开关",
+        "suggestion": "检查平移轴位置与软限位设置"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 20,
+      "reference": "平移轴已触发上限软限位开关",
+      "current": {
+        "code": 20,
+        "level": "error",
+        "name": "平移轴上限软限位",
+        "message": "平移轴已触发上限软限位开关",
+        "suggestion": "检查平移轴位置与软限位设置"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 21,
+      "reference": "平移轴已接近下限硬限位开关",
+      "current": {
+        "code": 21,
+        "level": "warn",
+        "name": "平移轴接近下限硬限位",
+        "message": "平移轴已接近下限硬限位开关",
+        "suggestion": "减速并检查平移轴行程"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 22,
+      "reference": "平移轴已接近上限硬限位开关",
+      "current": {
+        "code": 22,
+        "level": "warn",
+        "name": "平移轴接近上限硬限位",
+        "message": "平移轴已接近上限硬限位开关",
+        "suggestion": "减速并检查平移轴行程"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 23,
+      "reference": "平移轴编码器发出报警消息",
+      "current": {
+        "code": 23,
+        "level": "error",
+        "name": "平移轴编码器报警",
+        "message": "平移轴编码器发出报警消息",
+        "suggestion": "检查平移轴编码器"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 24,
+      "reference": "平移轴未回原点",
+      "current": {
+        "code": 24,
+        "level": "error",
+        "name": "平移轴未回原点",
+        "message": "平移轴未回原点",
+        "suggestion": "执行平移轴回原点"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 25,
+      "reference": "平移轴无法启用",
+      "current": {
+        "code": 25,
+        "level": "error",
+        "name": "平移轴无法启用",
+        "message": "平移轴无法启用",
+        "suggestion": "检查平移轴使能条件"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 26,
+      "reference": "平移轴未找到参考开关/编码器零位标记",
+      "current": {
+        "code": 26,
+        "level": "error",
+        "name": "平移轴未找到参考点",
+        "message": "平移轴未找到参考开关/编码器零位标记",
+        "suggestion": "检查平移轴参考开关与零位"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 27,
+      "reference": "平移轴硬限位开关错误",
+      "current": {
+        "code": 27,
+        "level": "error",
+        "name": "平移轴硬限位开关错误",
+        "message": "平移轴硬限位开关错误",
+        "suggestion": "检查平移轴硬限位接线"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 28,
+      "reference": "升降轴驱动器错误，丢失“驱动器就绪”信号",
+      "current": {
+        "code": 28,
+        "level": "error",
+        "name": "升降轴驱动器错误",
+        "message": "升降轴驱动器错误，丢失驱动器就绪信号",
+        "suggestion": "检查升降轴驱动器"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 29,
+      "reference": "升降轴已触发下限软限位开关",
+      "current": {
+        "code": 29,
+        "level": "error",
+        "name": "升降轴下限软限位",
+        "message": "升降轴已触发下限软限位开关",
+        "suggestion": "检查升降轴位置与软限位设置"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 30,
+      "reference": "升降轴已触发上限软限位开关",
+      "current": {
+        "code": 30,
+        "level": "error",
+        "name": "升降轴上限软限位",
+        "message": "升降轴已触发上限软限位开关",
+        "suggestion": "检查升降轴位置与软限位设置"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 31,
+      "reference": "升降轴已接近下限硬限位开关",
+      "current": {
+        "code": 31,
+        "level": "warn",
+        "name": "升降轴接近下限硬限位",
+        "message": "升降轴已接近下限硬限位开关",
+        "suggestion": "减速并检查升降轴行程"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 32,
+      "reference": "升降轴已接近上限硬限位开关",
+      "current": {
+        "code": 32,
+        "level": "warn",
+        "name": "升降轴接近上限硬限位",
+        "message": "升降轴已接近上限硬限位开关",
+        "suggestion": "减速并检查升降轴行程"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 33,
+      "reference": "升降轴编码器发出报警消息",
+      "current": {
+        "code": 33,
+        "level": "error",
+        "name": "升降轴编码器报警",
+        "message": "升降轴编码器发出报警消息",
+        "suggestion": "检查升降轴编码器"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 34,
+      "reference": "升降轴未回原点",
+      "current": {
+        "code": 34,
+        "level": "error",
+        "name": "升降轴未回原点",
+        "message": "升降轴未回原点",
+        "suggestion": "执行升降轴回原点"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 35,
+      "reference": "升降轴无法启用",
+      "current": {
+        "code": 35,
+        "level": "error",
+        "name": "升降轴无法启用",
+        "message": "升降轴无法启用",
+        "suggestion": "检查升降轴使能条件"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 36,
+      "reference": "升降轴未找到参考开关/编码器零位标记",
+      "current": {
+        "code": 36,
+        "level": "error",
+        "name": "升降轴未找到参考点",
+        "message": "升降轴未找到参考开关/编码器零位标记",
+        "suggestion": "检查升降轴参考开关与零位"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 37,
+      "reference": "升降轴硬限位开关错误",
+      "current": {
+        "code": 37,
+        "level": "error",
+        "name": "升降轴硬限位开关错误",
+        "message": "升降轴硬限位开关错误",
+        "suggestion": "检查升降轴硬限位接线"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 38,
+      "reference": "货叉轴驱动器错误，丢失“驱动器就绪”信号",
+      "current": {
+        "code": 38,
+        "level": "error",
+        "name": "货叉轴驱动器错误",
+        "message": "货叉轴驱动器错误，丢失驱动器就绪信号",
+        "suggestion": "检查货叉轴驱动器"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 39,
+      "reference": "货叉轴已触发下限软限位开关",
+      "current": {
+        "code": 39,
+        "level": "error",
+        "name": "货叉轴下限软限位",
+        "message": "货叉轴已触发下限软限位开关",
+        "suggestion": "检查货叉轴位置与软限位设置"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 40,
+      "reference": "货叉轴已触发上限软限位开关",
+      "current": {
+        "code": 40,
+        "level": "error",
+        "name": "货叉轴上限软限位",
+        "message": "货叉轴已触发上限软限位开关",
+        "suggestion": "检查货叉轴位置与软限位设置"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 41,
+      "reference": "货叉轴已接近下限硬限位开关",
+      "current": {
+        "code": 41,
+        "level": "warn",
+        "name": "货叉轴接近下限硬限位",
+        "message": "货叉轴已接近下限硬限位开关",
+        "suggestion": "减速并检查货叉轴行程"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 42,
+      "reference": "货叉轴已接近上限硬限位开关",
+      "current": {
+        "code": 42,
+        "level": "warn",
+        "name": "货叉轴接近上限硬限位",
+        "message": "货叉轴已接近上限硬限位开关",
+        "suggestion": "减速并检查货叉轴行程"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 43,
+      "reference": "货叉轴编码器发出报警消息",
+      "current": {
+        "code": 43,
+        "level": "error",
+        "name": "货叉轴编码器报警",
+        "message": "货叉轴编码器发出报警消息",
+        "suggestion": "检查货叉轴编码器"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 44,
+      "reference": "货叉轴未回原点",
+      "current": {
+        "code": 44,
+        "level": "error",
+        "name": "货叉轴未回原点",
+        "message": "货叉轴未回原点",
+        "suggestion": "执行货叉轴回原点"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 45,
+      "reference": "货叉轴无法启用",
+      "current": {
+        "code": 45,
+        "level": "error",
+        "name": "货叉轴无法启用",
+        "message": "货叉轴无法启用",
+        "suggestion": "检查货叉轴使能条件"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 46,
+      "reference": "货叉轴未找到参考开关/编码器零位标记",
+      "current": {
+        "code": 46,
+        "level": "error",
+        "name": "货叉轴未找到参考点",
+        "message": "货叉轴未找到参考开关/编码器零位标记",
+        "suggestion": "检查货叉轴参考开关与零位"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 47,
+      "reference": "货叉轴硬限位开关错误",
+      "current": {
+        "code": 47,
+        "level": "error",
+        "name": "货叉轴硬限位开关错误",
+        "message": "货叉轴硬限位开关错误",
+        "suggestion": "检查货叉轴硬限位接线"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "fault"
+    },
+    {
+      "code": 48,
+      "reference": "3轴已复位",
+      "current": {
+        "code": 48,
+        "level": "info",
+        "name": "3轴已复位",
+        "message": "3轴已复位",
+        "suggestion": "正常状态，3 轴已回原点"
+      },
+      "message_matches_after_punctuation_normalization": true,
+      "semantics": "normal_reset_info_currently_blocks_and_fails_task"
+    }
+  ],
+  "handshake": [
+    {
+      "reference": "WCS对接流程!B46",
+      "requirement": "联机自动、无故障、无任务前置检查",
+      "status": "matches_with_info_48_issue",
+      "source": "task/StackerHandshakeStateMachine.java:advance/doCheck"
+    },
+    {
+      "reference": "WCS对接流程!B47",
+      "requirement": "坐标→货口→任务号→任务类型",
+      "status": "matches",
+      "source": "task/StackerHandshakeStateMachine.java:doWriteParams"
+    },
+    {
+      "reference": "WCS对接流程!B48/A52",
+      "requirement": "状态0写确认1；状态1写0；状态2写2",
+      "status": "matches",
+      "source": "task/StackerHandshakeStateMachine.java:doConfirmExecute/doWaitComplete/doConfirmComplete"
+    },
+    {
+      "reference": "WCS对接流程!B49",
+      "requirement": "坐标、货口、任务号、任务类型、确认清0",
+      "status": "matches",
+      "source": "task/StackerHandshakeStateMachine.java:doClear"
+    },
+    {
+      "reference": "堆垛机标准协议!I28/J28；WCS对接流程!D40",
+      "requirement": "60元素Int16数组，非零项按1–48释义",
+      "status": "array_and_definitions_match_except_normal_48_execution_semantics",
+      "source": "simulator/opcua/StackerNamespace.java/connection/ConnectionManager.java"
+    },
+    {
+      "reference": "WCS对接流程!B45",
+      "requirement": "双向每5秒心跳并监测PLC翻转超时",
+      "status": "wcs_toggle_matches_plc_stagnation_detection_missing",
+      "source": "adapter/plc4x/StackerOpcUaAdapter.java/connection/ConnectionManager.java"
+    }
+  ],
+  "findings": [
+    {
+      "id": "OPC-01",
+      "severity": "high",
+      "category": "missing_requirement",
+      "reference": "WCS对接流程!B45",
+      "current_sources": [
+        "adapter/plc4x/StackerOpcUaAdapter.java:heartbeat",
+        "connection/ConnectionManager.java:pollOnceLocked",
+        "connection/ConnectionManager.java:runWatchdogOnce"
+      ],
+      "finding": "没有监测PLC_Heart是否翻转。每次成功读状态区即刷新lastHeartbeatAt，因此PLC应用停止跳动而OPC UA仍正常响应时不会超时告警。",
+      "validation": "真实Docker WCS连接独立Milo探针：PLC_Heart冻结超过30秒，连接仍RUNNING且lastHeartbeatAt持续刷新，没有通信报警。见WMS堆垛机故障实验记录。"
+    },
+    {
+      "id": "OPC-02",
+      "severity": "high",
+      "category": "normal_event_treated_as_failure",
+      "reference": "堆垛机标准协议!F28 第48项",
+      "current_sources": [
+        "device/AbstractDeviceHandler.java:readFirstFaultCode",
+        "task/StackerHandshakeStateMachine.java:advance",
+        "connection/ConnectionManager.java:hasActiveFault"
+      ],
+      "finding": "48为3轴已复位，当前字典标info/正常状态，却仍被任何非零即故障的闸门阻塞并使任务failed。",
+      "validation": "WMS真实派工：只注入48时本地任务58、远端102100均failed/error_code=48；48与18并存时本地61仍只保存48。字典报警级别为info。"
+    },
+    {
+      "id": "OPC-03",
+      "severity": "high",
+      "category": "reference_self_conflict_requires_plc_confirmation",
+      "reference": "堆垛机标准协议!I12/F12/I26/F26；WCS对接流程!C21/D21/C38/D38",
+      "current_sources": [
+        "adapter/PointTypeRegistry.java:canonical",
+        "protocol/contract/PointContractValidator.java:definition",
+        "backend/src/main/resources/db/migration/V17__protocol_point_contracts.sql:49-66"
+      ],
+      "finding": "原表任务号类型INT与范围1–65534不相容。仿真明确使用UINT16支持65534；物理协议仍INT/INT16且在线保持draft，必须确认现场PLC真实类型，不能把仿真通过当现场完全符合。",
+      "options": [
+        "现场Int16：将范围限制1–32767并同步上下游业务约束；",
+        "现场UInt16：明确改为UINT/UINT16后同步真实节点与协议，再发布。"
+      ]
+    },
+    {
+      "id": "OPC-04",
+      "severity": "medium",
+      "category": "simulator_enum_semantics",
+      "reference": "堆垛机标准协议!F3/F17；WCS对接流程!D12/D29",
+      "current_sources": [
+        "simulator/StackerDeviceState.java:handleConfirm",
+        "protocol/contract/DevicePointTemplates.java:validateHandlerContract",
+        "backend/src/main/resources/db/migration/V17__protocol_point_contracts.sql:71"
+      ],
+      "finding": "请求3=移库、4=移动；原表反馈3=移动、4=转库。模拟器直接复制请求类型，当前反馈约束扩展0–6。真实驱动只保留PLC反馈原值，须确认0–5/6与3/4映射。"
+    },
+    {
+      "id": "OPC-05",
+      "severity": "low",
+      "category": "simulation_timing_difference",
+      "reference": "堆垛机标准协议!F14；WCS对接流程!D26/B45",
+      "current_sources": [
+        "simulator/StackerDeviceState.java:tick",
+        "simulator/OpcUaStackerSimulator.java:start"
+      ],
+      "finding": "WCS主动心跳5000ms符合原表；模拟PLC心跳每tick翻转，Milo每1秒tick，故仿真PLC心跳周期1秒而非原表5秒。"
+    },
+    {
+      "id": "OPC-06",
+      "severity": "information",
+      "category": "range_extension_for_idle_clear",
+      "reference": "堆垛机标准协议!F3/F5:F12/F18:F19/F26:F27；WCS对接流程!B49",
+      "current_sources": [
+        "protocol/contract/PointContractValidator.java:semantic",
+        "backend/src/main/resources/db/migration/V17__protocol_point_contracts.sql:59-80"
+      ],
+      "finding": "业务命令类型仅允许1–6，0由驱动清零；取放坐标/货口等允许0用于非适用方向及收尾，实际适用方向坐标和入出库货口另有语义校验。反馈坐标/货物/任务号允许0作为空闲值，为兼容扩展。移动类型4额外要求有效排，较原表仅列层更严格。"
+    },
+    {
+      "id": "OPC-07",
+      "severity": "information",
+      "category": "server_specific_address_mapping",
+      "reference": "堆垛机标准协议!H2:H27/J2:J28",
+      "current_sources": [
+        "simulator/opcua/StackerNamespace.java:createNodes",
+        "backend/src/main/resources/db/migration/V4__seed_pallet_opcua_app.sql",
+        "backend/src/main/resources/db/migration/V5__seed_opcua_sim_app.sql"
+      ],
+      "finding": "原表提供DB100地址与WCS_Task.From_WCS/To_WCS符号路径，未给OPC UA命名空间索引。仿真ns=2、物理种子ns=3带Siemens引号均为服务端映射；现场需浏览节点核对，不能仅凭xlsx验证具体NodeId。故障数组原表未给英文符号名，当前status_ErrorCode为明确映射。"
+    },
+    {
+      "id": "OPC-08",
+      "severity": "information",
+      "category": "physical_readback_precondition",
+      "reference": "堆垛机标准协议!G12",
+      "current_sources": [
+        "task/StackerHandshakeStateMachine.java:doConfirmExecute",
+        "simulator/opcua/StackerNamespace.java:access"
+      ],
+      "finding": "当前执行确认前回读命令任务号，模拟请求节点允许读写；原表W表示WCS写入方向但未声明真实OPC UA AccessLevel，须现场确认cmd_TaskNum允许读取，否则该安全回读会失败并阻止执行。"
+    }
+  ],
+  "source_code_sha256": {
+    "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java": "4c5ae9a600f63dbb5b77c683dc25b2293f5e711ca5fda0ed1a555b007e6e01a2",
+    "backend\\src\\main\\java\\com\\cayleywcs\\connection\\ConnectionManager.java": "ba50f75f406a6b9b586903466217b46687e024c4b3ef0b8f3e1ac838b6505ed1",
+    "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\plc4x\\StackerOpcUaAdapter.java": "247626640eba8f463837ea75b864af4323cbcbe54c57f311e3de3dc62a988fd0",
+    "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\plc4x\\Plc4xAdapter.java": "a762564134224ce24cfa83531e61f72b8dc3630c835e3add6994e677d49bbf7a",
+    "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\PointTypeRegistry.java": "ef88551705b7ea61a43b5839b0b5895c6f13694b15f17064032415ba759397af",
+    "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\AbstractProtocolAdapter.java": "c90ef1182a4d1597f1b59f2253973869e788a6e262d9e19a496c69cb2f556e71",
+    "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\StackerDeviceState.java": "8a3af2158bf722a01b2cc6de04c19e965345d38dd03356695d7aaad34f9c3b91",
+    "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\OpcUaStackerSimulator.java": "8155fd6a19129c227c6df94507986cb9ce22f3f9785c73dc8f91f1cc41908c7b",
+    "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\opcua\\StackerNamespace.java": "e3f00cbf8b307b6546cc447f77ecd47f786070b9931106305a1025608abcda74",
+    "backend\\src\\main\\java\\com\\cayleywcs\\protocol\\contract\\PointContractValidator.java": "8c40c90180ce797cd1d10db17325777723cc97f6ef563dee3b2278a1abe3e5f8",
+    "backend\\src\\main\\java\\com\\cayleywcs\\protocol\\contract\\DevicePointTemplates.java": "6450bb447972c430ba58cccfacea59a291eb2153453e7f2d9dfefa8e3a79a763",
+    "backend\\src\\main\\java\\com\\cayleywcs\\device\\AbstractDeviceHandler.java": "0124361c4abc23e0c1869dbbeaebe4b672a7b0e28085ffda9d3c3c381b39eb6a"
+  },
+  "published_snapshot_sha256": "09ebb97294bc0b3317ba456cb399679bf1a293881e93ec5df080bfa14cd6d322",
+  "source_locations": {
+    "WCS心跳5000ms": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\plc4x\\StackerOpcUaAdapter.java",
+      "line": 14,
+      "token": "private static final long HEARTBEAT_TOGGLE_MS"
+    },
+    "心跳仅写WCS并检查连接": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\plc4x\\StackerOpcUaAdapter.java",
+      "line": 32,
+      "token": "public boolean heartbeat()"
+    },
+    "读状态区成功即刷新活跃时间": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\connection\\ConnectionManager.java",
+      "line": 613,
+      "token": "mc.setLatest(snap);"
+    },
+    "全部非零均为活动故障": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\connection\\ConnectionManager.java",
+      "line": 434,
+      "token": "public boolean hasActiveFault"
+    },
+    "提取数组所有非零故障": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\connection\\ConnectionManager.java",
+      "line": 653,
+      "token": "private static Set<Integer> extractFaultCodes"
+    },
+    "任务以首个非零判败": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 53,
+      "token": "int firstErrorCode = readFirstFaultCode"
+    },
+    "参数写入顺序": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 114,
+      "token": "private boolean doWriteParams"
+    },
+    "执行前回读命令任务号": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 139,
+      "token": "long echoed = readLong"
+    },
+    "执行确认1": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 155,
+      "token": "write(appId, \"cmd_ConfirmTask\", 1)"
+    },
+    "运行中确认0": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 174,
+      "token": "write(appId, \"cmd_ConfirmTask\", 0)"
+    },
+    "先采集结果再完成确认2": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 193,
+      "token": "private boolean doConfirmComplete"
+    },
+    "补发确认2并清零且检查空闲": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\task\\StackerHandshakeStateMachine.java",
+      "line": 208,
+      "token": "private boolean doClear"
+    },
+    "模拟PLC每tick翻转心跳": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\StackerDeviceState.java",
+      "line": 54,
+      "token": "plcHeart = plcHeart == 0 ? 1 : 0"
+    },
+    "模拟器直接复制请求任务类型": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\StackerDeviceState.java",
+      "line": 106,
+      "token": "store.put(\"status_TaskTypeFeedback\", intVal(\"cmd_TaskType\"))"
+    },
+    "Milo每一秒tick": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\OpcUaStackerSimulator.java",
+      "line": 106,
+      "token": "ticker.scheduleWithFixedDelay"
+    },
+    "故障数组60元素": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\opcua\\StackerNamespace.java",
+      "line": 65,
+      "token": ".setArrayDimensions"
+    },
+    "模拟命令节点允许读写": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\opcua\\StackerNamespace.java",
+      "line": 103,
+      "token": "return \"request\".equals(field.direction()) ? 3 : 1;"
+    },
+    "MiloUInt16": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\simulator\\opcua\\StackerNamespace.java",
+      "line": 109,
+      "token": "case \"UINT\" -> Identifiers.UInt16"
+    },
+    "INT明确映射Int16": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\PointTypeRegistry.java",
+      "line": 40,
+      "token": "case \"INT\", \"SHORT\", \"INT16\""
+    },
+    "UINT明确映射UInt16": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\adapter\\PointTypeRegistry.java",
+      "line": 41,
+      "token": "case \"UINT\", \"USHORT\", \"WORD\", \"UINT16\""
+    },
+    "有效方向坐标语义校验": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\protocol\\contract\\PointContractValidator.java",
+      "line": 149,
+      "token": "private static void semantic"
+    },
+    "原生值域发布校验": {
+      "path": "backend\\src\\main\\java\\com\\cayleywcs\\protocol\\contract\\PointContractValidator.java",
+      "line": 45,
+      "token": "for (String key : List.of(\"min\", \"max\"))"
+    }
+  },
+  "live_validation_evidence": "2026-10-13-wms-stacker-fault-evidence.json"
+}

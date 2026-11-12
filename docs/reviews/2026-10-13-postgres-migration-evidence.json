@@ -1,0 +1,208 @@
+{
+  "task_id": "TASK-20261013-3AA0DA2D",
+  "scope": "Read-only current PG backup; isolated PG actual Flyway16->19, no Spring device workers",
+  "source_version": "16",
+  "target_version": "19",
+  "postgres_image": "postgres:17",
+  "dump_sha256": "f82c9f9391a6d0d1ba3c48243571985f17a985e41594ec0403c1b74f993de51b",
+  "dump_bytes": 73990,
+  "backend_jar_sha256": "0e979d7a16222bc1537e65ab81fbb99822eadcffa2219f9a5915d94beec2abd1",
+  "counts_before": {
+    "flyway_schema_history": 16,
+    "wcs_alarm": 45,
+    "wcs_app_binding": 10,
+    "wcs_application": 12,
+    "wcs_connection_log": 203,
+    "wcs_dict_item": 64,
+    "wcs_dict_type": 15,
+    "wcs_fault_code": 152,
+    "wcs_message_log": 175,
+    "wcs_open_token": 15,
+    "wcs_protocol": 9,
+    "wcs_protocol_point": 140,
+    "wcs_task": 27,
+    "wcs_task_chain": 2,
+    "wcs_user": 1,
+    "wcs_userrole": 1,
+    "wcs_webhook": 9,
+    "wcs_webhook_cursor": 9,
+    "wcs_webhook_delivery": 72
+  },
+  "counts_after": {
+    "flyway_schema_history": 19,
+    "wcs_alarm": 45,
+    "wcs_app_binding": 10,
+    "wcs_application": 12,
+    "wcs_connection_log": 203,
+    "wcs_contract_migration_audit": 41,
+    "wcs_device_task_number": 12,
+    "wcs_device_task_number_lease": 0,
+    "wcs_dict_item": 64,
+    "wcs_dict_type": 15,
+    "wcs_fault_code": 152,
+    "wcs_message_log": 175,
+    "wcs_open_token": 15,
+    "wcs_protocol": 10,
+    "wcs_protocol_point": 181,
+    "wcs_protocol_revision": 0,
+    "wcs_task": 27,
+    "wcs_task_chain": 2,
+    "wcs_user": 1,
+    "wcs_userrole": 1,
+    "wcs_webhook": 9,
+    "wcs_webhook_cursor": 9,
+    "wcs_webhook_delivery": 72
+  },
+  "checks": [
+    {
+      "name": "wcs_task_row_ids_preserved",
+      "passed": true,
+      "rows": 27
+    },
+    {
+      "name": "wcs_task_create_time_preserved",
+      "passed": true,
+      "rows": 27
+    },
+    {
+      "name": "wcs_task_last_update_time_preserved",
+      "passed": true,
+      "rows": 27
+    },
+    {
+      "name": "task_legacy_columns_and_state_preserved",
+      "passed": true
+    },
+    {
+      "name": "task_original_request_recorded",
+      "passed": true,
+      "rows": 27
+    },
+    {
+      "name": "task_legacy_scope_per_row",
+      "passed": true
+    },
+    {
+      "name": "nonterminal_tasks_held",
+      "passed": true
+    },
+    {
+      "name": "unattributed_independent_tasks_held",
+      "passed": true
+    },
+    {
+      "name": "all_original_task_columns_except_payload_preserved",
+      "passed": true
+    },
+    {
+      "name": "task_original_request_metadata_matches_source",
+      "passed": true,
+      "rows": 27
+    },
+    {
+      "name": "task_original_payload_content_matches_source_after_redaction",
+      "passed": true,
+      "rows": 27
+    },
+    {
+      "name": "wcs_task_chain_row_ids_preserved",
+      "passed": true,
+      "rows": 2
+    },
+    {
+      "name": "wcs_task_chain_create_time_preserved",
+      "passed": true,
+      "rows": 2
+    },
+    {
+      "name": "wcs_task_chain_last_update_time_preserved",
+      "passed": true,
+      "rows": 2
+    },
+    {
+      "name": "chain_business_state_preserved",
+      "passed": true
+    },
+    {
+      "name": "valid_chain_original_segments_recorded",
+      "passed": true
+    },
+    {
+      "name": "nonterminal_chains_held",
+      "passed": true
+    },
+    {
+      "name": "all_original_chain_columns_except_segments_preserved",
+      "passed": true
+    },
+    {
+      "name": "chain_original_segments_match_source_after_redaction",
+      "passed": true,
+      "rows": 2
+    },
+    {
+      "name": "wcs_application_row_ids_preserved",
+      "passed": true,
+      "rows": 12
+    },
+    {
+      "name": "wcs_application_create_time_preserved",
+      "passed": true,
+      "rows": 12
+    },
+    {
+      "name": "wcs_application_last_update_time_preserved",
+      "passed": true,
+      "rows": 12
+    },
+    {
+      "name": "flyway_upgraded_16_to_19",
+      "passed": true
+    },
+    {
+      "name": "no_protocol_auto_publication",
+      "passed": true
+    },
+    {
+      "name": "known_http_apps_reclassified_and_waiting",
+      "passed": true,
+      "rows": 2
+    },
+    {
+      "name": "physical_protocol_native_types_and_permissions_not_guessed",
+      "passed": true
+    },
+    {
+      "name": "http_request_response_field_sets_match_explicit_sources",
+      "passed": true,
+      "rows": 41
+    },
+    {
+      "name": "no_automatic_protocol_revision_or_lease",
+      "passed": true
+    },
+    {
+      "name": "device_number_rows_initialized",
+      "passed": true
+    },
+    {
+      "name": "task_chain_audit_coverage",
+      "passed": true
+    },
+    {
+      "name": "repeat_migration_does_not_change_rows_or_times",
+      "passed": true
+    },
+    {
+      "name": "source_container_unchanged_by_rehearsal",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "checks": 32,
+    "passed": 32,
+    "failed": 0
+  },
+  "private_data": "Dump, original business rows and generated isolated credentials remain outside repository; evidence excludes all request payloads and secrets",
+  "executed_at": "2026-10-13T02:19:00+09:00"
+}

@@ -20,6 +20,7 @@ public class ManagedConnection {
     private final ApplicationEntity application;
     private final ProtocolEntity protocol;
     private final List<ProtocolPointEntity> points;
+    private final Map<String, ProtocolPointEntity> pointsByField;
     private final ProtocolAdapter adapter;
     private final AdapterContext context;
 
@@ -35,9 +36,15 @@ public class ManagedConnection {
                              List<ProtocolPointEntity> points, ProtocolAdapter adapter) {
         this.application = application;
         this.protocol = protocol;
-        this.points = points;
+        this.points = List.copyOf(points);
+        Map<String, ProtocolPointEntity> firstByField = new LinkedHashMap<>();
+        for (ProtocolPointEntity point : this.points) {
+            if (firstByField.put(point.getField_name(), point) != null)
+                throw new com.cayleywcs.common.exception.WcsException(4223,"当前设备模板存在重复点位："+point.getField_name());
+        }
+        this.pointsByField = Collections.unmodifiableMap(firstByField);
         this.adapter = adapter;
-        this.context = new AdapterContext(application, protocol, points);
+        this.context = new AdapterContext(application, protocol, this.points);
     }
 
     public ApplicationEntity application() {
@@ -50,6 +57,11 @@ public class ManagedConnection {
 
     public List<ProtocolPointEntity> points() {
         return points;
+    }
+
+    /** 已限定设备模板/协议版本的运行索引；重复名称在建连前拒绝。 */
+    public ProtocolPointEntity point(String field) {
+        return pointsByField.get(field);
     }
 
     public ProtocolAdapter adapter() {
@@ -122,7 +134,7 @@ public class ManagedConnection {
                 state.name(),
                 lastHeartbeatAt,
                 retryCount.get(),
-                latest
+                state==ConnectionState.RUNNING?latest:null
         );
     }
 }

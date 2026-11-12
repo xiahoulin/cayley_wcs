@@ -13,6 +13,8 @@ import com.cayleywcs.task.TaskService;
 import com.cayleywcs.task.TaskStatus;
 import com.cayleywcs.task.entity.TaskEntity;
 import com.cayleywcs.task.mapper.TaskMapper;
+import com.cayleywcs.protocol.ProtocolService;
+import com.cayleywcs.support.PublishedDeviceFixtures;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,7 @@ class DispatchStrategyTest {
     private IdleFirstStrategy idleFirst;
     @Autowired
     private RoundRobinStrategy roundRobin;
+    @Autowired ProtocolService protocols;
 
     /** 直插一个测试设备应用（绕过管理端登录要求）。 */
     private ApplicationEntity newApp(String code, String dispatchStrategy) {
@@ -50,7 +53,6 @@ class DispatchStrategyTest {
         app.setApp_name(code);
         app.setApp_key("ak_" + code.toLowerCase());
         app.setApp_secret("s");
-        app.setProtocol_id(1L);
         app.setDirection("downstream");
         app.setDevice_type("stacker");
         app.setWork_mode("normal");
@@ -63,7 +65,7 @@ class DispatchStrategyTest {
         app.setIs_valid(true);
         app.setTenant_id(1L);
         applicationMapper.insert(app);
-        return app;
+        return PublishedDeviceFixtures.ensure(protocols,applicationMapper,app.getId(),"stacker");
     }
 
     private TaskEntity newTask(Long appId, String no, long priority) {
@@ -72,6 +74,7 @@ class DispatchStrategyTest {
         t.setTask_no(no);
         t.setTask_type("1");
         t.setPriority(priority);
+        t.setPayload(PublishedDeviceFixtures.stackerPayload());
         return taskService.create(t);
     }
 
@@ -120,6 +123,7 @@ class DispatchStrategyTest {
         // LIFT_SIM 开连接且空闲；一个新设备无连接；一个暂停设备
         ApplicationEntity lift = applicationService.listAll().stream()
                 .filter(a -> "LIFT_SIM".equals(a.getApp_code())).findFirst().orElseThrow();
+        lift=PublishedDeviceFixtures.ensure(protocols,applicationMapper,lift.getId(),"lift");
         if (!connectionManager.isOpen(lift.getId())) {
             connectionManager.open(lift.getId());
         }
@@ -158,6 +162,8 @@ class DispatchStrategyTest {
         TaskEntity failed = taskService.getById(t.getId());
         failed.setStatus(TaskStatus.FAILED);
         taskMapper.updateById(failed);
+        applicationService.updateWorkMode(app.getId(),"paused");
+        if(!connectionManager.isOpen(app.getId()))connectionManager.open(app.getId());
         assertThat(taskService.retryTask(t.getId())).isTrue();
         TaskEntity retried = taskService.getById(t.getId());
         assertThat(retried.getStatus()).isEqualTo(TaskStatus.PENDING);

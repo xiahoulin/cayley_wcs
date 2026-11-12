@@ -26,6 +26,45 @@ public class TaskEntity extends BaseEntity {
     private String status;
     private String handshake_step;
     private Long error_code;
+    private Long caller_app_id;
+    private Long binding_id;
+    private Long protocol_revision_id;
+    private Long execution_epoch;
+    private Long native_task_num;
+    private Boolean physical_started;
+    private String contract_fingerprint;
+    private String request_fingerprint;
+    private String idempotency_scope;
+    private String held_reason;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private Map<String, Object> result;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private Map<String, Object> original_request;
+
+    public Long getCaller_app_id() { return caller_app_id; }
+    public void setCaller_app_id(Long value) { caller_app_id = value; }
+    public Long getBinding_id() { return binding_id; }
+    public void setBinding_id(Long value) { binding_id = value; }
+    public Long getProtocol_revision_id() { return protocol_revision_id; }
+    public void setProtocol_revision_id(Long value) { protocol_revision_id = value; }
+    public Long getExecution_epoch() { return execution_epoch; }
+    public void setExecution_epoch(Long value) { execution_epoch = value; }
+    public Long getNative_task_num() { return native_task_num; }
+    public Boolean getPhysical_started() { return physical_started; }
+    public void setPhysical_started(Boolean value) { physical_started = value; }
+    public void setNative_task_num(Long value) { native_task_num = value; }
+    public String getContract_fingerprint() { return contract_fingerprint; }
+    public void setContract_fingerprint(String value) { contract_fingerprint = value; }
+    public String getRequest_fingerprint() { return request_fingerprint; }
+    public void setRequest_fingerprint(String value) { request_fingerprint = value; }
+    public String getIdempotency_scope() { return idempotency_scope; }
+    public void setIdempotency_scope(String value) { idempotency_scope = value; }
+    public String getHeld_reason() { return held_reason; }
+    public void setHeld_reason(String value) { held_reason = value; }
+    public Map<String,Object> getResult() { return result; }
+    public void setResult(Map<String,Object> value) { result = value; }
+    public Map<String,Object> getOriginal_request() { return original_request; }
+    public void setOriginal_request(Map<String,Object> value) { original_request = value; }
 
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> payload;

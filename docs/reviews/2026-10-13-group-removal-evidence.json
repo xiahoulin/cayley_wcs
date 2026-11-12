@@ -1,0 +1,280 @@
+{
+  "task_id": "TASK-20261013-9F656A48",
+  "status": "passed",
+  "scope": "Remove protocol point grouping from frontend, backend, database and published snapshots",
+  "backend_nearest_tests": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "name": "com.cayleywcs.protocol.BindingContractIntegrationTest",
+        "tests": 3,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.LegacyPointPayloadMigrationTest",
+        "tests": 3,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.PointContractValidatorTest",
+        "tests": 5,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.PointGroupRemovalMigrationTest",
+        "tests": 2,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.PointRwRemovalMigrationTest",
+        "tests": 2,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.protocol.ProtocolContractPublicationTest",
+        "tests": 21,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "name": "com.cayleywcs.SchemaSeedTest",
+        "tests": 3,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "frontend": {
+    "build": "passed",
+    "type_check": "passed",
+    "mock_flows": 16,
+    "mock_post_requests": 70,
+    "actual_browser_checks": 13,
+    "actual_point_write_requests": 8,
+    "all_actual_point_write_requests_omit_group": true,
+    "actual_browser_errors": [],
+    "api_interception": false,
+    "test_http_protocol_id": 31,
+    "published_native_address_preserved": true
+  },
+  "migration_rehearsal": {
+    "source_version": "20",
+    "target_version": "21",
+    "checks": {
+      "checks": 19,
+      "passed": 19,
+      "failed": 0
+    },
+    "repeat_validation_preserves_data": true,
+    "source_database_unchanged": true,
+    "owned_rehearsal_container_stopped": true
+  },
+  "actual_database": {
+    "status": "passed",
+    "schema_version": "21",
+    "checks": [
+      {
+        "name": "flyway_upgraded_20_to_21",
+        "passed": true
+      },
+      {
+        "name": "point_point_group_column_removed",
+        "passed": true
+      },
+      {
+        "name": "wcs_task_all_rows_and_times_preserved",
+        "passed": true,
+        "rows": 46
+      },
+      {
+        "name": "wcs_task_chain_all_rows_and_times_preserved",
+        "passed": true,
+        "rows": 5
+      },
+      {
+        "name": "wcs_application_configuration_preserved_except_expected_reconnection_time",
+        "passed": true,
+        "rows": 21,
+        "expected_runtime_time_updates": [
+          {
+            "app_id": 3,
+            "field": "last_update_time",
+            "reason": "automatic_connection_recovery"
+          }
+        ]
+      },
+      {
+        "name": "wcs_protocol_all_rows_and_times_preserved",
+        "passed": true,
+        "rows": 28
+      },
+      {
+        "name": "wcs_app_binding_all_rows_and_times_preserved",
+        "passed": true,
+        "rows": 14
+      },
+      {
+        "name": "wcs_device_task_number_all_rows_and_times_preserved",
+        "passed": true,
+        "rows": 13
+      },
+      {
+        "name": "wcs_device_task_number_lease_all_rows_and_times_preserved",
+        "passed": true,
+        "rows": 0
+      },
+      {
+        "name": "point_all_other_values_and_times_preserved",
+        "passed": true,
+        "rows": 374
+      },
+      {
+        "name": "point_json_no_point_group",
+        "passed": true
+      },
+      {
+        "name": "published_revision_ids_preserved",
+        "passed": true,
+        "rows": 11
+      },
+      {
+        "name": "published_revision_identity_fingerprints_and_times_preserved",
+        "passed": true
+      },
+      {
+        "name": "published_snapshot_point_group_keys_removed",
+        "passed": true
+      },
+      {
+        "name": "published_snapshot_other_point_values_preserved",
+        "passed": true
+      },
+      {
+        "name": "wcs_dict_type_obsolete_point_group_only_removed",
+        "passed": true
+      },
+      {
+        "name": "wcs_dict_item_obsolete_point_group_only_removed",
+        "passed": true
+      }
+    ],
+    "point_count": 374,
+    "revision_count": 11,
+    "native_addresses_and_direction_purpose_preserved": true,
+    "published_identity_fingerprints_and_business_records_preserved": true,
+    "expected_runtime_time_updates": [
+      {
+        "app_id": 3,
+        "field": "last_update_time",
+        "reason": "automatic_connection_recovery"
+      }
+    ],
+    "group_column_dictionary_and_snapshot_fields_removed": true
+  },
+  "actual_api_and_opcua": {
+    "status": "passed",
+    "checks": [
+      "Existing publication, fixed application version, epoch and HTTP/OPC UA binding unchanged",
+      "All current points and published snapshots omit the removed grouping field",
+      "Grouping dictionary removed from actual management API",
+      "Complete HTTP protocol clone, point edit and new publication work without grouping",
+      "Pinned OPC UA connection automatically recovers with validated response points",
+      "Existing HTTP application obtains access_token normally",
+      "HTTP payload dispatch and idempotent repeat work without point grouping",
+      "Real PLC4X OPC UA to Eclipse Milo task completes with persisted good response and 60 cleared faults",
+      "Snapshot and existing application publication identities remain valid after task completion"
+    ],
+    "point_count": 372,
+    "revision_count": 11,
+    "new_http_protocol_id": 30,
+    "new_revision_id": 12,
+    "task_id": 102052,
+    "task_no": "GROUP-REMOVAL-1791873797890352100",
+    "task_status": "completed",
+    "result_quality": "good",
+    "actual_transport": "PLC4X OPC UA to Eclipse Milo",
+    "test_data_retained": true
+  },
+  "deployment": {
+    "services": [
+      {
+        "name": "cayleywcs-backend",
+        "changed": true,
+        "running": true,
+        "image": "cayley_wcs-backend:no-group-20261013"
+      },
+      {
+        "name": "cayleywcs-frontend",
+        "changed": true,
+        "running": true,
+        "image": "cayley_wcs-frontend:no-group-20261013"
+      },
+      {
+        "name": "cayleywcs-postgres",
+        "changed": false,
+        "running": true,
+        "image": "postgres:17"
+      },
+      {
+        "name": "cayleywcs-redis",
+        "changed": false,
+        "running": true,
+        "image": "redis:7.4"
+      },
+      {
+        "name": "cayleywms-backend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-backend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywms-frontend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-frontend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywms-postgres",
+        "changed": false,
+        "running": true,
+        "image": "postgres:17"
+      },
+      {
+        "name": "cayleywms-redis",
+        "changed": false,
+        "running": true,
+        "image": "redis:7.4"
+      },
+      {
+        "name": "cayleywms-bot-service",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-bot-service:continuations20-20261002"
+      }
+    ],
+    "backend_sha256": "c312addaa7b68ac9da92d209b0a111a591cf0bed8e70337f101bb6a0a253df0b",
+    "frontend_port": 5186,
+    "only_wcs_app_containers_recreated": true,
+    "database_backup_sha256": "ba8c87c04c598cd41c612b22642e2927e03afb752ce867a3dae4890b69dd987f"
+  },
+  "documentation": {
+    "evidence": "2026-10-13-group-removal-document-evidence.json"
+  },
+  "test_data_retained": true,
+  "private_data": "Credentials, original database rows, backups and runtime override remain outside repository"
+}

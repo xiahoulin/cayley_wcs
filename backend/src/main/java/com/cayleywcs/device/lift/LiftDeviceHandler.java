@@ -9,15 +9,15 @@ import org.springframework.stereotype.Component;
 
 /**
  * 提升机/电梯设备 handler（device_type=lift）。
- * 任务 payload：{@code targetFloor}（目标层，必填）。
- * 流程：检查(联机自动+空闲+无故障) → 写目标层+任务号 → 启动 → 等到层且门开 → 清零完成。含门联锁：完成需 status_DoorState=1。
+ * 任务 payload：{@code cmd_TargetFloor}（目标层，必填）。
+ * 流程：到层且门开后保存结果，持久化清理阶段，再确认设备关门回空闲。
  */
 @Component
 public class LiftDeviceHandler extends AbstractDeviceHandler {
     private static final int MODE_ONLINE_AUTO = 2;
     private static final int DOOR_OPEN = 1;
 
-    private enum Step { CREATED, CHECKING, MOVING, DONE, FAILED }
+    private enum Step { CREATED, CHECKING, MOVING, CLEARING, DONE, FAILED }
 
     public LiftDeviceHandler(ConnectionManager connectionManager) {
         super(connectionManager);
@@ -34,6 +34,7 @@ public class LiftDeviceHandler extends AbstractDeviceHandler {
             case CREATED -> check(t, appId);
             case CHECKING -> startMove(t, appId);
             case MOVING -> waitArrive(t, appId);
+            case CLEARING -> clearCompleted(t, appId);
             case DONE, FAILED -> {
                 resetStall(t);
                 yield false;
@@ -51,16 +52,17 @@ public class LiftDeviceHandler extends AbstractDeviceHandler {
     }
 
     private boolean startMove(TaskEntity t, Long appId) {
-        Long floor = payloadLongOrNull(t, "targetFloor");
+        Long floor = payloadLongOrNull(t, "cmd_TargetFloor");
         if (floor == null) {
-            fail(t, "电梯任务缺少必填参数 targetFloor", 0);
+            fail(t, "提升机任务缺少必填点位 cmd_TargetFloor", 0);
             return false;
         }
         write(appId, "cmd_TargetFloor", floor);
-        write(appId, "cmd_TaskNum", taskNum(t));
+        write(appId, "cmd_TaskNum", nativeNumber(t));
         t.setHandshake_step(Step.MOVING.name());
         t.setStatus(TaskStatus.EXECUTING);
         t.setDispatch_time(LocalDateTime.now());
+        beginPhysical(t);
         if (!claim(t)) {
             t.setHandshake_step(Step.CHECKING.name());
             return true;
@@ -70,17 +72,12 @@ public class LiftDeviceHandler extends AbstractDeviceHandler {
     }
 
     private boolean waitArrive(TaskEntity t, Long appId) {
+        if (t.getResult()!=null) return enterClearing(t);
         int st = readInt(appId, "status_Task");
         if (st == 2) {
             if (readInt(appId, "status_DoorState") == DOOR_OPEN) {
-                write(appId, "cmd_Go", 0);          // 完成确认（设备关门离开）
-                write(appId, "cmd_TargetFloor", 0);
-                write(appId, "cmd_TaskNum", 0);
-                t.setHandshake_step(Step.DONE.name());
-                t.setStatus(TaskStatus.COMPLETED);
-                t.setFinish_time(LocalDateTime.now());
-                resetStall(t);
-                return false;
+                captureResult(t);
+                return enterClearing(t);
             }
             // 到层但门迟迟不开（无故障码）：有界等待，避免无限空转饿死队列
             if (bumpStall(t) >= STALL_LIMIT * 2) {
@@ -98,6 +95,23 @@ public class LiftDeviceHandler extends AbstractDeviceHandler {
             resetStall(t); // st==1 运行中，正常推进
         }
         return true;
+    }
+
+    private boolean enterClearing(TaskEntity t) {
+        t.setHandshake_step(Step.CLEARING.name());claim(t);resetStall(t);return true;
+    }
+
+    private boolean clearCompleted(TaskEntity t, Long appId) {
+        if (t.getResult()==null) { t.setHeld_reason("清理阶段缺少已保存结果，禁止完成并释放设备任务号"); return true; }
+        int state=readInt(appId,"status_Task");
+        if (state!=0 && state!=2) { t.setHeld_reason("提升机尚未确认完成清理，等待设备空闲"); return true; }
+        if (state==2 && readLong(appId,"status_TaskNum")!=nativeNumber(t)) {
+            t.setHeld_reason("提升机清理反馈任务号不属于本任务"); return true;
+        }
+        write(appId,"cmd_Go",0);write(appId,"cmd_TargetFloor",0);write(appId,"cmd_TaskNum",0);
+        if (readInt(appId,"status_Task")!=0 || readInt(appId,"status_DoorState")!=0) { t.setHeld_reason("提升机已发送完成确认，等待设备关门并反馈空闲"); return true; }
+        t.setHeld_reason("");t.setHandshake_step(Step.DONE.name());t.setStatus(TaskStatus.COMPLETED);
+        t.setFinish_time(LocalDateTime.now());resetStall(t);return false;
     }
 
     private Step parse(String s) {

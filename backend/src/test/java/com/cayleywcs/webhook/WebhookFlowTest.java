@@ -29,9 +29,15 @@ import org.springframework.test.context.ActiveProfiles;
  * M13 Webhook：游标扫描（分类/scope/去重/游标推进）、投递（内嵌 HTTP server：先失败后成功验证退避+签名头）、
  * SSRF 校验、CRUD 校验。
  */
-@SpringBootTest
+@SpringBootTest(properties={
+        "spring.datasource.url=jdbc:h2:mem:cayleywcs_webhook_flow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
+        "cayleywcs.webhook.scan-interval-ms=3600000",
+        "cayleywcs.webhook.deliver-interval-ms=3600000"})
 @ActiveProfiles("test-flyway")
 class WebhookFlowTest {
+    @Autowired private com.cayleywcs.protocol.ProtocolService fixtureProtocols;
+    @Autowired private com.cayleywcs.application.mapper.ApplicationMapper fixtureApps;
+
 
     @Autowired
     private WebhookService webhookService;
@@ -72,6 +78,8 @@ class WebhookFlowTest {
         t.setApp_id(appId);
         t.setTask_no(no);
         t.setTask_type("1");
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,t.getApp_id(),"stacker");
+        t.setPayload(com.cayleywcs.support.PublishedDeviceFixtures.stackerPayload());
         t = taskService.create(t);
         taskMapper.update(null, new UpdateWrapper<TaskEntity>()
                 .eq("\"id\"", t.getId()).set("\"status\"", TaskStatus.COMPLETED)
@@ -110,7 +118,7 @@ class WebhookFlowTest {
         TaskEntity pending = new TaskEntity();
         pending.setApp_id(95010L);
         pending.setTask_no("WH-PENDING");
-        pending.setTask_type("1");
+        pending.setPayload(com.cayleywcs.support.PublishedDeviceFixtures.stackerPayload());
         taskService.create(pending);
 
         scanner.runOnce();
@@ -164,6 +172,10 @@ class WebhookFlowTest {
                     List.of("task.completed"), List.of(95020L)); // 仅本测试的 app，避免捕获他测已完成任务
             TaskEntity done = completedTask(95020L, "WH-DELIVER");
             scanner.runOnce();
+            // 明确进入待投递窗口，避免数据库时间精度与当前时间的边界影响本次HTTP断言。
+            WebhookDeliveryEntity due = deliveryFor(wh.getId(), done.getId());
+            deliveryMapper.update(null, new UpdateWrapper<WebhookDeliveryEntity>()
+                    .eq("\"id\"", due.getId()).set("\"next_retry_time\"", LocalDateTime.now().minusSeconds(1)));
 
             // 第一次投递：500 → 退避（attempts=1, 仍 pending, next_retry 未来）
             worker.runOnce();

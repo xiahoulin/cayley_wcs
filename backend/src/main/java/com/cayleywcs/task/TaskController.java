@@ -39,7 +39,12 @@ public class TaskController {
 
     @PostMapping("/task/create")
     @Operation(summary = "手动创建任务")
-    public ApiResponse<TaskEntity> create(@RequestBody TaskEntity entity) {
+    public ApiResponse<TaskEntity> createHttp(@RequestBody java.util.Map<String,Object> body) {
+        TaskEntity entity=RequestPayloads.parse(body,java.util.Set.of("task_no","app_id","priority","wms_ref","payload"),TaskEntity.class);
+        return create(entity);
+    }
+
+    public ApiResponse<TaskEntity> create(TaskEntity entity) {
         return ApiResponse.success(taskService.create(entity));
     }
 

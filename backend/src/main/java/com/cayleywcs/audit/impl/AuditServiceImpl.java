@@ -6,10 +6,12 @@ import com.cayleywcs.audit.entity.ConnectionLogEntity;
 import com.cayleywcs.audit.entity.MessageLogEntity;
 import com.cayleywcs.audit.mapper.ConnectionLogMapper;
 import com.cayleywcs.audit.mapper.MessageLogMapper;
+import com.cayleywcs.config.WcsMetrics;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,6 +20,9 @@ public class AuditServiceImpl implements AuditService {
 
     private final ConnectionLogMapper connectionLogMapper;
     private final MessageLogMapper messageLogMapper;
+    @Autowired private WcsMetrics metrics;
+    @Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public AuditServiceImpl(ConnectionLogMapper connectionLogMapper, MessageLogMapper messageLogMapper) {
         this.connectionLogMapper = connectionLogMapper;
@@ -35,9 +40,13 @@ public class AuditServiceImpl implements AuditService {
             row.setDetail(truncate(detail, 2048));
             row.setCreate_time(LocalDateTime.now());
             row.setTenant_id(1L);
-            connectionLogMapper.insert(row);
+            persistIfApplicationExists(appId, () -> connectionLogMapper.insert(row));
         } catch (RuntimeException ex) {
-            log.debug("writeConnectionLog failed: {}", ex.getMessage());
+            long count = metrics == null ? 1 : metrics.auditFailure("connection");
+            if (WcsMetrics.shouldLogFailure(count)) {
+                log.warn("connection audit write failed (count={}, appId={}, cause={})",
+                        count, appId, ex.getClass().getSimpleName());
+            }
         }
     }
 
@@ -53,9 +62,13 @@ public class AuditServiceImpl implements AuditService {
             row.setJson_payload(jsonPayload == null ? "{}" : jsonPayload);
             row.setCreate_time(LocalDateTime.now());
             row.setTenant_id(1L);
-            messageLogMapper.insert(row);
+            persistIfApplicationExists(appId, () -> messageLogMapper.insert(row));
         } catch (RuntimeException ex) {
-            log.debug("writeMessageLog failed: {}", ex.getMessage());
+            long count = metrics == null ? 1 : metrics.auditFailure("message");
+            if (WcsMetrics.shouldLogFailure(count)) {
+                log.warn("message audit write failed (count={}, appId={}, cause={})",
+                        count, appId, ex.getClass().getSimpleName());
+            }
         }
     }
 
@@ -84,6 +97,15 @@ public class AuditServiceImpl implements AuditService {
             return 200;
         }
         return Math.min(limit, 2000);
+    }
+
+    private void persistIfApplicationExists(Long appId, Runnable write) {
+        if (lifecycle == null) { write.run(); return; }
+        lifecycle.referenceWrite(() -> {
+            if (jdbc.queryForObject("select count(*) from wcs_application where id=?", Long.class, appId) > 0)
+                write.run();
+            return null;
+        });
     }
 
     private static String truncate(String value, int max) {

@@ -4,6 +4,46 @@
 
 > 设计与里程碑详见计划：`C:\Users\<user>\.claude\plans\wcs-1-java-spring-wms-opc-mossy-hinton.md`（或团队内同步副本）。
 
+2026-11-12 版本提交覆盖点位合同与开放接口、应用协议归属、统一监控看板、仙工导航和连续采集及资源删除保护。提交验证共 411 项后台测试（401 通过、10 项可选 PostgreSQL 用例跳过），前端类型检查、构建及 8 项点位编辑测试通过；历史验收中的现场设备地址已脱敏，部署配置和凭据保留在仓库外。源码注释仅精简过程标记，执行逻辑保持原样。
+
+## 应用、协议与点位归属（2026-11-12）
+
+仙工 AGV 新增应用级 IP 维护及站点导航下发：[`应用编辑页`](frontend/src/views/ApplicationView.vue) 维护 `conn_params.ip`，[`导航窗口`](frontend/src/components/AgvNavigationPanel.vue) 位于连接监控中。协议类型仍为 `tcp`，[`仙工连接设置`](backend/src/main/java/com/cayleywcs/adapter/seer/SeerConnectionSettings.java) 和 [`导航会话`](backend/src/main/java/com/cayleywcs/adapter/seer/SeerNavigationSession.java) 在应用适配器内处理地址及 API 3051 报文。V3 合同保留状态点位并增加导航目标、下发成功两点；[`导航服务`](backend/src/main/java/com/cayleywcs/device/agv/impl/AgvNavigationServiceImpl.java) 提供版本、租户、管理员权限、车辆空闲检查及持久请求去重。[`V27`](backend/src/main/resources/db/migration/V27__agv_navigation_command.sql) 仅新增下发记录表，历史导航引用同样禁止删除。下发成功不代表到站，结果未知不自动重发；后续下发需核对车辆并解除锁定。操作、接口、限制及测试入口见 [`仙工站点导航说明`](docs/seer-agv-navigation.md)。
+
+当前层级为 **WCS 分配 AppID → 应用专属协议（可多份）→ 协议点位与发布版本**。应用先注册，随后维护自己的协议并选择固定发布版本；跨应用复用通过复制独立草稿完成，不能直接引用其他应用协议。AppID 沿用平台生成的应用 `id`，既有凭据及开放接口的 `app_id` 不变。[`ApplicationView`](frontend/src/views/ApplicationView.vue) 展示 AppID 和所属协议入口；[`ProtocolView`](frontend/src/views/ProtocolView.vue) 按应用筛选、创建、复制与维护点位。
+
+[`V25`](backend/src/main/java/db/migration/V25__application_owned_protocols.java) 增加协议 `app_id` 和应用、协议、点位、发布版本的复合外键。共享旧协议按应用拆分，保持原生配置并同步固定的任务、链和授权引用；无明确引用的旧配置标记为只读历史模板，保留全部记录，使用前须复制到应用。AGV 与三传感器创建入口已改为先注册应用、再建协议并激活版本。详细说明与验收见 [`应用协议层级说明`](docs/application-protocol-ownership.md)，测试入口为 [`归属约束`](backend/src/test/java/com/cayleywcs/protocol/ApplicationProtocolOwnershipTest.java)、[`共享协议迁移`](backend/src/test/java/com/cayleywcs/protocol/ApplicationOwnedProtocolMigrationTest.java) 和 [`PG 升级演练`](scripts/postgres_migration_rehearsal.py)。
+
+Docker 数据已按维护指令清除全部无归属历史模板及关联记录；清理完成时六个应用共保留 6 份协议、123 个点位、6 个发布版本。随后仙工导航升级新增一份本应用协议及不可变快照，保留原状态版本用于追溯，当前共 **7 份所属协议、168 个点位、7 个发布版本**，应用仍为六个，历史模板目录为空。清理范围、备份和业务保留验证见 [历史协议清理记录](docs/operations/2026-11-12-history-protocol-cleanup.md)；导航升级见 [站点导航说明](docs/seer-agv-navigation.md)。
+
+应用和协议的删除现由 [`ResourceDeletionService`](backend/src/main/java/com/cayleywcs/application/ResourceDeletionService.java) 及其[事务实现](backend/src/main/java/com/cayleywcs/application/impl/ResourceDeletionServiceImpl.java) 执行实际删除。应用连同全部所属协议、点位、发布版本、故障配置、令牌、看板偏好和运行记录一起清理；单独删除协议会清理其全部点位与版本。任何任务、任务链或授权引用（包含历史任务、撤销授权和软删除记录）均拒绝删除；正在选用的协议、未关闭连接、任务号占用、共享采集依赖及待投递回调同样受保护。前端在确认框说明清理范围，并显示具体阻止原因。
+
+[`V26`](backend/src/main/resources/db/migration/V26__resource_lifecycle_guard.sql) 新增单行生命周期锁，不改动既有业务数据。[`ResourceLifecycleGuard`](backend/src/main/java/com/cayleywcs/common/support/ResourceLifecycleGuard.java) 让 PostgreSQL 中普通引用写入共享锁、删除独占锁，防止“检查后新增引用”；仅在提交后清理对应的故障、采集和 AppKey 重放缓存，Redis 暂时不可用时由独立的 [`AppKeyReplayCache`](backend/src/main/java/com/cayleywcs/application/security/AppKeyReplayCache.java) 后台重试，不依赖旧签名过滤器是否启用，不清空其他应用或用户登录缓存。延迟到达的采集、日志、告警和回调入队也会重新核验归属。验证入口为 [`ResourceDeletionTest`](backend/src/test/java/com/cayleywcs/application/ResourceDeletionTest.java) 与支持 **V25→V26** 的 [`PG 升级演练`](scripts/postgres_migration_rehearsal.py)；规则和部署证据见 [安全删除说明](docs/application-protocol-deletion.md)。
+
+## 点位合同与 HTTP 对接（2026-10-13）
+
+协议点位支持新增、修改、删除，明确设备模板、请求或响应方向、业务或内部用途、逻辑与原生类型、必填规则及取值约束。草稿通过完整定义校验后发布为不可修改的快照；修改已发布协议须克隆新草稿。应用选择固定发布版本，上下游绑定由 [`ProtocolContractService`](backend/src/main/java/com/cayleywcs/protocol/contract/ProtocolContractService.java) 逐项核对两方向字段及约束。原生地址和 Modbus 字节序属于设备映射，类型别名通过 [`PointTypeRegistry`](backend/src/main/java/com/cayleywcs/adapter/PointTypeRegistry.java) 归一；未知类型、无损映射失败、非 1 缩放及 OPC UA UInt64 明确拒绝。
+
+HTTP 任务只接收 `appId/taskNo/priority/wmsRef/payload`，所有设备点位放在 `payload`；任务链每段同样使用点位对象。管理端点位读写也使用 `payload`，运维写入要求维护模式且无活动任务、遗留设备任务号或物理动作。业务任务号保持原值，原生设备号由 [`TaskExecutionService`](backend/src/main/java/com/cayleywcs/task/TaskExecutionService.java) 持久分配并占用至设备完成清理，所有入口共享同一设备号分配器。
+
+[`DeviceExecutionCoordinator`](backend/src/main/java/com/cayleywcs/connection/DeviceExecutionCoordinator.java) 协调设备写入、取消、连接轮询和配置切换；任务固定来源、绑定及发布版本，执行前重复校验。已被设备受理的任务撤权后安全收尾。完成响应在清反馈前持久保存为 `result={quality,capturedAt,payload}`；后续任务不会覆盖该结果。输送线与提升机另有持久化清理阶段，实际反馈空闲后才完成并释放设备号。公共查询使用 [`TaskPublicView`](backend/src/main/java/com/cayleywcs/task/TaskPublicView.java) 与 [`OpenPublicViews`](backend/src/main/java/com/cayleywcs/openapi/OpenPublicViews.java) 的固定字段，快照点位异常返回质量 `bad` 和空点位。
+
+前端 [`ProtocolView`](frontend/src/views/ProtocolView.vue)、[`PointConstraintsEditor`](frontend/src/components/PointConstraintsEditor.vue)、[`BindingMatchDetails`](frontend/src/components/BindingMatchDetails.vue) 提供发布、固定版本、两方向匹配差异和约束维护；连接监控、任务页及看板统一展示点位对象。
+
+逻辑类型和协议原生类型使用 [`PointTypeSelect`](frontend/src/components/PointTypeSelect.vue) 的完整基础类型、数组类型下拉列表，选中 BOOL 时不会过滤掉其他类型。[`pointTypes`](frontend/src/utils/pointTypes.ts) 提供中文说明；原生选项依照后台支持范围，另提供别名与固定长度数组的手动声明入口，既有声明在编辑和查看时保留原值。前端构建、类型检查及当前 Docker 浏览器的选择、保存、重开验证通过，见 [`类型选择验证证据`](docs/reviews/2026-10-13-point-type-selector-evidence.json)；模拟接口页面流程入口为 [`protocol-contract-ui.mjs`](frontend/tests/protocol-contract-ui.mjs)。
+
+读写依照方向、用途和驱动流程处理，协议点位无需维护独立物理访问权限。对外请求用于参数写入，响应用于反馈采集；内部任务号读回、心跳、确认和清零由驱动显式执行。管理读取只开放业务响应，管理写入只开放业务请求且要求维护模式和设备空闲；应用授权、版本及类型校验继续生效。数据库 [`V20`](backend/src/main/java/db/migration/V20__remove_point_rw.java) 删除旧字段和废弃字典，清理发布快照时保留版本编号、历史指纹、绑定、任务和时间。对应验证见 [`PointRwRemovalMigrationTest`](backend/src/test/java/com/cayleywcs/protocol/PointRwRemovalMigrationTest.java)、[`AdapterPointDirectionTest`](backend/src/test/java/com/cayleywcs/adapter/AdapterPointDirectionTest.java) 与 [`本次部署联调证据`](docs/reviews/2026-10-13-rw-removal-evidence.json)。
+
+协议点位已取消分组配置，新增、编辑、查看和管理接口不再携带分组字段；方向和用途继续用于匹配与驱动读写。数据库 [`V21`](backend/src/main/java/db/migration/V21__remove_point_group.java) 删除分组列、废弃字典及发布快照中的分组属性，保留原生地址中的 `From_WCS` / `To_WCS` 路径、版本身份、历史指纹和业务数据。验证入口为 [`PointGroupRemovalMigrationTest`](backend/src/test/java/com/cayleywcs/protocol/PointGroupRemovalMigrationTest.java) 和支持明确目标版本的 [`升级演练脚本`](scripts/postgres_migration_rehearsal.py)。本次最近后台39项、前端16项流程、实际PG副本19项迁移检查通过；Docker中的13项浏览器流程与9项真实HTTP到OPC UA验证通过，堆垛机任务102052完成且结果采集有效。见 [`分组移除验收`](docs/reviews/2026-10-13-group-removal-evidence.json) 与 [`V20到V21升级演练`](docs/reviews/2026-10-13-group-removal-migration-evidence.json)。
+
+V17/V18/V19 分别增加点位与发布快照、任务版本及原生号预约、旧任务和链段的审计迁移。原请求、业务时间和终态保留；未知来源和冲突历史记录暂停等待核对，旧协议不会自动发布。升级演练见 [`PostgreSQL 证据`](docs/reviews/2026-10-13-postgres-migration-evidence.json)。协议仿真入口见 [`PROTOCOL_SIMULATION.md`](scripts/PROTOCOL_SIMULATION.md)，六类真实网络及 UInt64 边界见 [`传输证据`](docs/reviews/2026-10-13-transport-test-evidence.json)；执行与恢复集成用例见 [`TaskPayloadExecutionIntegrationTest`](backend/src/test/java/com/cayleywcs/task/TaskPayloadExecutionIntegrationTest.java)。正式 HTTP 上位到 OPC UA 堆垛机合同见 [`开放 API 文档`](docs/礁盘工业WCS开放API接口文档.docx)。
+
+HTTP上位到OPC UA堆垛机和WMS完整业务的可重跑脚本为 [`http_stacker_business_e2e.py`](scripts/http_stacker_business_e2e.py)，WMS侧入口为 [`wcs-e2e.ps1`](../cayley_wms/scripts/wcs-e2e.ps1)。操作员须显式提供测试密码、仓库外工作目录和独立数据前缀，库区编码也使用该前缀，便于保留旧资料并建立新的仿真仓库；脚本仅连接已知容器内Milo仿真端点，按发布、固定版本、匹配授权、下发/查询、入库/整托移库/出库及回调实例采集分阶段验证。私有应用凭据和原始业务响应留在仓库外，测试数据保留。PostgreSQL复本演练脚手架见 [`POSTGRES_MIGRATION_REHEARSAL.md`](scripts/POSTGRES_MIGRATION_REHEARSAL.md)。
+
+连接服务退出仅关闭传输，保留 `desired_state=open`，启动后按固定发布版本恢复连接；管理端关闭和配置切换仍明确保存关闭意图。故障失败任务保留设备号，专用复位确认故障清除及物理空闲后才释放，重试重新预约设备号。连接读取、状态列表及关闭按当前账户固定归属过滤。
+
+点位合同初次实施验收见 [`2026-10-13-protocol-point-contract-evidence.json`](docs/reviews/2026-10-13-protocol-point-contract-evidence.json)，包含业务过账、重复回调、重启、管理API及前端证据。删除独立物理访问配置后的最新后台报告329通过、4可选PG门禁跳过、零失败，包含六协议真实网络11项；实际PG V19→V20副本19项检查通过，见 [`本次升级演练`](docs/reviews/2026-10-13-rw-removal-migration-evidence.json)。
+
 ## 技术栈
 
 | 层 | 选型 |
@@ -28,36 +68,60 @@
 
 | 包 | 职责 |
 |---|---|
-| `common.api` | 统一响应 `ApiResponse` / 分页 `PageData`·`PageSearch`·`PageSupport` / `IdRequest` |
+| `common.api` | 统一响应 `ApiResponse` / 分页 `PageData`·`PageSearch`·`PageSupport`（小表内存切片，大表可用数据库 COUNT + LIMIT/OFFSET）/ `IdRequest` |
 | `common.exception` | 全局异常处理 `GlobalExceptionHandler` + `WcsException` + `ErrorCode` |
 | `common.security` | `CurrentUser` |
-| `config` | 安全/CORS、OpenAPI（后续：连接线程池、WebSocket） |
+| `config` | 安全/CORS、OpenAPI、`SchedulerConfig`（4 线程核心定时池 + Webhook/监控各单线程池）、`WcsMetrics`/`WcsRequestMetricsFilter`/`WebhookBacklogMetrics`（固定标签指标） |
 | `auth` | 管理端 JWT 登录链路；预留 APISIX/Keycloak flag |
 | `system` | 当前用户、用户/角色（登录用） |
 | `health` | 健康检查 `/health` |
 | `dict`（M1） | 数据字典：协议类型等枚举单一事实源 |
 | `protocol`（M1） | 协议表 + 协议点位/字段映射 |
-| `application`（M1） | 应用信息表 + 双向 AppKey 鉴权 |
-| `binding` | 应用绑定授权：`wcs_app_binding`(上位侧→下位侧，不锁 direction、禁自绑定) CRUD + **按应用整批授权**(`grant`/`grantedDownstreamIds`) + 下发越权判定(`isAllowed`/`assertAllowed`) |
+| `application`（M1） | 应用信息表、稳定 app_id/app_key、密钥重置；每个应用固定归属 |
+| `openapi` | 对接应用 `POST /system/token` 颁发 7200 秒 access_token；开放业务采用 `app_id/app_key/access_token/request_id/data` JSON 封装，返回 `errcode/errmsg/request_id/timestamp/data`。逐次校验应用状态、密钥、固定归属和设备绑定权限；管理端 JWT 与回调签名独立 |
+| `binding` | 应用绑定授权：`wcs_app_binding`(HTTP上位→已实现下位，完整点位合同及方向校验、禁自绑定) CRUD + **按应用整批授权**(`grant`/`grantedDownstreamIds`) + 下发越权判定(`isAllowed`/`assertAllowed`) |
 | `faultcode`（M1） | 故障码表 + 解析（未维护走统一兜底） |
-| `connection`（M2/M12） | 连接治理：线程池 + 信号量 + 60s 超时回收 + 看门狗重连；**单机自愈**（M12）：`open/close` 落 `desired_state`（用户意图）、看门狗 rearm（FAILED+desired=open 冷却后重入重连 / desired≠open 释放槽）、`ConnectionRecoveryRunner`（启动+周期对账把 desired=open 未连应用拉起）、建连成功防御复位 `cmd_ResetFault=0` |
-| `adapter`（M2） | 协议适配器 SPI（Adapter/Factory/Strategy/Template）+ 各协议实现 |
+| `connection`（M2/M12） | 连接治理：线程池 + 信号量 + 60s 超时回收 + 看门狗重连；**单机自愈**（M12）：`open/close` 落 `desired_state`（用户意图）、看门狗 rearm（FAILED+desired=open 冷却后重入重连 / desired≠open 释放槽）、`ConnectionRecoveryRunner`（启动+周期对账把 desired=open 未连应用拉起）、建连成功防御复位 `cmd_ResetFault=0`；`ManagedConnection` 保留连接建立时的只读点位列表与名称索引，重复名称取首项 |
+| `adapter`（M2） | 常规协议适配器 SPI + 独立应用适配器（`ApplicationAdapterProvider` / `ApplicationAdapterCatalog`），在应用层选择仙工帧或 DR164 共享采集，不注册设备专用协议类型 |
+| `dashboard` | [看板服务](backend/src/main/java/com/cayleywcs/dashboard/impl/DashboardServiceImpl.java)：已发布点位与缓存状态、按租户/账号/应用保存展示选择、版本与点位集合校验 |
 | `device`（M8/M9） | **设备类型 SPI**：`DeviceHandler`/`AbstractDeviceHandler`（advanceGuarded 故障闸+传输异常放弃、claim 占位、bumpStall 死等检测、payload 取值）/`DeviceHandlerRegistry`，按 `wcs_application.device_type` 路由（未知类型：保存时拒绝 + 运行期报警不静默）；实现：`task/StackerHandshakeStateMachine`(stacker/palletizer)、`device/conveyor`(输送线)、`device/lift`(电梯)、`device/autodoor`(自动门)。新增设备类型零改引擎，接入见 `docs/device-handler-template.md` |
 | `task`（M4/M8） | 任务调度引擎（tick 只扇出 worker 池 + 设备级单飞 + `wcs_task.version` 乐观锁）+ 堆垛机三段握手状态机（stacker/palletizer 的 DeviceHandler，含确认步重入容错）+ `TaskStatus` 状态常量 |
 | `task.orchestrate`（M10） | **任务链编排**：`ChainService`（chain_no 幂等下发/级联取消）+ `TaskOrchestrator`（无内存态，每 tick 从 DB 派生；段严格串行；物化前先赢链行版本防 cancel 竞态；确定性 task_no=chainNo-seq 崩溃重放幂等；候选组激活可配超时报警 -3）+ **双策略 SPI**：选机 `DeviceSelectionStrategy`(idle_first/round_robin) 与派工 `TaskSelectionStrategy`(priority/fifo，按 `wcs_application.dispatch_strategy` 路由；在飞优先是正确性约束非策略) |
-| `monitor`/`alarm`（M5） | WebSocket 实时推送 + 报警生命周期 |
-| `stats`（M11） | 运行统计（Java 聚合保 H2/PG 双兼容）：`/stats/task-summary`（任务量/终态分布/完成率/平均执行时长/失败码 TOP）、`/stats/device-utilization`（重放 `wcs_connection_log` 状态迁移算 RUNNING 占比）、`/stats/alarm-top` |
-| `webhook`（M13） | **主动回调（游标 outbox，崩溃安全）**：`WebhookScanner`（每 webhook×每源 keyset 游标 (last_update_time,id) 扫 task/alarm/chain 终态→分类事件→scope 匹配→插投递，游标推进到已处理最后一行）+ `WebhookDeliveryWorker`（HMAC 签名头 ts+nonce+sha256(body) POST，指数退避超 max-attempts 置 failed，SSRF：scheme+host allowlist+禁重定向）+ `WebhookService/Controller` CRUD/投递查询 |
+| `monitor`/`alarm`（M5） | WebSocket 实时推送 + 报警生命周期；`MonitorPusher` 使用 Spring 配置的 JSON 序列化器；管理端经 `POST /monitor/ws-ticket` 用 Bearer JWT 换一次性 30 秒握手票据，`/ws/monitor` 校验票据与 Origin，并在 JWT 到期时关闭连接 |
+| `stats`（M11） | 运行统计：任务状态与故障码 SQL 聚合、完成任务时长按原逐行毫秒规则流式求均值；报警窗口查询只返回 TOP；连接日志按 JDBC 游标重放。多语句统计入口使用只读 `REPEATABLE_READ` 快照，保留 H2/PG 口径 |
+| `webhook`（M13） | **主动回调（游标 outbox，崩溃安全）**：`WebhookScanner`（每 webhook×每源 keyset 游标 (last_update_time,id) 扫 task/alarm/chain 终态→分类事件→scope 匹配→插投递，游标推进到已处理最后一行）+ `WebhookDeliveryWorker`（HMAC 签名头 ts+nonce+sha256(body) POST，指数退避超 max-attempts 置 failed，SSRF：scheme+host allowlist+禁重定向；停机/中断后不启动本轮后续投递）+ `WebhookService/Controller` CRUD/投递查询 |
 | `simulator`（M3/M9） | 堆垛机 OPC UA 仿真服务端（profile `simulator`）；**通用内存仿真** `DeviceSim`/`AbstractDeviceSim`/`DeviceSimRegistry`/`DeviceSimFactory`（按 device_type 建模）+ Stacker/Conveyor/Lift/AutoDoor 四种设备态；`SimulatorController` 故障注入/复位/快照按类型透传 |
 
 ## 文档
 
-- **《CayleyWCS HTTP 接入 API 文档》**：`docs/open-api-guide.md`（WMS/ERP/第三方上位系统接入；覆盖 AppKey/HMAC v2、单任务与任务链、增量对账、断线快照、Webhook、错误码和联调清单）。
-- **《礁盘工业WCS系统对接文档_http版本》**：`docs/礁盘工业WCS系统对接文档_http版本.docx`（面向已经取得 WCS Base URL、AppKey/AppSecret、码垛机 appId 与 Webhook Secret 的外部系统；详细说明 HMAC v2、码垛任务下发、状态回调、增量对账与断线恢复，不包含 WCS 管理端操作）。
-- HTTP 对接文档生成器：`docs/manual_assets/build_wcs_http_integration_doc.py`（python-docx + PIL，运行即重建 Word 文档和 `docs/manual_assets/rendered/` 中的配图）。
-- **Postman 联调集合**：`docs/CayleyWCS-WMS-Loop.postman_collection.json`（开放接口自动按原始请求体计算 AppKey/HMAC v2 签名）。
+- **仙工 AGV 只读状态与三传感器连续采集（2026-11-12）**：[接入说明](docs/agv-readonly-telemetry.md)、[实施与验证日志](.logs/2026-11-12-agv-readonly-telemetry-implementation.md)。使用 `tcp` 协议与独立的 `seer_agv` / `dr164_sensor` 应用适配器，1004/1005/1020 状态缓存；独立四读块连续采集、12 指标、供电预热、6 秒陈旧、每网关 60 轮存储队列与 30 天历史；[V22](backend/src/main/resources/db/migration/V22__agv_continuous_telemetry.sql) 新增网关/最新值/历史表。三外设默认 Unit ID 80/1/2，红外 0x0000、暂定 0–600℃，目标 2 秒轮询、请求间隔 ≥250 ms。导航与其他运动写入尚未开放，传感器不创建 WCS 任务。新 API、服务、字段和测试路径均见接入说明。
+
+- **现有 Docker 部署（2026-11-12）**：后端 `agv-navigation-20261112`、前端 `agv-navigation-20261112-ui1`，数据库 V27，发布配置在仓库外 `20261112-agv-navigation` 目录。仙工应用已启用 V3 状态与导航合同（协议 40、发布版本 18、45 个点位），IP 在应用界面维护，其他五个应用配置保留；见 [导航使用说明](docs/seer-agv-navigation.md) 和 [部署证据](docs/operations/2026-11-12-agv-navigation-evidence.json)。本次只替换前后端容器，PostgreSQL、Redis 容器和数据卷不变，沿用 Temurin 25.0.5+8 和完整 C2 编译。AGV 及三传感器仍分别使用通用 TCP 的 `seer_agv`、`dr164_sensor` 应用适配器；DR164 未配置时显示“待配置采集端点”。原有 [安全删除规则](docs/application-protocol-deletion.md) 继续生效。21:04 JST 曾再次发生 C2 编译线程崩溃，根因仍未闭环；本次业务验证不代表 JVM 根因已修复，见 [复发证据](docs/deployments/2026-11-12-jvm-c2-recurrence-evidence.json) 与 [JVM 事故处理](docs/deployments/2026-11-12-jvm-c2.md)。初次接入见 [AGV 部署记录](docs/deployments/2026-11-12-agv-readonly.md)。
+- **JVM 编译验证**：[后台 Dockerfile](backend/Dockerfile) 将已验证的 JRE 版本及摘要固定；[MyBatis C2 探针](scripts/jvm_c2_probe.py) 从实际 Spring Boot JAR 提取 MyBatis，编译并运行 [参数读取与动态 SQL 用例](scripts/jvm/MyBatisC2Probe.java)，校验默认最高层级 4、实际目标方法 C2 编译和结果正确性。它不是原 SIGSEGV 的确定性复现器，不以探针通过冒充唯一根因证明。
+- **当前应用数据清理（2026-11-12）**：[清理与验证记录](docs/operations/2026-11-12-application-cleanup.md)。按用户要求保留 `PALLET_SIM`、`WMS-MAIN`、`SEER_AGV_01` 和振动/噪声/红外温度三个传感器，共 6 个应用；其余 19 个应用及关联任务、链、授权、独占协议、旧令牌和占用计数已在同一事务中删除。正式备份已完整恢复到 PG17 副本复验，28 项保留数据校验通过；WCS Redis 缓存已清空，后台已重启清除内存缓存。原发布镜像、现场端点与 V24 结构沿用。
+
+- **统一应用与状态设置**：AGV v2 的 40 个业务状态点位与 3 个诊断报文点位，以及振动/噪声/红外温度三个独立应用的 10/1/1 个测量点位，统一在 [连接监控](frontend/src/views/ConnectionView.vue) 查看。三个传感器共用一个 DR164 TCP 采集器，独立启停。业务反馈只读，业务命令按维护模式、物理空闲、任务占用和协议版本判定是否允许设置；所有条件后台复验。实现、V23、接口与测试入口见 [接入说明](docs/agv-readonly-telemetry.md#应用点位与状态设置)。
+- **实时看板与应用适配器（2026-11-12）**：[DashboardDeviceCard](frontend/src/components/DashboardDeviceCard.vue) 根据实际点位显示两列有边框网格，长数组/文字自动换行，400px 高卡片内滚动；右上“看板展示编辑”支持中文点位复选，选择按账号和应用保存，状态移至应用名称同一行。[pointLabels](frontend/src/utils/pointLabels.ts) 保留人工维护的中文名，并为旧 PLC 自动别名提供中文说明。[V24](backend/src/main/resources/db/migration/V24__application_adapters_and_dashboard.sql) 将 `seer_tcp` / `sensor_gateway` 归并为通用 TCP，应用管理独立选择报文适配器；[应用适配器目录](backend/src/main/java/com/cayleywcs/adapter/ApplicationAdapterCatalog.java) 校验协议、设备类型和方向。API、结构、迁移与测试见 [实现说明](docs/dashboard-and-application-adapters.md)，执行及验收见 [本次日志](.logs/2026-11-12-dashboard-adapters.md)。
+- **点位状态面板与逐点设置**：[`PointStatePanels`](frontend/src/components/PointStatePanels.vue) 将 AGV 状态按定位/运动/导航展示为卡片，传感器按测量项目分区；界面分区不引入协议点位分组字段。可写卡片旁提供“设置”，[`PointValueEditor`](frontend/src/components/PointValueEditor.vue) 按数值、布尔、枚举、文字、数组类型打开编辑窗口；只读项展示权限，暂不允许设置时说明原因。命令值不冒充设备反馈。[`statePoints`](frontend/src/utils/statePoints.ts) 负责类型校验、无损 64 位整数、数据过期和自动门互斥联动；断线或撤权禁用提交，版本变化取消旧编辑。验证入口：[`8 组纯函数测试`](frontend/tests/state-points.test.mjs)、[`独立页面夹具`](frontend/tests/state-panels-fixture.mjs)（仅回环监听，无设备转发）及 [`本次日志`](.logs/2026-11-12-state-panels.md)。
+- **状态窗口显示密度**：[状态窗口](frontend/src/views/ConnectionView.vue) 随视口铺开、四周保留 8px，点位区域占满剩余高度；[卡片](frontend/src/components/PointStatePanels.vue) 保持分组与内容顺序，最小宽度 220px、内边距 6/10px、间距 6px，数值字号 19px。实际 1280×720 页面为每行 5 个点位，同屏完整卡片由前版 12 个增至 19 个，首卡高度约 155→113px；数据、权限及设置入口保留。构建、类型检查与当前 Docker 页面验收见 [进一步紧凑布局日志](.logs/2026-11-12-state-panels-dense.md)；前次扩大窗口记录见 [紧凑布局日志](.logs/2026-11-12-state-panels-compact.md)。
+- **AGV 看板中文术语**：[`agvLabels.ts`](frontend/src/utils/agvLabels.ts) 集中维护设备枚举及连接、采集、存储状态的中文说明；[状态设置](frontend/src/views/ConnectionView.vue) 使用协议点位中文名称并显示原字段编码。实时看板的 AGV 状态同步使用“状态采集中”等术语；解释边界见 [接入说明](docs/agv-readonly-telemetry.md#看板中文术语)。
+
+- **仙工 AGV 运动与三传感器连续监测对接方案（2026-11-12）**：[`docs/plans/2026-11-12-agv-motion-sensor-integration-plan.md`](docs/plans/2026-11-12-agv-motion-sensor-integration-plan.md)。依据当前任务/协议/连接源码、`seer-agv-operator` 和三传感器说明书，首期采用单车、单执行实例，WCS 直连 SRC 站点导航与 DR164 单连接串行采集；明确 AGV 专属执行/恢复策略、协议模板、质量与工况、数据表、POST 接口和阶段验收，预留到站采集。只读与连续监测软件模块已实施并部署；导航闭环和到站采集尚未实施。
+- **协议点位与统一 payload 改造计划（2026-10-13）**：[`docs/plans/2026-10-13-protocol-point-contract-plan.md`](docs/plans/2026-10-13-protocol-point-contract-plan.md)，包含点位维护、请求/响应方向、跨协议类型匹配、绑定版本治理、WMS 联动及真实协议仿真验收；已完成实施，当前状态见本文点位合同说明与对应验收证据。
+- **系统架构与任务优先级**：[`架构说明`](docs/architecture/wcs-system-architecture.md)、[`高清架构图`](docs/architecture/wcs-system-architecture.png)、[`矢量架构图`](docs/architecture/wcs-system-architecture.svg)。覆盖当前HTTP接入、单进程后台模块、多设备驱动、多协议适配、监控回调和存储；说明优先级在同设备待派工队列中的生效条件，以及在飞任务和任务链的边界。当前Docker配置读取和19项现有测试验证见 [`核验记录`](docs/reviews/2026-10-13-architecture-priority-evidence.json)。
+- **堆垛机任务执行时序**：[`时序说明`](docs/architecture/stacker-task-sequence.md)、[`PNG原图`](docs/architecture/stacker-task-sequence.png)、[`SVG原图`](docs/architecture/stacker-task-sequence.svg)。依据当前HTTP到OPC UA堆垛机实现说明异步受理、调度、参数写入、执行及完成确认、结果先保存、清零空闲和终态通知；图嵌入正式开放API文档的下发单任务一节，核验见 [`时序图文档验证`](docs/reviews/2026-10-13-stacker-sequence-document-evidence.json)。
+- **堆垛机故障回传与原始OPC UA核查**：[`实际实验报告`](docs/reviews/2026-10-13-wms-stacker-fault-report.md)、[`机器证据`](docs/reviews/2026-10-13-wms-stacker-fault-evidence.json)及[`原始协议对照`](docs/reviews/2026-10-13-stacker-opcua-conformance.md)。当前Docker WMS到真正Milo OPC UA的48项号码逐项传递通过，补测多故障、数组末槽、执行中故障和恢复过账；WMS只接收首个任务故障码并跳过实时报警。实测确认正常复位48被判失败、PLC心跳冻结不告警，任务号原生类型与反馈枚举仍有协议差异，当前不能认定完全符合原始资料。原连接已恢复，测试业务数据保留。
+- **《礁盘工业WCS开放API接口文档》**：[`docs/礁盘工业WCS开放API接口文档.docx`](docs/礁盘工业WCS开放API接口文档.docx)。按当前 WMS API 文档版式编写，依据当前代码和联调数据说明令牌获取、六个开放业务接口、回调、数据模型、相关枚举和错误码。说明文字中的字段采用中文在前、空格后接英文标识的形式；字段表、接口路径和调用实例保留原始标识。下发单任务一节新增当前堆垛机时序图，文字、真实目录页码及逐页排版验证见 [`最新文档验证`](docs/reviews/2026-10-13-stacker-sequence-document-evidence.json)。
+- 应用令牌实现：[`ApplicationTokenService`](backend/src/main/java/com/cayleywcs/openapi/ApplicationTokenService.java)、[`ApplicationTokenFilter`](backend/src/main/java/com/cayleywcs/openapi/ApplicationTokenFilter.java)，迁移 [`V16__open_application_token.sql`](backend/src/main/resources/db/migration/V16__open_application_token.sql)。原逐请求 AppKey 签名不再作为开放接口认证入口。
+- 定向验证：[`ApplicationTokenIntegrationTest`](backend/src/test/java/com/cayleywcs/openapi/ApplicationTokenIntegrationTest.java) 与既有 `ReconcileAuthTest` 验证真实 HTTP 令牌生命周期、身份不匹配和设备授权边界。
+- Docker 部署、WMS 联调、令牌重启持久性及文档字段验证见 [`2026-10-12-open-api-token-integration-evidence.json`](docs/reviews/2026-10-12-open-api-token-integration-evidence.json)，执行记录见 [当日联调日志](.logs/2026-10-12-wcs-application-token-integration.md)。
+
+- **WCS 优化方案（审核修订版，2026-09-29）**：[`docs/optimization-proposal-2026-09-29.md`](docs/optimization-proposal-2026-09-29.md)（分页/索引/统计/监控优化边界；补齐活动报警 WS 帧、WS 握手访问控制、调度池绑定、停机中断和统计快照约束；实施与验收记录见同日 `.logs/2026-09-29_wcs-optimization-implementation.md`）。
+
+优化实施进度：A 的任务/报警/链列表改为数据库 COUNT + LIMIT/OFFSET，入口使用只读 `REPEATABLE_READ`；[`DatabasePaginationTest`](backend/src/test/java/com/cayleywcs/common/api/DatabasePaginationTest.java) 与 [`PageSnapshotPostgresTest`](backend/src/test/java/com/cayleywcs/common/api/PageSnapshotPostgresTest.java) 分别验证固定分页和 PG 并发快照。B 的 [`V15__optimization_indexes`](backend/src/main/java/db/migration/V15__optimization_indexes.java) 根据隔离库 10 万行执行计划添加派工及单应用连接日志索引，PG 并发建索引使用会话级 Flyway 锁，H2 使用等效普通索引。C 的统计按 SQL 聚合和流式读取，由 [`StatsWindowEquivalenceTest`](backend/src/test/java/com/cayleywcs/stats/StatsWindowEquivalenceTest.java) 及可选真实 PG 快照、游标测试覆盖。D 的看板采用单飞轮询、WS 完整帧/seq/过期检测、12 秒无帧主动重连、票据握手及断线恢复；真实握手与报警生命周期由 [`MonitorWebSocketIntegrationTest`](backend/src/test/java/com/cayleywcs/monitor/MonitorWebSocketIntegrationTest.java) 验证。E/F 的调度分池、Webhook 中断处理、连接点位名称索引由定向测试覆盖。G 的指标通过需 JWT 的 `/actuator/metrics` 查询，积压每分钟采样；[`WcsMetricsIntegrationTest`](backend/src/test/java/com/cayleywcs/config/WcsMetricsIntegrationTest.java) 覆盖端点权限与指标生成。后端全套测试、前端构建、真实 PG/Redis 冒烟与 OPC UA 仿真联调通过；生产数据规模、深页和长游标负载仍需在部署前评估。
+- **Postman 联调集合**：`docs/CayleyWCS-WMS-Loop.postman_collection.json`（包含应用令牌获取、公共 JSON 封装、独立任务号与状态查询）。
 - **《礁盘工业WCS使用功能说明书》**：`docs/礁盘工业WCS使用功能说明书.docx`（参考 WMS 说明书结构，按代码梳理全部模块/接口/数据表 + 业务逻辑图/握手时序/连接状态机）。
-- 生成器（python-docx + PIL，同 WMS 套路）：`docs/manual_assets/build_wcs_manual.py`，运行即重建文档与图（`docs/manual_assets/rendered/*.png`）。
+- 生成器（python-docx + PIL，同 WMS 套路）：`docs/manual_assets/build_wcs_manual.py`，运行即重建文档与图（`docs/manual_assets/rendered/*.png`）；点位表字段已同步V20，移除旧读写字段。
 
 ## 数据库
 
@@ -79,6 +143,10 @@ Flyway 迁移位于 `backend/src/main/resources/db/migration/`：
 | `V12__failure_policy.sql` | **M11**：`wcs_application` 加 `failure_policy`（manual 转人工/auto_retry 自动重试，上限=任务 `max_retry`>0 ? 任务级 : 应用 `max_retry`——该列自此承担任务重试默认上限语义）+ `task_stale_seconds`（在飞停滞超时，0=关）；字典 + `task_type=charge` 充电预留 + message_log 时间索引 |
 | `V13__desired_state.sql` | **M12**：`wcs_application` 加 `desired_state`（open/closed，用户连接意图，重启后 `ConnectionRecoveryRunner` 据此自动恢复）+ 字典 |
 | `V14__webhook_and_sign_v2.sql` | **M13**：`wcs_webhook`（订阅：url/secret/event_types/scope_app_ids）+ `wcs_webhook_cursor`（每源独立 keyset 游标）+ `wcs_webhook_delivery`（投递记录，唯一键 webhook×event×biz 幂等）+ `wcs_application.min_sign_version`（签名 v2 灰度强制） |
+| `V15__optimization_indexes.java` | **优化**：PostgreSQL `CREATE INDEX CONCURRENTLY` 部分/覆盖索引（待派工优先级、单应用状态变更日志）；H2 等效前缀索引。PG 失败遗留的无效同名索引可在重试时重建，Flyway 使用 `spring.flyway.postgresql.transactional-lock=false` |
+| [`V20__remove_point_rw.java`](backend/src/main/java/db/migration/V20__remove_point_rw.java) | 删除点位旧读写字段和对应字典，清理已发布点位快照，保留发布身份及所有其他定义；读写由方向、用途及驱动决定 |
+| [`V24__application_adapters_and_dashboard.sql`](backend/src/main/resources/db/migration/V24__application_adapters_and_dashboard.sql) | 设备专用协议分类归并为 TCP，应用保存独立报文适配器；新增按租户/账号/应用隔离的看板点位选择表，点位、发布身份和业务记录保留 |
+| [`V25__application_owned_protocols.java`](backend/src/main/java/db/migration/V25__application_owned_protocols.java) | 应用拥有协议；新增复合外键约束，拆分共享旧协议并保留业务引用，无引用旧协议作为只读历史模板保留 |
 
 ## 无硬件 OPC UA 联调（Milo 仿真服务端）
 
@@ -146,7 +214,7 @@ docker compose --profile full up -d --build
 | M10 对抗审查加固 | ✅ 完成 | 5 镜头×2 反驳者审查（确认 2×P1+7×P2+若干 P3）后修复：① **物化占位+子行插入同事务**（TransactionTemplate，P1）——否则 /chain/cancel 可在两次 auto-commit 间穿越，已取消链的孤儿子任务照常驱动设备；② **dispatchChain 去 @Transactional**（P1）——PG 上唯一键冲突把事务标记 aborted(25P02)，catch 后兜底重查必然失败（H2 语句级回滚掩盖）；③ `(chain_id,seq_no)` 升级**唯一索引** + 物化 catch DuplicateKey 良性放弃（双编排线程/多实例双物化兜底）；④ 激活超时基准改**上一段完成时间**（原 last_update_time 把上段执行耗时误算进等待）；⑤ 单任务幂等查询加 `chain_id IS NULL`（防误命中撞名链子任务）；⑥ findApp 只容错 NOT_FOUND（DB 抖动不再 fail-open 绕过暂停闸）；⑦ `update()` 缺省沿用 work_mode/dispatch_strategy（防全行写覆盖暂停状态）；⑧ chainNo 长度/选机策略码校验、候选清洗、/task/create 清洗链字段、终态先落库再报警、对账水位线协议文档修正（取最后一行 last_update_time 防 limit 截断漏行） |
 | M9 对抗审查加固 | ✅ 完成 | 4 镜头×2 反驳者审查后修复 15 项确认发现：① **claim 版本还原（P1）**——MyBatis-Plus 乐观锁拦截器 updateById 无论命中几行都把实体 version 就地 +1，claim 失败若不还原会令引擎兜底 save 复活已取消任务；现失败时还原 version（同时闭合 M8 stacker 同源缺陷）；② payload 必填参数缺失/非法 → 判失败不用垃圾值命令设备；③ 自动门过渡态不计死等（慢门不误杀）、电梯到层门不开有界等待；④ **故障复位回空闲**——cmd_ResetFault 中止当前任务，防故障失败任务把设备永久卡非空闲阻塞后续；⑤ 仿真 `reset` 原地复位保持实例身份（修 SimAdapter/OPC UA 引用脱钩）；⑥ 缺 status_ErrorCode 点位跳过故障闸不空转；⑦ V10 补上位授权绑定、子查询加 tenant 过滤、注释订正 |
 
-测试：`cd backend && mvn test`（H2，无需外部依赖）。当前 **106 个用例全绿**（schema/连接池/仿真端到端/握手/报警联动/对账/绑定授权/架构约束 + M8/M9 全部加固回归 + M10：链端到端(conveyor→lift 全自动)/chain_no 幂等/崩溃重放/级联取消/每段越权/下发者收敛/fifo·priority·idle_first·round_robin 策略/暂停恢复/重试改优先级）。
+测试：`cd backend && mvn test`（H2，无需外部依赖）。本轮全套 **119 项：0 失败、0 错误、1 跳过**（真实 PG 可选测试另行运行）（schema/连接池/仿真端到端/握手/报警联动/对账/绑定授权/架构约束 + M8/M9 全部加固回归 + M10：链端到端(conveyor→lift 全自动)/chain_no 幂等/崩溃重放/级联取消/每段越权/下发者收敛/fifo·priority·idle_first·round_robin 策略/暂停恢复/重试改优先级）。
 
 > 绑定授权经两轮多智能体对抗式评审加固：`create()`/`update()` 复用或校验软删行避免撞唯一索引(返回干净 CONFLICT)、`grant()` 与 **dispatch 越权判定 `isAllowed`** 均按 `tenant_id` 隔离(写/读两侧一致，杜绝跨租户放行)、`grant()` 声明式收敛 `scope`、appkey 关闭时 dispatch 记 WARN、前端校正已删上位选择、禁止自绑定。
 
@@ -172,24 +240,25 @@ npm run dev          # http://127.0.0.1:5184 ，/api 与 /ws 代理到后端 200
 ```
 
 页面（`src/views/`，菜单顺序）：
-- **实时看板** `DashboardView`（WebSocket 设备状态/报警，轮询兜底；设备类型/工作模式标注、进行中任务链、连接槽/进行中链统计卡）
+- **实时看板** [DashboardView](frontend/src/views/DashboardView.vue)（JWT 兑换短期 WS 票据；完整帧/seq/过期检查、断线退避重连；连接和报警在健康 WS 期间每 30 秒 REST 校准，失联时每 2 秒单飞轮询；链与实际应用点位每 2 秒刷新；设备类型/工作模式、进行中任务链与连接槽；中文点位复选配置、每行两项、固定区域内部滚动）
 - **任务队列** `TaskView`（任务/任务链两 tab；任务取消/重试/改优先级、按应用暂停/恢复派工；任务链段明细下钻、级联取消）
 - **报警中心** `AlarmView`（活动/历史切换、确认/清除、按设备下发故障复位脉冲）
 - **运行统计** `StatsView`（任务量/完成率/平均时长汇总卡、设备利用率、报警 TOP、失败故障码 TOP；设备+时间窗过滤）
-- **协议管理** `ProtocolView`（协议 + 点位）
+- **协议管理** `ProtocolView`（所属应用 → 协议 → 点位与版本；历史模板只读、复制时指定目标应用）
 - **故障码** `FaultCodeView`（按协议维护故障码 CRUD）
-- **应用管理** `ApplicationView`（AppKey 生成/重置、设备类型选择）
+- **应用管理** `ApplicationView`（平台 AppID、AppKey 生成/重置、所属协议与点位、本应用固定发布版本、设备类型及应用适配器）
 - **授权绑定** `BindingGrantView`（选定上位侧应用 → 勾选其可指挥的下位侧应用，批量授权）
 - **绑定明细** `BindingDetailView`（全部绑定列表 + 手动新建/编辑/删除 + 按应用搜索）
-- **连接监控** `ConnectionView`（建连/断开/重连、60s 超时回收可见）
+- **连接监控** [`ConnectionView`](frontend/src/views/ConnectionView.vue)（全部设备应用、建连/断开/重连、按权限的“状态设置”；AGV 连续监测已合并，旧路由跳转此页）
+- **采集配置与历史** [`AgvCollectionPanel`](frontend/src/components/AgvCollectionPanel.vue)（连接监控内的面板：车辆接入、三传感器应用注册、默认档案、供电记录、通信与存储健康、分传感器历史曲线；接口见 [`agv.ts`](frontend/src/api/agv.ts) 和 [`deviceState.ts`](frontend/src/api/deviceState.ts)）
 - **Webhook** `WebhookView`（订阅 CRUD + 事件类型勾选 + 作用域应用 + 投递记录排障）
 - **数据字典** `DictView`（字典类型/字典项两级 CRUD）
 
 绑定不锁 direction、禁自绑定。构建校验：`npm run build`（vite）+ `npm run type-check`（vue-tsc `--noEmit`）均通过。
 
-## WMS 对账闭环（WS 提示 + REST 权威）
+## WMS 对账闭环（HTTP 下发、Webhook 与 REST 对账）
 
-WMS↔WCS 采用「命令走 REST、遥测走 WS、关键事件 REST 对账」。WS 推送不保证不丢，故关键事件以 DB 为真相用 REST 拉权威态。
+当前 CayleyWMS 实现使用应用凭据获取 access_token 并通过公共 JSON 封装进行 HTTP 下发、HMAC Webhook 终态回调和定时 REST 对账；回调与对账共用 WMS 的终态 claim 与库存内核。WCS 的 WS 监控是可用的遥测能力，当前 WMS 设备任务闭环不依赖 WS 订阅。既有巷道联调与当前多设备关联边界见 [WMS 对接说明](../cayley_wms/docs/WCS对接说明.md#8-使用现有基础数据联调)。
 
 - **WS 帧**（`/ws/monitor`，每秒）：`{type, seq, ts, connections:[{appId,appCode,state,latest{...}}], slots, alarms:[...]}`。`seq` 单调递增，WMS 据此发现断号。
 - **增量对账**（`/open/**`，AppKey 鉴权）：
@@ -197,6 +266,6 @@ WMS↔WCS 采用「命令走 REST、遥测走 WS、关键事件 REST 对账」�
   - `POST /open/alarm/query {appId, sinceMillis, limit}` → 同上（报警）
   - `POST /open/snapshot    {appId}` → `{serverTimeMillis, connection, alarms, tasks}`（断线一把全量重同步）
 
-WMS 算法：稳态读 WS（`seq` 连续即可）；发现断号/重连 → `/open/snapshot` 全量重同步 → 之后增量拉取，**按 id 去重**。这样既享受 WS 实时、又保证任务完成/报警不丢（最终一致）。
+对需要接入 WS 遥测的上位系统，可在稳态读取 WS；发现断号或重连时用 `/open/snapshot` 全量同步，再增量拉取并按 id 去重。关键任务状态仍以 REST 返回的数据库事实为准。
 
 > **水位线取值（重要）**：下次 `sinceMillis` 应取**本次已处理最后一行的 `last_update_time`**，而非响应的 `serverTimeMillis`——当 `count == limit`（结果被截断）时用 serverTimeMillis 会永久漏掉截断行。查询按 `last_update_time >= since` 含等值重拉，配合按 id 去重无重复风险。`/open/chain/query` 同此协议。

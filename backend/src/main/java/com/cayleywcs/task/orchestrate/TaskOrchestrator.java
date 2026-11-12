@@ -5,6 +5,7 @@ import com.cayleywcs.alarm.AlarmService;
 import com.cayleywcs.application.ApplicationService;
 import com.cayleywcs.application.entity.ApplicationEntity;
 import com.cayleywcs.common.support.Audits;
+import com.cayleywcs.config.WcsMetrics;
 import com.cayleywcs.system.CurrentUserProvider;
 import com.cayleywcs.task.HandshakeStep;
 import com.cayleywcs.task.TaskService;
@@ -22,6 +23,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -52,6 +54,8 @@ public class TaskOrchestrator {
     private final TransactionTemplate materializeTx;
     private final long activationTimeoutMs;
     private final long retryBackoffMs;
+    @Autowired private WcsMetrics metrics;
+    @Autowired private com.cayleywcs.task.TaskExecutionService execution;
 
     public TaskOrchestrator(TaskChainMapper chainMapper, TaskMapper taskMapper,
                             TaskService taskService, ApplicationService applicationService,
@@ -67,7 +71,7 @@ public class TaskOrchestrator {
         this.selectionRegistry = selectionRegistry;
         this.alarmService = alarmService;
         this.currentUserProvider = currentUserProvider;
-        // 物化必须原子（对抗审查 P1）：占位 updateById 与子行 insert 若各自 auto-commit，
+        // 物化必须原子：占位 updateById 与子行 insert 若各自 auto-commit，
         // /chain/cancel 可在两次提交之间穿越——链已取消但孤儿子任务照常落库并被引擎执行。
         // @Transactional 对内部自调用失效，故用编程式事务。
         this.materializeTx = new TransactionTemplate(transactionManager);
@@ -76,9 +80,9 @@ public class TaskOrchestrator {
     }
 
     /** fixedDelay 保证本方法不与自身并发（单飞）。 */
-    @Scheduled(fixedDelayString = "${cayleywcs.chain.orchestrate-interval-ms:2000}")
+    @Scheduled(fixedDelayString = "${cayleywcs.chain.orchestrate-interval-ms:2000}", scheduler = "taskScheduler")
     public void tick() {
-        runOnce();
+        WcsMetrics.tick(metrics, "chain-orchestrator", this::runOnce);
     }
 
     /** 单轮编排（公开供测试驱动/崩溃重放验证）。 */
@@ -97,6 +101,7 @@ public class TaskOrchestrator {
     }
 
     private void advanceChain(TaskChainEntity chain) {
+        if (chain.getHeld_reason()!=null && !chain.getHeld_reason().isBlank()) return;
         List<TaskEntity> tasks = taskMapper.selectList(new QueryWrapper<TaskEntity>()
                 .eq("\"is_valid\"", true)
                 .eq("\"chain_id\"", chain.getId())
@@ -130,7 +135,7 @@ public class TaskOrchestrator {
             return;
         }
         // 激活等待基准 = 本段开始等待的时刻（上一段完成时间；首段为链行时间）。
-        // 不能只用链行 last_update_time——它停在上一段物化时刻，会把上段执行耗时误算进本段等待（对抗审查 P2）。
+        // 不能只用链行 last_update_time——它停在上一段物化时刻，会把上段执行耗时误算进本段等待。
         LocalDateTime waitingSince = tasks.stream()
                 .map(TaskEntity::getFinish_time)
                 .filter(java.util.Objects::nonNull)
@@ -168,7 +173,7 @@ public class TaskOrchestrator {
                 .toMillis() < retryBackoffMs) {
             return true; // 退避未到点：本轮不动（链保持 running），下轮再试
         }
-        // 段重派与 /chain/cancel 的互斥（M11 审查 P1，与 materialize 同模式）：同一事务内先赢链行版本再重置
+        // 段重派与 /chain/cancel 的互斥（与 materialize 使用同一互斥方式）：同一事务内先赢链行版本再重置
         // 段任务——否则 cancel 的级联查询（只取 pending）可在 reset 提交前跑过，已取消链复活孤儿 pending 子任务。
         materializeTx.executeWithoutResult(txStatus -> {
             Audits.touch(chain);
@@ -217,7 +222,7 @@ public class TaskOrchestrator {
             }
         }
         // 占位提交（cancel 竞态防护）：先赢链行版本再插子行——取消赢了本段零插入。
-        // 占位与插入在**同一事务**（对抗审查 P1）：事务持有链行锁至提交，并发 cancel 的 updateById
+        // 占位与插入在**同一事务**：事务持有链行锁至提交，并发 cancel 的 updateById
         // 要么等锁后 0 行失败重试（重试可见新子行、级联完整），要么先赢使占位 0 行——不存在孤儿子任务窗口。
         // 崩溃窗口（事务未提交）自愈：整体回滚，下轮重进重新占位+插入。
         Long boundAppId = appId;
@@ -250,7 +255,7 @@ public class TaskOrchestrator {
             return; // 本段等待未超时，继续等
         }
         String msg = "链 " + chain.getChain_no() + " 段 " + seq + " 激活超时：候选设备均不可用 " + candidates;
-        // 先落终态再报警（对抗审查 P3：反序会在并发 cancel 赢版本时留下孤立报警）
+        // 先落终态再报警（反序会在并发 cancel 赢版本时留下孤立报警）
         if (!finishChain(chain, ChainStatus.FAILED, msg)) {
             return;
         }
@@ -266,14 +271,6 @@ public class TaskOrchestrator {
         t.setTask_no(chain.getChain_no() + "-" + seq); // 确定性任务号：先查后插天然幂等
         t.setChain_id(chain.getId());
         t.setSeq_no(seq);
-        t.setTask_type(segString(seg, "taskType", ""));
-        t.setTake_row(segLongOrNull(seg, "takeRow"));
-        t.setTake_column(segLongOrNull(seg, "takeColumn"));
-        t.setTake_floor(segLongOrNull(seg, "takeFloor"));
-        t.setPut_row(segLongOrNull(seg, "putRow"));
-        t.setPut_column(segLongOrNull(seg, "putColumn"));
-        t.setPut_floor(segLongOrNull(seg, "putFloor"));
-        t.setPort_num(segLongOrNull(seg, "portNum"));
         t.setPayload(segMap(seg, "payload"));
         t.setPriority(chain.getPriority() == null ? 0L : chain.getPriority());
         t.setWms_ref(chain.getWms_ref());
@@ -281,6 +278,13 @@ public class TaskOrchestrator {
         t.setHandshake_step(HandshakeStep.CREATED.name());
         t.setError_code(0L);
         Audits.fillCreate(t, currentUserProvider.systemUser());
+        t.setTenant_id(chain.getTenant_id());
+        execution.assertCandidate(chain.getUpstream_app_id(),appId);
+        Map<String,Object> pinned=segMap(seg,"pinnedRevisionIds");
+        if (pinned==null || !String.valueOf(execution.revisionId(appId)).equals(String.valueOf(pinned.get(appId.toString()))))
+            throw new com.cayleywcs.common.exception.WcsException(409,"任务链候选点位版本已改变，暂停物化");
+        execution.initialize(t,chain.getUpstream_app_id());
+        t.setIdempotency_scope("chain:"+chain.getId());
         return t;
     }
 

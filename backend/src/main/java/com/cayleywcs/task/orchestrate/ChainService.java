@@ -45,10 +45,11 @@ public interface ChainService {
 
     /** 链段定义：坐标字段供堆垛机类设备，其他设备参数走 payload（与单任务 DispatchRequest 对齐）。 */
     record ChainSegment(
-            Long seq, Long appId, List<Long> candidateAppIds, String taskType,
-            Long takeRow, Long takeColumn, Long takeFloor,
-            Long putRow, Long putColumn, Long putFloor,
-            Long portNum, Map<String, Object> payload
+            Long seq, Long appId, List<Long> candidateAppIds, Map<String, Object> payload
     ) {
+        public ChainSegment(Long seq,Long appId,List<Long> candidates,String type,Long tr,Long tc,Long tf,
+                            Long pr,Long pc,Long pf,Long port,Map<String,Object> payload) {
+            this(seq,appId,candidates,com.cayleywcs.task.RequestPayloads.migrate(type,tr,tc,tf,pr,pc,pf,port,payload));
+        }
     }
 }

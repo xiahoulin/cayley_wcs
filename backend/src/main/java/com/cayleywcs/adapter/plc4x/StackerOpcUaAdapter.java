@@ -1,6 +1,7 @@
 package com.cayleywcs.adapter.plc4x;
 
 import com.cayleywcs.protocol.entity.ProtocolPointEntity;
+import com.cayleywcs.adapter.AdapterContext;
 
 /**
  * 礁盘工业码垛机（堆垛机）OPC UA 适配器。
@@ -18,6 +19,13 @@ public class StackerOpcUaAdapter extends Plc4xAdapter {
 
     public StackerOpcUaAdapter(String connectionString, long timeoutMs) {
         super("opcua", connectionString, timeoutMs);
+    }
+
+    @Override protected void doConnect(AdapterContext ctx) throws Exception {
+        heartbeatPoint = null;
+        lastToggleAt = 0;
+        wcsHeart = 0;
+        super.doConnect(ctx);
     }
 
     @Override
@@ -42,14 +50,14 @@ public class StackerOpcUaAdapter extends Plc4xAdapter {
         return isConnected();
     }
 
-    /** 从点位表定位可写的 WCS 心跳点（field_name 含 wcs_heart 且 rw 含 W）。无则退化为被动心跳。 */
+    /** 从请求方向的内部点位定位 WCS 心跳；没有该驱动点位时仅检查连接存活。 */
     private ProtocolPointEntity resolveHeartbeatPoint() {
         ProtocolPointEntity cached = heartbeatPoint;
         if (cached != null || context == null) {
             return cached;
         }
         heartbeatPoint = context.points().stream()
-                .filter(p -> p.getRw() != null && p.getRw().toUpperCase().contains("W"))
+                .filter(p -> "request".equals(p.getDirection()) && "internal".equals(p.getPoint_scope()))
                 .filter(p -> p.getField_name() != null
                         && p.getField_name().toLowerCase().contains("wcs_heart"))
                 .findFirst()

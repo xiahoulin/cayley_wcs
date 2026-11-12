@@ -1,0 +1,415 @@
+{
+  "task_id": "TASK-20261112-0425DFA1",
+  "date": "2026-11-12",
+  "scope": "Current WCS database only; no application source, schema, image, credential or endpoint changes",
+  "execution": {
+    "deleted": {
+      "wcs_contract_migration_audit": 2,
+      "wcs_fault_code": 0,
+      "wcs_protocol_point": 194,
+      "wcs_protocol_revision": 5,
+      "wcs_protocol": 21
+    },
+    "protected_table_checks": 28,
+    "remaining_protocols": 6,
+    "remaining_points": 123,
+    "remaining_revisions": 6,
+    "task_id": "TASK-20261112-0425DFA1",
+    "backup": {
+      "bytes": 134426,
+      "sha256": "63239ab282dc9fd49d776672e47a193e97632bd4ab7562abeb24a281315bd46b"
+    },
+    "cache": {
+      "redis_keys_before": 0,
+      "redis_keys_after": 0,
+      "memory_reset": "backend process restarted after transaction"
+    },
+    "final_backup_restored_exactly": true,
+    "production_equals_rehearsed_snapshot": true
+  },
+  "final_backup_restore": {
+    "exact_restored_tables": 28,
+    "all_restored_rows_equal": true,
+    "cleanup": {
+      "deleted": {
+        "wcs_contract_migration_audit": 2,
+        "wcs_fault_code": 0,
+        "wcs_protocol_point": 194,
+        "wcs_protocol_revision": 5,
+        "wcs_protocol": 21
+      },
+      "protected_table_checks": 28,
+      "remaining_protocols": 6,
+      "remaining_points": 123,
+      "remaining_revisions": 6
+    },
+    "backup": {
+      "bytes": 134426,
+      "sha256": "63239ab282dc9fd49d776672e47a193e97632bd4ab7562abeb24a281315bd46b"
+    }
+  },
+  "containers": {
+    "checks": [
+      {
+        "container": "/cayleywcs-backend",
+        "same_identity": true,
+        "same_image": true,
+        "same_config": true,
+        "same_mounts": true,
+        "running": true,
+        "restart_count": 0
+      },
+      {
+        "container": "/cayleywcs-frontend",
+        "same_identity": true,
+        "same_image": true,
+        "same_config": true,
+        "same_mounts": true,
+        "running": true,
+        "restart_count": 0
+      },
+      {
+        "container": "/cayleywcs-postgres",
+        "same_identity": true,
+        "same_image": true,
+        "same_config": true,
+        "same_mounts": true,
+        "running": true,
+        "restart_count": 0
+      },
+      {
+        "container": "/cayleywcs-redis",
+        "same_identity": true,
+        "same_image": true,
+        "same_config": true,
+        "same_mounts": true,
+        "running": true,
+        "restart_count": 0
+      }
+    ],
+    "backend_memory_reset": true,
+    "health_up": true
+  },
+  "acceptance": {
+    "task_id": "TASK-20261112-0425DFA1",
+    "summary": {
+      "passed": 73,
+      "failed": 0
+    },
+    "checks": [
+      {
+        "name": "exact_six_applications_preserved",
+        "passed": true
+      },
+      {
+        "name": "only_owned_protocols_remain",
+        "passed": true
+      },
+      {
+        "name": "historical_template_catalog_empty",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_8_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_9_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_11_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_15_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_16_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_17_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_21_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_22_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_23_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_24_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_25_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_26_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_27_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_28_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_29_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_30_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_31_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_32_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_37_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_38_not_found",
+        "passed": true
+      },
+      {
+        "name": "deleted_protocol_39_not_found",
+        "passed": true
+      },
+      {
+        "name": "protocol_3_point_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_3_revision_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_10_point_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_10_revision_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_33_point_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_33_revision_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_34_point_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_34_revision_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_35_point_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_35_revision_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_36_point_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "protocol_36_revision_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "task_102018_state_preserved",
+        "passed": true
+      },
+      {
+        "name": "task_102026_state_preserved",
+        "passed": true
+      },
+      {
+        "name": "task_102027_state_preserved",
+        "passed": true
+      },
+      {
+        "name": "binding_ids_preserved",
+        "passed": true
+      },
+      {
+        "name": "wms_unconfigured_version_preserved",
+        "passed": true
+      },
+      {
+        "name": "live_samples_all_passed",
+        "passed": true
+      },
+      {
+        "name": "agv_receipt_time_advances",
+        "passed": true
+      },
+      {
+        "name": "simulator_heartbeat_changes",
+        "passed": true
+      },
+      {
+        "name": "backend_running_no_automatic_restarts",
+        "passed": true
+      },
+      {
+        "name": "runtime_flyway_schema_history_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_alarm_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_app_binding_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_app_configuration_credentials_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_contract_migration_audit_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_dashboard_point_selection_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_device_task_number_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_device_task_number_lease_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_dict_item_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_dict_type_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_fault_code_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_message_log_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_open_token_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_protocol_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_protocol_point_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_protocol_revision_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_sensor_application_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_sensor_gateway_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_task_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_task_chain_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_telemetry_cycle_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_telemetry_latest_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_user_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_userrole_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_webhook_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_webhook_cursor_preserved",
+        "passed": true
+      },
+      {
+        "name": "runtime_wcs_webhook_delivery_preserved",
+        "passed": true
+      },
+      {
+        "name": "redis_no_related_cache_remaining",
+        "passed": true
+      }
+    ],
+    "elapsed_seconds": 125.7,
+    "successful_samples": 58,
+    "http_requests": 388,
+    "sample_failures": [],
+    "simulator_heartbeat_values": [
+      "0",
+      "1"
+    ],
+    "agv_receipt_time_advances": true,
+    "restart_count": 0,
+    "remaining_applications": 6,
+    "remaining_protocols": 6,
+    "remaining_points": 123,
+    "remaining_revisions": 6,
+    "remaining_templates": 0,
+    "redis_keys": 0
+  },
+  "rehearsal_stopped": {
+    "stopped": true,
+    "backup_and_data_retained": true
+  },
+  "private_artifacts": "Complete database dumps, Redis snapshot, raw data and operational configuration remain outside the repository."
+}

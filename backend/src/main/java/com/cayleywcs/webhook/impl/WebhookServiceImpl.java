@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WebhookServiceImpl implements WebhookService {
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
+    @org.springframework.beans.factory.annotation.Autowired private com.cayleywcs.application.ApplicationService applications;
     private final WebhookMapper webhookMapper;
     private final WebhookDeliveryMapper deliveryMapper;
     private final CurrentUserProvider currentUserProvider;
@@ -53,6 +55,7 @@ public class WebhookServiceImpl implements WebhookService {
     @Override
     @Transactional
     public WebhookEntity create(WebhookEntity entity) {
+        lifecycle.references();
         validate(entity);
         if (entity.getEnabled() == null) {
             entity.setEnabled(true);
@@ -65,6 +68,7 @@ public class WebhookServiceImpl implements WebhookService {
     @Override
     @Transactional
     public WebhookEntity update(WebhookEntity entity) {
+        lifecycle.references();
         WebhookEntity existing = getById(entity.getId());
         validate(entity);
         entity.setCreator(existing.getCreator());
@@ -98,6 +102,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     private void validate(WebhookEntity entity) {
+        if(entity.getScope_app_ids()!=null) for(Long appId:entity.getScope_app_ids()) applications.getById(appId);
         if (entity.getName() == null || entity.getName().isBlank()) {
             throw new WcsException(ErrorCode.BAD_REQUEST, "name 必填");
         }

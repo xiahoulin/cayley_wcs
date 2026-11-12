@@ -43,7 +43,7 @@ class NewDeviceSimEndToEndTest {
                 "PLC_Heart", "status_Mode", "status_Task", "status_TaskNum", "status_Position",
                 "status_Occupied", "status_ErrorCode"));
         ConveyorDeviceHandler handler = new ConveyorDeviceHandler(h.manager);
-        TaskEntity task = task("5001", Map.of("toStation", 7));
+        TaskEntity task = task("5001", Map.of("cmd_DestStation", 7));
 
         handler.advance(task); // CREATED -> CHECKING
         handler.advance(task); // CHECKING -> MOVING（写目的站+启动）
@@ -51,7 +51,9 @@ class NewDeviceSimEndToEndTest {
         DeviceSim device = h.device();
         device.tick();
         device.tick();         // 运输到位：status_Task=2
-        boolean more = handler.advance(task); // MOVING -> DONE
+        task.setResult(Map.of("quality","good","payload",device.snapshot())); // 本纯状态机测试显式提供已采集结果，真实持久化由Spring集成验证
+        assertThat(handler.advance(task)).isTrue(); // 完成反馈先落清理阶段
+        boolean more = handler.advance(task); // CLEARING -> DONE
 
         assertThat(more).isFalse();
         assertThat(task.getStatus()).isEqualTo(TaskStatus.COMPLETED);
@@ -66,7 +68,7 @@ class NewDeviceSimEndToEndTest {
                 "PLC_Heart", "status_Mode", "status_Task", "status_TaskNum", "status_Position",
                 "status_Occupied", "status_ErrorCode"));
         ConveyorDeviceHandler handler = new ConveyorDeviceHandler(h.manager);
-        TaskEntity task = task("5002", Map.of("toStation", 3));
+        TaskEntity task = task("5002", Map.of("cmd_DestStation", 3));
 
         handler.advance(task); // CHECKING
         handler.advance(task); // MOVING
@@ -87,14 +89,16 @@ class NewDeviceSimEndToEndTest {
                 "PLC_Heart", "status_Mode", "status_Task", "status_TaskNum", "status_CurrentFloor",
                 "status_DoorState", "status_ErrorCode"));
         LiftDeviceHandler handler = new LiftDeviceHandler(h.manager);
-        TaskEntity task = task("6001", Map.of("targetFloor", 5));
+        TaskEntity task = task("6001", Map.of("cmd_TargetFloor", 5));
 
         handler.advance(task); // CHECKING
         handler.advance(task); // MOVING（写目标层+启动）
         DeviceSim device = h.device();
         device.tick();
         device.tick();         // 到层开门：status_Task=2, status_DoorState=1
-        boolean more = handler.advance(task); // DONE
+        task.setResult(Map.of("quality","good","payload",device.snapshot())); // 本纯状态机测试显式提供已采集结果，真实持久化由Spring集成验证
+        assertThat(handler.advance(task)).isTrue(); // 完成反馈先落清理阶段
+        boolean more = handler.advance(task); // CLEARING -> DONE
 
         assertThat(more).isFalse();
         assertThat(task.getStatus()).isEqualTo(TaskStatus.COMPLETED);
@@ -109,7 +113,7 @@ class NewDeviceSimEndToEndTest {
                 "PLC_Heart", "status_Mode", "status_Task", "status_TaskNum", "status_CurrentFloor",
                 "status_DoorState", "status_ErrorCode"));
         LiftDeviceHandler handler = new LiftDeviceHandler(h.manager);
-        TaskEntity task = task("6002", Map.of("targetFloor", 2));
+        TaskEntity task = task("6002", Map.of("cmd_TargetFloor", 2));
 
         handler.advance(task); // CHECKING
         handler.advance(task); // MOVING
@@ -129,7 +133,7 @@ class NewDeviceSimEndToEndTest {
                 "WCS_Heart", "cmd_Open", "cmd_Close", "cmd_ResetFault",
                 "PLC_Heart", "status_Mode", "status_DoorState", "status_ErrorCode"));
         AutoDoorDeviceHandler handler = new AutoDoorDeviceHandler(h.manager);
-        TaskEntity task = task("7001", Map.of("action", "open"));
+        TaskEntity task = task("7001", Map.of("cmd_Open",1,"cmd_Close",0));
 
         handler.advance(task); // CREATED -> COMMANDING（写开门 → 开门中）
         assertThat(task.getStatus()).isEqualTo(TaskStatus.EXECUTING);
@@ -148,7 +152,7 @@ class NewDeviceSimEndToEndTest {
                 "WCS_Heart", "cmd_Open", "cmd_Close", "cmd_ResetFault",
                 "PLC_Heart", "status_Mode", "status_DoorState", "status_ErrorCode"));
         AutoDoorDeviceHandler handler = new AutoDoorDeviceHandler(h.manager);
-        TaskEntity task = task("7002", Map.of("action", "open"));
+        TaskEntity task = task("7002", Map.of("cmd_Open",1,"cmd_Close",0));
 
         handler.advance(task); // COMMANDING
         h.device().injectFault(1); // 障碍物检测

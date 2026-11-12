@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import {
-  taskList, taskCancel, taskRetry, taskReprioritize, taskPauseApp, taskResumeApp,
+  taskList, taskDetail, taskCancel, taskRetry, taskReprioritize, taskPauseApp, taskResumeApp,
   chainList, chainDetail, chainCancel, applicationAll,
   type Task, type TaskChain, type Application,
 } from '../api/wcs'
@@ -14,6 +14,11 @@ const error = ref('')
 const pauseAppId = ref<number | null>(null)
 
 const detail = ref<{ chain: TaskChain; tasks: Task[] } | null>(null)
+const taskInfo = ref<Task | null>(null)
+const pretty = (v: unknown) => JSON.stringify(v ?? null, null, 2)
+async function showTask(t: Task) {
+  try { taskInfo.value = await taskDetail(t.id) } catch (e: any) { error.value = e?.message || '任务详情加载失败' }
+}
 
 const TERMINAL = ['completed', 'failed', 'cancelled']
 function appName(id?: number) {
@@ -97,7 +102,7 @@ onMounted(load)
           <tr v-for="t in tasks" :key="t.id">
             <td>{{ t.task_no }}</td>
             <td>{{ appName(t.app_id) }}</td>
-            <td>{{ t.task_type }}</td>
+            <td>{{ t.payload?.cmd_TaskType ?? t.task_type ?? '-' }}</td>
             <td><span :class="['tag', statusClass(t.status)]">{{ t.status }}</span></td>
             <td><small class="muted">{{ t.handshake_step || '-' }}</small></td>
             <td>{{ t.priority }}</td>
@@ -105,6 +110,7 @@ onMounted(load)
             <td>{{ t.retry_count ?? 0 }}</td>
             <td><code v-if="t.error_code">{{ t.error_code }}</code><span v-else>-</span></td>
             <td>
+              <button @click="showTask(t)">点位与结果</button>
               <button v-if="!isTerminal(t.status)" @click="reprioritize(t)">改优先级</button>
               <button v-if="!isTerminal(t.status)" class="danger" @click="cancelTask(t)">取消</button>
               <button v-if="t.status === 'failed' && !t.chain_id" @click="retryTask(t)">重试</button>
@@ -153,7 +159,7 @@ onMounted(load)
               <td>{{ t.seq_no }}</td>
               <td>{{ t.task_no }}</td>
               <td>{{ appName(t.app_id) }}</td>
-              <td>{{ t.task_type }}</td>
+              <td>{{ t.payload?.cmd_TaskType ?? t.task_type ?? '-' }}<br /><button @click="showTask(t)">点位与结果</button></td>
               <td><span :class="['tag', statusClass(t.status)]">{{ t.status }}</span></td>
               <td><code v-if="t.error_code">{{ t.error_code }}</code><span v-else>-</span></td>
               <td>{{ t.retry_count ?? 0 }}</td>
@@ -164,10 +170,19 @@ onMounted(load)
         <div class="toolbar" style="margin-top:10px"><span class="spacer"></span><button @click="detail = null">关闭</button></div>
       </div>
     </div>
+    <div v-if="taskInfo" class="modal-mask task-info-mask" @click.self="taskInfo = null"><div class="panel modal task-info">
+      <h3>任务 {{ taskInfo.task_no }}</h3><div class="toolbar"><span :class="['tag', statusClass(taskInfo.status)]">{{ taskInfo.status }}</span><span class="muted">{{ appName(taskInfo.app_id) }} / 协议发布版本 #{{ taskInfo.protocol_revision_id || '-' }}</span><span class="muted">设备任务号 {{ taskInfo.native_task_num ?? '-' }}</span></div>
+      <div class="grid2"><div><h4>请求点位 payload</h4><pre>{{ pretty(taskInfo.payload) }}</pre></div><div><h4>本任务采集结果 result</h4><p v-if="!taskInfo.result" class="muted">尚未采集到本任务的有效结果</p><pre v-else>{{ pretty(taskInfo.result) }}</pre></div></div>
+      <div class="toolbar"><span class="spacer"></span><button @click="taskInfo = null">关闭</button></div>
+    </div></div>
   </div>
 </template>
 
 <style scoped>
 .tabs { display: flex; gap: 4px; margin-left: 14px; }
 .muted { color: var(--muted); }
+.task-info { width: min(980px, 94vw); }
+.task-info-mask { z-index: 60; }
+h4 { font-size: 13px; margin: 8px 0; }
+pre { padding: 10px; background: var(--bg); max-height: 50vh; overflow: auto; font-size: 12px; }
 </style>

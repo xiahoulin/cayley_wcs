@@ -7,7 +7,7 @@ spring:
   task:
     scheduling:
       pool:
-        # F1：TaskEngine/看门狗/WS 推送共用调度池，>1 防单条慢任务饿死其他 @Scheduled（PLC I/O 已下沉 worker 池）
+        # 核心调度池；Webhook 投递与 WS 推送分别使用独立的单线程池。
         size: 4
   datasource:
     url: ${CAYLEYWCS_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cayleywcs?stringtype=unspecified}
@@ -20,10 +20,20 @@ spring:
       port: ${CAYLEYWCS_REDIS_PORT:6379}
   flyway:
     enabled: true
+    postgresql:
+      # V15 使用 CREATE INDEX CONCURRENTLY；会话级 advisory lock 避免事务锁阻塞索引完成。
+      transactional-lock: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
 
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
+    local-cache-scope: STATEMENT
   global-config:
     banner: false
 
@@ -35,11 +45,10 @@ cayleywcs:
   security:
     allowed-origin-patterns: ${CAYLEYWCS_ALLOWED_ORIGIN_PATTERNS:http://127.0.0.1:*,http://localhost:*}
   openapi:
-    # 入站开放接口 AppKey 鉴权（外部系统调用 /open/**）
-    appkey-enabled: ${CAYLEYWCS_OPEN_APPKEY_ENABLED:true}
-    signature-max-skew-seconds: ${CAYLEYWCS_OPEN_SIGN_SKEW:300}
+    # 对接应用令牌：POST /system/token 获取，/open/** 的 JSON 公共字段携带。
+    token-seconds: ${CAYLEYWCS_OPEN_TOKEN_SECONDS:7200}
   connection:
-    # 连接治理（需求 4）
+    # 连接治理
     max-connections: ${CAYLEYWCS_MAX_CONNECTIONS:32}
     connect-timeout-seconds: ${CAYLEYWCS_CONNECT_TIMEOUT_SECONDS:60}
     reconnect-max-retry: ${CAYLEYWCS_RECONNECT_MAX_RETRY:5}

@@ -8,11 +8,11 @@ import com.cayleywcs.common.entity.BaseEntity;
 import java.util.Map;
 
 /**
- * 应用信息表（需求 3）：可对接的应用/设备。app_key 用于双向鉴权，protocol_id 关联协议表。
+ * 应用信息表：可对接的应用/设备。app_key 用于双向鉴权，protocol_id 关联协议表。
  * conn_params 为 JSON（host/port/endpoint/unitId 等连接参数）。
  *
  * 「专用接口独占」列（work_mode/dispatch_strategy/failure_policy/task_stale_seconds/desired_state）标注
- * {@code updateStrategy=NEVER}（对抗审查 P2）：普通 update() 全行 updateById 永不写这些列——它们只由
+ * {@code updateStrategy=NEVER}：普通 update() 全行 updateById 永不写这些列——它们只由
  * updateWorkMode/updateDesiredState 等单列 UpdateWrapper 写。否则 update() 读快照再全行写会把并发 open/close/
  * pause 刚落的值静默覆盖（wcs_application 无 @Version）。UpdateWrapper.set 是显式 SQL，不受本策略影响。
  */
@@ -23,8 +23,14 @@ public class ApplicationEntity extends BaseEntity {
     private String app_key;
     private String app_secret;
     private Long protocol_id;
+    private Long protocol_revision_id;
+    @TableField(updateStrategy = FieldStrategy.NEVER)
+    private Long configuration_epoch;
+    @TableField(updateStrategy = FieldStrategy.NEVER)
+    private String configuration_state;
     private String direction;
     private String device_type;
+    private String adapter_type;
     /** 工作模式（M10）：normal 正常 / paused 暂停派工（在飞跑完）/ maintenance 维护（M11 完整语义）。 */
     @TableField(updateStrategy = FieldStrategy.NEVER)
     private String work_mode;
@@ -92,6 +98,13 @@ public class ApplicationEntity extends BaseEntity {
         this.protocol_id = protocol_id;
     }
 
+    public Long getProtocol_revision_id() { return protocol_revision_id; }
+    public void setProtocol_revision_id(Long value) { protocol_revision_id = value; }
+    public Long getConfiguration_epoch() { return configuration_epoch; }
+    public void setConfiguration_epoch(Long value) { configuration_epoch = value; }
+    public String getConfiguration_state() { return configuration_state; }
+    public void setConfiguration_state(String value) { configuration_state = value; }
+
     public String getDirection() {
         return direction;
     }
@@ -107,6 +120,9 @@ public class ApplicationEntity extends BaseEntity {
     public void setDevice_type(String device_type) {
         this.device_type = device_type;
     }
+
+    public String getAdapter_type() { return adapter_type; }
+    public void setAdapter_type(String value) { adapter_type = value; }
 
     public String getWork_mode() {
         return work_mode;

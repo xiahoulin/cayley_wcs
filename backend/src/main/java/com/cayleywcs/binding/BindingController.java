@@ -8,6 +8,8 @@ import com.cayleywcs.common.api.PageSearch;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import com.cayleywcs.application.ApplicationService;
+import com.cayleywcs.protocol.contract.ProtocolContractService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,17 +17,29 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 上下位绑定授权管理（需求 3 安全增强）：维护「上位调用方 → 下位设备」的指挥授权。
+ * 上下位绑定授权管理：维护「上位调用方 → 下位设备」的指挥授权。
  */
 @RestController
 @RequestMapping(value = "/binding", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Binding")
 public class BindingController {
     private final BindingService bindingService;
+    private final ApplicationService applications;
+    private final ProtocolContractService contracts;
 
-    public BindingController(BindingService bindingService) {
+    public BindingController(BindingService bindingService, ApplicationService applications, ProtocolContractService contracts) {
         this.bindingService = bindingService;
+        this.applications = applications;
+        this.contracts = contracts;
     }
+
+    @PostMapping("/check")
+    public ApiResponse<ProtocolContractService.Match> check(@RequestBody MatchRequest request) {
+        return ApiResponse.success(contracts.match(applications.getById(request.upstream_app_id()),
+                applications.getById(request.downstream_app_id())));
+    }
+
+    public record MatchRequest(Long upstream_app_id, Long downstream_app_id) {}
 
     @PostMapping("/list")
     @Operation(summary = "绑定分页列表")

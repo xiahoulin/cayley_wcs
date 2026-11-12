@@ -21,7 +21,7 @@
         <java.version>25</java.version>
         <mybatis-plus.version>3.5.16</mybatis-plus.version>
         <springdoc.version>3.0.3</springdoc.version>
-        <plc4x.version>0.12.0</plc4x.version>
+        <plc4x.version>0.13.1</plc4x.version>
         <paho.version>1.2.5</paho.version>
         <milo.version>0.6.14</milo.version>
     </properties>
@@ -38,6 +38,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -71,7 +75,7 @@
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- 工业协议统一驱动：Apache PLC4X 覆盖 OPC UA / Modbus TCP / S7（需求 5）。 -->
+        <!-- 工业协议统一驱动：Apache PLC4X 覆盖 OPC UA / Modbus TCP / S7。 -->
         <dependency>
             <groupId>org.apache.plc4x</groupId>
             <artifactId>plc4j-api</artifactId>

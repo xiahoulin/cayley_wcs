@@ -1,0 +1,153 @@
+{
+  "task_id": "TASK-20261013-008BD7B2",
+  "scope": "Read-only current PG backup; isolated PG actual Flyway upgrade to V20, no Spring device workers",
+  "source_version": "19",
+  "target_version": "20",
+  "postgres_image": "postgres:17",
+  "dump_sha256": "e1a22fd970cdf9201689913f55db2254de000eb0a24de93b333b94324877e036",
+  "dump_bytes": 115425,
+  "backend_jar_sha256": "ca84734fa098d0a6d42afbeb6f6bbe6aab0416d3b64d6c815d3a050cbc248783",
+  "counts_before": {
+    "flyway_schema_history": 19,
+    "wcs_alarm": 46,
+    "wcs_app_binding": 13,
+    "wcs_application": 19,
+    "wcs_connection_log": 222,
+    "wcs_contract_migration_audit": 41,
+    "wcs_device_task_number": 13,
+    "wcs_device_task_number_lease": 0,
+    "wcs_dict_item": 64,
+    "wcs_dict_type": 15,
+    "wcs_fault_code": 152,
+    "wcs_message_log": 899,
+    "wcs_open_token": 49,
+    "wcs_protocol": 25,
+    "wcs_protocol_point": 288,
+    "wcs_protocol_revision": 9,
+    "wcs_task": 40,
+    "wcs_task_chain": 4,
+    "wcs_user": 1,
+    "wcs_userrole": 1,
+    "wcs_webhook": 10,
+    "wcs_webhook_cursor": 12,
+    "wcs_webhook_delivery": 165
+  },
+  "counts_after": {
+    "flyway_schema_history": 20,
+    "wcs_alarm": 46,
+    "wcs_app_binding": 13,
+    "wcs_application": 19,
+    "wcs_connection_log": 222,
+    "wcs_contract_migration_audit": 41,
+    "wcs_device_task_number": 13,
+    "wcs_device_task_number_lease": 0,
+    "wcs_dict_item": 61,
+    "wcs_dict_type": 14,
+    "wcs_fault_code": 152,
+    "wcs_message_log": 899,
+    "wcs_open_token": 49,
+    "wcs_protocol": 25,
+    "wcs_protocol_point": 288,
+    "wcs_protocol_revision": 9,
+    "wcs_task": 40,
+    "wcs_task_chain": 4,
+    "wcs_user": 1,
+    "wcs_userrole": 1,
+    "wcs_webhook": 10,
+    "wcs_webhook_cursor": 12,
+    "wcs_webhook_delivery": 165
+  },
+  "checks": [
+    {
+      "name": "flyway_upgraded_19_to_20",
+      "passed": true
+    },
+    {
+      "name": "point_rw_column_removed",
+      "passed": true
+    },
+    {
+      "name": "wcs_task_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 40
+    },
+    {
+      "name": "wcs_task_chain_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 4
+    },
+    {
+      "name": "wcs_application_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 19
+    },
+    {
+      "name": "wcs_protocol_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 25
+    },
+    {
+      "name": "wcs_app_binding_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 13
+    },
+    {
+      "name": "wcs_device_task_number_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 13
+    },
+    {
+      "name": "wcs_device_task_number_lease_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 0
+    },
+    {
+      "name": "point_all_other_values_and_times_preserved",
+      "passed": true,
+      "rows": 288
+    },
+    {
+      "name": "point_json_no_rw",
+      "passed": true
+    },
+    {
+      "name": "published_revision_ids_preserved",
+      "passed": true,
+      "rows": 9
+    },
+    {
+      "name": "published_revision_identity_fingerprints_and_times_preserved",
+      "passed": true
+    },
+    {
+      "name": "published_snapshot_rw_keys_removed",
+      "passed": true
+    },
+    {
+      "name": "published_snapshot_other_point_values_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_dict_type_obsolete_point_rw_only_removed",
+      "passed": true
+    },
+    {
+      "name": "wcs_dict_item_obsolete_point_rw_only_removed",
+      "passed": true
+    },
+    {
+      "name": "repeat_migration_does_not_change_rows_or_times",
+      "passed": true
+    },
+    {
+      "name": "source_business_tables_unchanged_by_rehearsal",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "checks": 19,
+    "passed": 19,
+    "failed": 0
+  },
+  "private_data": "Dump, original business rows and generated isolated credentials remain outside repository; evidence excludes all request payloads and secrets"
+}

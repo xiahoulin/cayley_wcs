@@ -1,0 +1,50 @@
+{
+  "task_id": "TASK-20261013-9F656A48",
+  "status": "passed",
+  "api_document": {
+    "path": "E:/workspace/cayley_ai/cayley_project/cayley_wcs/docs/礁盘工业WCS开放API接口文档.docx",
+    "sha256": "5e4d9bd126480b8406966aea04bf40bf7ec0ea424f3dbd859b2eb479fa5bb866",
+    "input_sha256": "dbcdda72868fc8e5453628b3a05e2e31d06396cfa1a5bd4afb0e8bd37dd21c16",
+    "revision": "2.4",
+    "pages": 37,
+    "tables": 40,
+    "navigation_headings": 29,
+    "model_labels_excluded_from_navigation": 11,
+    "source_group_configuration_hits": 0,
+    "revision_record_added": true,
+    "all_business_body_and_nonrevision_tables_unchanged": true,
+    "code_paragraphs_preserved": 524,
+    "call_formats_preserved": 7,
+    "chinese_first_without_explanation_parentheses_preserved": true,
+    "native_navigation_and_toc_pages_verified": true,
+    "all_pages_rendered_and_visually_verified": true,
+    "final_original_file_hash_verified": true,
+    "source_backup_verified": true
+  },
+  "functional_manual": {
+    "path": "E:/workspace/cayley_ai/cayley_project/cayley_wcs/docs/礁盘工业WCS使用功能说明书.docx",
+    "sha256": "1ba613fa880f4a0d8c70b65c63ab32e20b91eac6ef9683747b5ab3f85715cd20",
+    "input_sha256": "e7cab47cbbd555ab42f2b57b2d16cb4191f2f5ce19694d1d33ca48d1e07860f8",
+    "pages": 19,
+    "navigation_headings": 39,
+    "edits": 2,
+    "obsolete_dictionary_phrase_removed": true,
+    "point_group_model_rows_removed": 1,
+    "all_other_paragraph_and_machine_text_preserved": true,
+    "all_other_tables_preserved": true,
+    "heading_text_and_styles_preserved": true,
+    "existing_toc": false,
+    "all_pages_rendered_and_visually_verified": true,
+    "changed_pages": [5, 14, 15],
+    "other_16_pages_pixel_identical": true,
+    "final_original_file_hash_verified": true,
+    "source_backup_verified": true
+  },
+  "manual_generator": {
+    "path": "docs/manual_assets/build_wcs_manual.py",
+    "obsolete_group_field_and_dictionary_phrase_removed": true,
+    "syntax_check": "passed"
+  },
+  "historical_plans_reviews_and_unrelated_swagger_or_statistical_grouping": "preserved",
+  "final_files_byte_identical_to_visually_verified_candidates": true
+}

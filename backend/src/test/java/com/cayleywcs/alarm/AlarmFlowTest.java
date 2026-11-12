@@ -19,6 +19,8 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @ActiveProfiles("test-flyway")
 class AlarmFlowTest {
+    @Autowired private com.cayleywcs.protocol.ProtocolService fixtureProtocols;
+    @Autowired private com.cayleywcs.application.mapper.ApplicationMapper fixtureApps;
 
     @Autowired
     private ApplicationEventPublisher publisher;
@@ -32,6 +34,7 @@ class AlarmFlowTest {
         Long protocolId = jdbcTemplate.queryForObject(
                 "select \"id\" from \"wcs_protocol\" where \"protocol_code\" = 'STACKER_STD'", Long.class);
         long appId = 90001L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
 
         publisher.publishEvent(new FaultDetectedEvent(appId, protocolId, 8)); // 里库位检测1触发
         assertThat(alarmService.listActive(appId)).hasSize(1);
@@ -51,6 +54,7 @@ class AlarmFlowTest {
         Long protocolId = jdbcTemplate.queryForObject(
                 "select \"id\" from \"wcs_protocol\" where \"protocol_code\" = 'STACKER_STD'", Long.class);
         long appId = 90004L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
 
         // 两个故障码并发
         publisher.publishEvent(new FaultDetectedEvent(appId, protocolId, 2));
@@ -73,6 +77,7 @@ class AlarmFlowTest {
         Long protocolId = jdbcTemplate.queryForObject(
                 "select \"id\" from \"wcs_protocol\" where \"protocol_code\" = 'STACKER_STD'", Long.class);
         long appId = 90002L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
 
         publisher.publishEvent(new FaultDetectedEvent(appId, protocolId, 9999));
         assertThat(alarmService.listActive(appId)).hasSize(1);
@@ -82,6 +87,7 @@ class AlarmFlowTest {
     @Test
     void connectionDropRaisesCommAlarmAndRecoveryClears() {
         long appId = 90003L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
         publisher.publishEvent(new ConnectionStateChangedEvent(appId, "APP3",
                 ConnectionState.RUNNING, ConnectionState.DISCONNECTED, "stale"));
         assertThat(alarmService.listActive(appId)).hasSize(1);

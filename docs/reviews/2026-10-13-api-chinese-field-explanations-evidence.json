@@ -1,0 +1,43 @@
+{
+  "task_id": "TASK-20261013-D134088E",
+  "document": {
+    "path": "E:/workspace/cayley_ai/cayley_project/cayley_wcs/docs/礁盘工业WCS开放API接口文档.docx",
+    "sha256": "e2d9109005d4b4aff3bd662b9443dc7599616272890a1040edfe27e8c9673800",
+    "input_sha256": "a05c8f9e2fae2cdd3c668a9cc8fd0b600e1501a413f3c883eeed07745cff5c5f",
+    "pages": 37,
+    "tables": 40,
+    "navigation_entries": 29,
+    "revision": "2.2",
+    "original_name_restored": true,
+    "backup_verified": true
+  },
+  "scope": "Chinese-first field explanations in WCS API prose, notes, errors and dictionary labels",
+  "changed_body_paragraphs": 32,
+  "changed_table_paragraphs": 74,
+  "total_changed_positions": 106,
+  "explained_identifier_occurrences": 178,
+  "narrative_items_checked": 908,
+  "unexplained_identifiers": 0,
+  "duplicate_phrases": 0,
+  "chinese_spacing_errors": 0,
+  "interface_content_preserved": {
+    "code_paragraphs": 524,
+    "call_formats": 7,
+    "definition_cells_independently_checked": 620,
+    "field_encoding_types_required_rules_enumerations": "unchanged"
+  },
+  "checks": {
+    "terms": "passed",
+    "structure": "passed",
+    "real_navigation_and_toc_pages": "passed",
+    "all_37_pages_visual_qa": "passed",
+    "final_file_hash": "passed"
+  },
+  "field_examples": {
+    "last_update_time": "最后更新时间",
+    "sinceMillis": "已处理时间水位",
+    "serverTimeMillis": "服务端查询时间",
+    "limit": "本次最大条数"
+  },
+  "source_backup_saved": true
+}

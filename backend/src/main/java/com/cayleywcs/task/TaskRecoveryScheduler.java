@@ -5,6 +5,7 @@ import com.cayleywcs.alarm.AlarmService;
 import com.cayleywcs.application.ApplicationService;
 import com.cayleywcs.application.entity.ApplicationEntity;
 import com.cayleywcs.common.support.Audits;
+import com.cayleywcs.config.WcsMetrics;
 import com.cayleywcs.task.entity.TaskEntity;
 import com.cayleywcs.task.mapper.TaskMapper;
 import java.time.Duration;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +43,7 @@ public class TaskRecoveryScheduler {
     private final ApplicationService applicationService;
     private final AlarmService alarmService;
     private final long retryBackoffMs;
+    @Autowired private WcsMetrics metrics;
 
     public TaskRecoveryScheduler(TaskMapper taskMapper, TaskService taskService,
                                  ApplicationService applicationService, AlarmService alarmService,
@@ -52,9 +55,9 @@ public class TaskRecoveryScheduler {
         this.retryBackoffMs = retryBackoffMs;
     }
 
-    @Scheduled(fixedDelayString = "${cayleywcs.task.recovery-interval-ms:5000}")
+    @Scheduled(fixedDelayString = "${cayleywcs.task.recovery-interval-ms:5000}", scheduler = "taskScheduler")
     public void tick() {
-        runOnce();
+        WcsMetrics.tick(metrics, "task-recovery", this::runOnce);
     }
 
     /** 单轮扫描（公开供测试驱动）。 */
@@ -76,7 +79,7 @@ public class TaskRecoveryScheduler {
                 .filter(a -> "auto_retry".equals(a.getFailure_policy()))
                 .toList();
         LocalDateTime now = LocalDateTime.now();
-        // 逐应用扫描且**耗尽行在 SQL 层排除**（M11 审查 P2）：耗尽任务 last_update_time 永久冻结，
+        // 逐应用扫描且**耗尽行在 SQL 层排除**：耗尽任务 last_update_time 永久冻结，
         // 若进入 order by lu asc 的扫描窗会累积霸占前列、饿死后面的可重试任务——必须不进结果集。
         for (ApplicationEntity app : autoRetryApps) {
             long appMax = app.getMax_retry() == null ? 0 : app.getMax_retry();

@@ -1,0 +1,153 @@
+{
+  "task_id": "TASK-20261013-9F656A48",
+  "scope": "Read-only current PG backup; isolated PG actual Flyway upgrade to V21, no Spring device workers",
+  "source_version": "20",
+  "target_version": "21",
+  "postgres_image": "postgres:17",
+  "dump_sha256": "cb9190dda08b0d4b774421fdecf92aba71b1569bb992d33ec11c39fb12fb6949",
+  "dump_bytes": 128317,
+  "backend_jar_sha256": "c312addaa7b68ac9da92d209b0a111a591cf0bed8e70337f101bb6a0a253df0b",
+  "counts_before": {
+    "flyway_schema_history": 20,
+    "wcs_alarm": 46,
+    "wcs_app_binding": 14,
+    "wcs_application": 21,
+    "wcs_connection_log": 234,
+    "wcs_contract_migration_audit": 41,
+    "wcs_device_task_number": 13,
+    "wcs_device_task_number_lease": 0,
+    "wcs_dict_item": 61,
+    "wcs_dict_type": 14,
+    "wcs_fault_code": 152,
+    "wcs_message_log": 1234,
+    "wcs_open_token": 52,
+    "wcs_protocol": 28,
+    "wcs_protocol_point": 374,
+    "wcs_protocol_revision": 11,
+    "wcs_task": 46,
+    "wcs_task_chain": 5,
+    "wcs_user": 1,
+    "wcs_userrole": 1,
+    "wcs_webhook": 11,
+    "wcs_webhook_cursor": 15,
+    "wcs_webhook_delivery": 214
+  },
+  "counts_after": {
+    "flyway_schema_history": 21,
+    "wcs_alarm": 46,
+    "wcs_app_binding": 14,
+    "wcs_application": 21,
+    "wcs_connection_log": 234,
+    "wcs_contract_migration_audit": 41,
+    "wcs_device_task_number": 13,
+    "wcs_device_task_number_lease": 0,
+    "wcs_dict_item": 59,
+    "wcs_dict_type": 13,
+    "wcs_fault_code": 152,
+    "wcs_message_log": 1234,
+    "wcs_open_token": 52,
+    "wcs_protocol": 28,
+    "wcs_protocol_point": 374,
+    "wcs_protocol_revision": 11,
+    "wcs_task": 46,
+    "wcs_task_chain": 5,
+    "wcs_user": 1,
+    "wcs_userrole": 1,
+    "wcs_webhook": 11,
+    "wcs_webhook_cursor": 15,
+    "wcs_webhook_delivery": 214
+  },
+  "checks": [
+    {
+      "name": "flyway_upgraded_20_to_21",
+      "passed": true
+    },
+    {
+      "name": "point_point_group_column_removed",
+      "passed": true
+    },
+    {
+      "name": "wcs_task_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 46
+    },
+    {
+      "name": "wcs_task_chain_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 5
+    },
+    {
+      "name": "wcs_application_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 21
+    },
+    {
+      "name": "wcs_protocol_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 28
+    },
+    {
+      "name": "wcs_app_binding_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 14
+    },
+    {
+      "name": "wcs_device_task_number_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 13
+    },
+    {
+      "name": "wcs_device_task_number_lease_all_rows_and_times_preserved",
+      "passed": true,
+      "rows": 0
+    },
+    {
+      "name": "point_all_other_values_and_times_preserved",
+      "passed": true,
+      "rows": 374
+    },
+    {
+      "name": "point_json_no_point_group",
+      "passed": true
+    },
+    {
+      "name": "published_revision_ids_preserved",
+      "passed": true,
+      "rows": 11
+    },
+    {
+      "name": "published_revision_identity_fingerprints_and_times_preserved",
+      "passed": true
+    },
+    {
+      "name": "published_snapshot_point_group_keys_removed",
+      "passed": true
+    },
+    {
+      "name": "published_snapshot_other_point_values_preserved",
+      "passed": true
+    },
+    {
+      "name": "wcs_dict_type_obsolete_point_group_only_removed",
+      "passed": true
+    },
+    {
+      "name": "wcs_dict_item_obsolete_point_group_only_removed",
+      "passed": true
+    },
+    {
+      "name": "repeat_migration_does_not_change_rows_or_times",
+      "passed": true
+    },
+    {
+      "name": "source_business_tables_unchanged_by_rehearsal",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "checks": 19,
+    "passed": 19,
+    "failed": 0
+  },
+  "private_data": "Dump, original business rows and generated isolated credentials remain outside repository; evidence excludes all request payloads and secrets"
+}

@@ -16,6 +16,9 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @ActiveProfiles("test-flyway")
 class ReconcileTest {
+    @Autowired private com.cayleywcs.protocol.ProtocolService fixtureProtocols;
+    @Autowired private com.cayleywcs.application.mapper.ApplicationMapper fixtureApps;
+
 
     @Autowired
     private TaskService taskService;
@@ -40,6 +43,7 @@ class ReconcileTest {
     @Test
     void alarmReconcileWatermark() {
         long appId = 70002L;
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
         alarmService.raise(appId, 5L, "warn", "测试报警", "处置");
 
         List<AlarmEntity> all = alarmService.queryReconcile(appId, 0, 100);
@@ -51,10 +55,12 @@ class ReconcileTest {
     }
 
     private TaskEntity task(long appId, String no) {
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,fixtureApps,appId,"stacker");
         TaskEntity t = new TaskEntity();
         t.setApp_id(appId);
         t.setTask_no(no);
         t.setTask_type("1");
+        t.setPayload(com.cayleywcs.support.PublishedDeviceFixtures.stackerPayload());
         return t;
     }
 }

@@ -1,0 +1,159 @@
+{
+  "task_id": "TASK-20261013-898288ED",
+  "root_cause": "Browser datalist filters suggestions by current BOOL input text; backend supports other types.",
+  "build": {
+    "type_check": "passed",
+    "vite_build": "passed"
+  },
+  "actual_docker_ui": {
+    "status": "passed",
+    "url": "http://127.0.0.1:5186",
+    "protocol_id": 25,
+    "protocol_code": "HTTP-TYPE-UI-mv66j1eu",
+    "checks": [
+      "cmd_TaskType: complete lists under BOOL",
+      "cmd_TaskType: save and reopen retained INT16/INT16",
+      "numeric_value: complete lists under BOOL",
+      "numeric_value: save and reopen retained FLOAT64/FLOAT64",
+      "text_value: complete lists under BOOL",
+      "text_value: save and reopen retained STRING/TEXT",
+      "array_value: complete lists under BOOL",
+      "array_value: save and reopen retained ARRAY<INT16>/ARRAY[0..2] OF INT16",
+      "Actual API persisted all four point types and one update each",
+      "OPC UA unsupported UInt64 remains excluded by backend options"
+    ],
+    "page_errors": [],
+    "logical_scalar_types": [
+      "BOOL",
+      "STRING",
+      "INT8",
+      "UINT8",
+      "INT16",
+      "UINT16",
+      "INT32",
+      "UINT32",
+      "INT64",
+      "UINT64",
+      "FLOAT32",
+      "FLOAT64",
+      "DECIMAL"
+    ],
+    "points": [
+      {
+        "id": 285,
+        "field_name": "cmd_TaskType",
+        "logical_type": "INT16",
+        "data_type": "INT16",
+        "constraints": {
+          "min": "1",
+          "max": "3"
+        },
+        "row_version": 1
+      },
+      {
+        "id": 286,
+        "field_name": "numeric_value",
+        "logical_type": "FLOAT64",
+        "data_type": "FLOAT64",
+        "constraints": {},
+        "row_version": 1
+      },
+      {
+        "id": 287,
+        "field_name": "text_value",
+        "logical_type": "STRING",
+        "data_type": "TEXT",
+        "constraints": {
+          "max_length": 32,
+          "encoding": "UTF-8"
+        },
+        "row_version": 1
+      },
+      {
+        "id": 288,
+        "field_name": "array_value",
+        "logical_type": "ARRAY<INT16>",
+        "data_type": "ARRAY[0..2] OF INT16",
+        "constraints": {
+          "length": 3,
+          "element_type": "INT16"
+        },
+        "row_version": 1
+      }
+    ],
+    "api_interception": false,
+    "test_protocol_published": false,
+    "test_protocol_bound_to_device": false
+  },
+  "deployment": {
+    "image": "cayley_wcs-frontend:type-selector-20261013",
+    "frontend_port": 5186,
+    "services": [
+      {
+        "name": "cayleywcs-frontend",
+        "changed": true,
+        "running": true,
+        "image": "cayley_wcs-frontend:type-selector-20261013"
+      },
+      {
+        "name": "cayleywcs-backend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wcs-backend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywcs-postgres",
+        "changed": false,
+        "running": true,
+        "image": "postgres:17"
+      },
+      {
+        "name": "cayleywcs-redis",
+        "changed": false,
+        "running": true,
+        "image": "redis:7.4"
+      },
+      {
+        "name": "cayleywms-frontend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-frontend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywms-backend",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-backend:point-contract-20261013"
+      },
+      {
+        "name": "cayleywms-postgres",
+        "changed": false,
+        "running": true,
+        "image": "postgres:17"
+      },
+      {
+        "name": "cayleywms-redis",
+        "changed": false,
+        "running": true,
+        "image": "redis:7.4"
+      },
+      {
+        "name": "cayleywms-bot-service",
+        "changed": false,
+        "running": true,
+        "image": "cayley_wms-bot-service:continuations20-20261002"
+      }
+    ],
+    "only_frontend_recreated": true
+  },
+  "mock_api_ui": {
+    "status": "passed",
+    "flows": 14,
+    "requests": 70,
+    "api_interception": true
+  },
+  "visual_check": {
+    "scalar_editor": "passed",
+    "manual_array_editor": "passed"
+  }
+}

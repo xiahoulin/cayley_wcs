@@ -16,6 +16,7 @@ public interface TaskService {
 
     /** WMS 下发：创建一条待调度任务（幂等：同 app + task_no 不重复创建）。 */
     TaskEntity dispatch(DispatchRequest request);
+    TaskEntity dispatch(DispatchRequest request, Long callerAppId);
 
     boolean cancel(Long id);
 
@@ -47,11 +48,12 @@ public interface TaskService {
     boolean save(TaskEntity entity);
 
     public record DispatchRequest(
-            Long appId, String taskNo, String taskType,
-            Long takeRow, Long takeColumn, Long takeFloor,
-            Long putRow, Long putColumn, Long putFloor,
-            Long portNum, Long priority, String wmsRef,
+            Long appId, String taskNo, Long priority, String wmsRef,
             Map<String, Object> payload
     ) {
+        public DispatchRequest(Long appId,String taskNo,String taskType,Long tr,Long tc,Long tf,
+                               Long pr,Long pc,Long pf,Long port,Long priority,String ref,Map<String,Object> payload) {
+            this(appId,taskNo,priority,ref,RequestPayloads.migrate(taskType,tr,tc,tf,pr,pc,pf,port,payload));
+        }
     }
 }

@@ -12,22 +12,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
-import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * 入站开放接口鉴权（需求 3 / APP KEY 双向）：仅作用于 /open/**。
+ * 入站开放接口鉴权（APP KEY 双向）：仅作用于 /open/**。
  * 校验 X-App-Key / X-Timestamp / X-Nonce / X-Sign：应用有效 + 时间戳未过期 + nonce 不重放 + 签名正确。
  * 成功后将 appId/appCode 放入 request attribute 供下游使用；失败返回结构化 ApiResponse.error（HTTP 200）。
  */
-@Component
 public class AppKeyAuthFilter extends OncePerRequestFilter {
     public static final String ATTR_APP_ID = "wcs.app.id";
     public static final String ATTR_APP_CODE = "wcs.app.code";
@@ -35,9 +30,10 @@ public class AppKeyAuthFilter extends OncePerRequestFilter {
 
     private final ApplicationService applicationService;
     private final AppKeySigner signer;
-    private final ObjectProvider<StringRedisTemplate> redisProvider;
+    private AppKeyReplayCache replayCache;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Map<String, Long> nonceFallback = new ConcurrentHashMap<>();
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.cayleywcs.common.support.ResourceLifecycleGuard lifecycle;
     private final boolean enabled;
     private final long maxSkewSeconds;
     private final int maxBodyBytes;
@@ -51,7 +47,7 @@ public class AppKeyAuthFilter extends OncePerRequestFilter {
                             @Value("${cayleywcs.openapi.max-body-bytes:1048576}") int maxBodyBytes) {
         this.applicationService = applicationService;
         this.signer = signer;
-        this.redisProvider = redisProvider;
+        this.replayCache = new AppKeyReplayCache(redisProvider,maxSkewSeconds);
         this.enabled = enabled;
         this.maxSkewSeconds = maxSkewSeconds;
         this.maxBodyBytes = Math.max(1024, maxBodyBytes);
@@ -118,7 +114,7 @@ public class AppKeyAuthFilter extends OncePerRequestFilter {
         String expected;
         if (signVersion >= 2) {
             // v2：缓存 body 供本过滤器算摘要 + 下游控制器 @RequestBody 复读。
-            // 有界读（对抗审查 P1）：鉴权在读 body 时进行，超 maxBodyBytes 直接拒，防超大 body 打爆堆内存。
+            // 有界读：鉴权在读 body 时进行，超 maxBodyBytes 直接拒，防超大 body 打爆堆内存。
             byte[] body = readBounded(request.getInputStream(), maxBodyBytes);
             if (body == null) {
                 reject(response, ErrorCode.BAD_REQUEST, "请求体过大(> " + maxBodyBytes + " bytes)");
@@ -170,20 +166,16 @@ public class AppKeyAuthFilter extends OncePerRequestFilter {
     }
 
     private boolean isReplay(String appKey, String nonce) {
-        String key = "cayleywcs:appkey:nonce:" + appKey + ":" + nonce;
-        StringRedisTemplate redis = redisProvider.getIfAvailable();
-        if (redis != null) {
-            try {
-                Boolean first = redis.opsForValue().setIfAbsent(key, "1", Duration.ofSeconds(maxSkewSeconds + 5));
-                return !Boolean.TRUE.equals(first);
-            } catch (RuntimeException ignored) {
-                // Redis 不可用时退回内存
-            }
-        }
-        long now = Instant.now().getEpochSecond();
-        nonceFallback.entrySet().removeIf(e -> now - e.getValue() > maxSkewSeconds + 5);
-        return nonceFallback.putIfAbsent(key, now) != null;
+        if(lifecycle==null) return rememberNonce(appKey,nonce);
+        return lifecycle.referenceWrite(() -> applicationService.getByAppKey(appKey)==null || rememberNonce(appKey,nonce));
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    void setReplayCache(AppKeyReplayCache replayCache) { this.replayCache=replayCache; }
+
+    private boolean rememberNonce(String appKey,String nonce) { return replayCache.isReplay(appKey,nonce); }
+    public void evictApplication(String appKey) { replayCache.evictApplication(appKey); }
+    public void retryEvictions() { replayCache.retryEvictions(); }
 
     private void reject(HttpServletResponse response, ErrorCode code, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);

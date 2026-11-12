@@ -31,7 +31,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * M9 对抗审查加固回归：
+ * 设备处理器回归约束：
  * ① claim 失败还原 version——防 MP 拦截器就地 +1 后引擎兜底 save 复活已取消任务；
  * ② payload 必填参数缺失/非法 → 判失败，不用 0 号站/0 层/默认开门命令设备；
  * ③ 自动门过渡态不计死等（慢门不误杀），停在错误终态才判失败；
@@ -66,7 +66,7 @@ class DeviceHandlerHardeningTest {
         });
         handler.setTaskPersister(persister);
 
-        TaskEntity task = task("5001", Map.of("toStation", 7));
+        TaskEntity task = task("5001", Map.of("cmd_DestStation", 7));
         task.setVersion(5L);
 
         handler.advance(task); // CREATED -> CHECKING
@@ -111,7 +111,7 @@ class DeviceHandlerHardeningTest {
     void autoDoorInvalidActionFails() {
         Harness h = new Harness("auto_door", DOOR_FIELDS);
         AutoDoorDeviceHandler handler = new AutoDoorDeviceHandler(h.manager);
-        TaskEntity task = task("7003", Map.of("action", "wiggle"));
+        TaskEntity task = task("7003", Map.of("cmd_Open",0,"cmd_Close",0));
 
         boolean more = handler.advance(task); // command → action 非法判失败
 
@@ -126,7 +126,7 @@ class DeviceHandlerHardeningTest {
         // 慢门：过渡态(开门中)多轮不到位，不得误判失败
         Harness h = new Harness("auto_door", DOOR_FIELDS);
         AutoDoorDeviceHandler handler = new AutoDoorDeviceHandler(h.manager);
-        TaskEntity task = task("7004", Map.of("action", "open"));
+        TaskEntity task = task("7004", Map.of("cmd_Open",1,"cmd_Close",0));
 
         handler.advance(task); // COMMANDING（写开门 → status_DoorState=2 开门中）
         for (int i = 0; i < 10; i++) {
@@ -142,7 +142,7 @@ class DeviceHandlerHardeningTest {
         // 命令丢失：门停在错误终态(关)，有界重试后判失败
         Harness h2 = new Harness("auto_door", DOOR_FIELDS);
         AutoDoorDeviceHandler handler2 = new AutoDoorDeviceHandler(h2.manager);
-        TaskEntity task2 = task("7005", Map.of("action", "open"));
+        TaskEntity task2 = task("7005", Map.of("cmd_Open",1,"cmd_Close",0));
         handler2.advance(task2);                        // COMMANDING
         h2.device().set("status_DoorState", 0);          // 模拟命令未生效/被复位，停在关
         boolean failed = false;
@@ -157,7 +157,7 @@ class DeviceHandlerHardeningTest {
     void faultResetReturnsDeviceToIdleSoNextTaskRuns() {
         Harness h = new Harness("conveyor", CONVEYOR_FIELDS);
         ConveyorDeviceHandler handler = new ConveyorDeviceHandler(h.manager);
-        TaskEntity task = task("5010", Map.of("toStation", 6));
+        TaskEntity task = task("5010", Map.of("cmd_DestStation", 6));
 
         handler.advance(task); // CHECKING
         handler.advance(task); // MOVING（设备启动 → status_Task=1）
@@ -172,11 +172,13 @@ class DeviceHandlerHardeningTest {
         assertThat(((Number) h.device().get("status_ErrorCode")).intValue()).isEqualTo(0);
 
         // 后续任务可正常跑完
-        TaskEntity next = task("5011", Map.of("toStation", 4));
+        TaskEntity next = task("5011", Map.of("cmd_DestStation", 4));
         handler.advance(next); // CHECKING（status_Task==0 通过）
         handler.advance(next); // MOVING
         h.device().tick();
         h.device().tick();
+        next.setResult(Map.of("quality","good","payload",h.device().snapshot()));
+        assertThat(handler.advance(next)).isTrue(); // 完成反馈先落清理阶段
         assertThat(handler.advance(next)).isFalse();
         assertThat(next.getStatus()).isEqualTo(TaskStatus.COMPLETED);
         h.manager.shutdown();

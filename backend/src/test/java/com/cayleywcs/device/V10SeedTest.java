@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * V10 迁移在 H2 上落地校验：输送线/电梯/自动门三套 sim 协议 + 点位 + 故障码 + 应用（含 device_type）。
  */
-@SpringBootTest
+@SpringBootTest(properties="spring.datasource.url=jdbc:h2:mem:cayleywcs_seed_v10;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1")
 @ActiveProfiles("test-flyway")
 class V10SeedTest {
 
@@ -40,7 +40,9 @@ class V10SeedTest {
         // device_type 字典就位
         Integer dt = jdbcTemplate.queryForObject(
                 "select count(*) from \"wcs_dict_item\" where \"type_code\" = 'device_type'", Integer.class);
-        assertThat(dt).isEqualTo(10);
+        assertThat(dt).isEqualTo(13);
+        assertThat(jdbcTemplate.queryForList("select item_code from wcs_dict_item where type_code='device_type'",String.class))
+                .contains("vibration_sensor","noise_sensor","infrared_sensor");
     }
 
     private Integer protocolCount(String code) {

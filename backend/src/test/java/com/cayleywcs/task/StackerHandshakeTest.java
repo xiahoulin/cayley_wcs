@@ -87,6 +87,8 @@ class StackerHandshakeTest {
         t.setPriority(0L);
         t.setStatus("pending");
         t.setHandshake_step(HandshakeStep.CREATED.name());
+        t.setPayload(RequestPayloads.migrate(t.getTask_type(),t.getTake_row(),t.getTake_column(),t.getTake_floor(),t.getPut_row(),t.getPut_column(),t.getPut_floor(),t.getPort_num(),null));
+        t.setNative_task_num(t.getTask_no().matches("[0-9]+")?Long.valueOf(t.getTask_no()):1L);
         return t;
     }
 
@@ -130,7 +132,7 @@ class StackerHandshakeTest {
                     "status_CurrentColumnNum", "status_CurrentFloorNum", "status_ErrorCode"}) {
                 ProtocolPointEntity p = new ProtocolPointEntity();
                 p.setField_name(f);
-                p.setData_type("INT");
+                p.setData_type("status_ErrorCode".equals(f)?"ARRAY[60] OF INT":"INT");
                 list.add(p);
             }
             return list;

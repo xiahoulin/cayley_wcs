@@ -7,6 +7,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import com.cayleywcs.task.RequestPayloads;
+import com.cayleywcs.openapi.OpenPublicViews;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,7 +36,19 @@ public class OpenChainController {
 
     @PostMapping("/dispatch")
     @Operation(summary = "下发任务链（chain_no 幂等；每段全量绑定授权校验）")
-    public ApiResponse<TaskChainEntity> dispatch(@RequestBody ChainService.ChainDispatchRequest request,
+    public ApiResponse<Map<String,Object>> dispatchHttp(@RequestBody Map<String,Object> body,HttpServletRequest http) {
+        Object raw=body.get("segments");
+        if (raw instanceof List<?> list) for (Object item:list) {
+            if (!(item instanceof Map<?,?> segment)) throw new com.cayleywcs.common.exception.WcsException(4241,"链段必须为对象");
+            for (Object key:segment.keySet()) if (!Set.of("seq","appId","candidateAppIds","payload").contains(key))
+                throw new com.cayleywcs.common.exception.WcsException(4241,"链段点位必须放在payload，不支持字段"+key);
+        }
+        var accepted=dispatch(RequestPayloads.parse(body,Set.of("chainNo","priority","selectStrategy","wmsRef","payload","segments"),
+                ChainService.ChainDispatchRequest.class),http);
+        return ApiResponse.success(OpenPublicViews.chain(accepted.data()));
+    }
+
+    public ApiResponse<TaskChainEntity> dispatch(ChainService.ChainDispatchRequest request,
                                                  HttpServletRequest http) {
         if (request.segments() != null) {
             for (ChainService.ChainSegment seg : request.segments()) {
@@ -56,12 +72,12 @@ public class OpenChainController {
         long now = System.currentTimeMillis();
         Long caller = accessGuard.resolveCaller(http); // null=appkey 关闭旁路：不限
         List<TaskChainEntity> rows = chainService.queryReconcile(caller, q.sinceMillis(), q.limit());
-        return ApiResponse.success(new ChainReconcileResult(now, rows.size(), rows));
+        return ApiResponse.success(new ChainReconcileResult(now, rows.size(), rows.stream().map(OpenPublicViews::chain).toList()));
     }
 
     public record ChainReconcileQuery(long sinceMillis, int limit) {
     }
 
-    public record ChainReconcileResult(long serverTimeMillis, int count, List<TaskChainEntity> rows) {
+    public record ChainReconcileResult(long serverTimeMillis, int count, List<Map<String,Object>> rows) {
     }
 }

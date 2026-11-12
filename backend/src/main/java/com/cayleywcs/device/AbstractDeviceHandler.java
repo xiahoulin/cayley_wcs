@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 设备 handler 基类：下沉点位读写、故障码解析、payload 取值、占位提交与死等检测等通用助手；子类只写设备专属状态机。
  * 约定：各设备的步枚举写入 wcs_task.handshake_step（varchar，handler 私有语义），终态步名统一为 "DONE"/"FAILED"。
  *
- * 并发/重入契约（M8 对抗审查沉淀，新设备 handler 一并适用）：
+ * 并发/重入契约（新设备 handler 同样适用）：
  * - 对设备的不可回滚写（启动/执行确认）前先 {@link #claim} 占位提交，管理端并发取消赢了则本步废弃、设备零写入；
  * - 传输/生命周期异常（连接拆除、读写超时、停机中断）经 {@link #advanceGuarded} 只放弃本步、不落终态；
  * - 等待期间设备意外回空闲用 {@link #bumpStall}/{@link #STALL_LIMIT} 判死等，避免无限空转饿死设备队列。
@@ -35,6 +35,25 @@ public abstract class AbstractDeviceHandler implements DeviceHandler {
 
     private TaskService taskPersister;
     private AlarmService alarmService;
+    private com.cayleywcs.task.TaskExecutionService execution;
+
+    @Autowired(required=false)
+    public void setExecution(com.cayleywcs.task.TaskExecutionService execution) { this.execution=execution; }
+
+    protected void beginPhysical(TaskEntity task) {
+        if (execution!=null) execution.assertCanStart(task);
+    }
+
+    protected void captureResult(TaskEntity task) {
+        if (execution!=null) execution.captureResult(task);
+    }
+
+    protected long nativeNumber(TaskEntity task) {
+        if (task.getNative_task_num()!=null) return task.getNative_task_num();
+        if (execution!=null) throw new WcsException(ErrorCode.TASK_INVALID,"缺少已分配原生设备任务号");
+        String digits=task.getTask_no()==null?"":task.getTask_no().replaceAll("\\D","");
+        try { return Long.parseLong(digits); } catch (NumberFormatException ex) { return 0; }
+    }
     private final Map<String, Integer> stall = new ConcurrentHashMap<>();
 
     protected AbstractDeviceHandler(ConnectionManager connectionManager) {
@@ -93,7 +112,7 @@ public abstract class AbstractDeviceHandler implements DeviceHandler {
      * 管理端并发写（如取消）赢了则返回 false，本步必须废弃且不得再写设备。
      * 无持久化器（单测直接 new）时视为成功，退化为旧行为。
      *
-     * 关键（对抗审查 P1）：MyBatis-Plus OptimisticLocker 拦截器在 updateById 时**无论命中几行都把实体内存
+     * 关键：MyBatis-Plus OptimisticLocker 拦截器在 updateById 时**无论命中几行都把实体内存
      * version 就地 +1**。若不还原，claim 失败后引擎兜底 `save` 会用被 +1 的版本恰好命中「取消方已提交(version+1)」
      * 的行 → 静默覆盖复活已取消任务。故失败时必须把 version 还原为调用前值，令引擎兜底 save 也 0 行、安全丢弃本步。
      */

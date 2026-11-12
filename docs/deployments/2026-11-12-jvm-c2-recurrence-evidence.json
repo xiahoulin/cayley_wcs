@@ -1,0 +1,27 @@
+{
+  "task_id": "TASK-20261112-52D24ADC",
+  "recorded_at": "2026-11-12T21:23:16.157904+09:00",
+  "fault_at_utc": "2026-11-12T12:04:23Z",
+  "elapsed_seconds": 381.186428,
+  "runtime": "Temurin 25.0.5+8",
+  "signal": "SIGSEGV",
+  "thread": "C2 CompilerThread0",
+  "compile_target": "sun.nio.ch.NioSocketImpl$2::write",
+  "native_frame": "PhaseIdealLoop::split_thru_region(Node*, RegionNode*)+0x454",
+  "same_runtime_replay": {
+    "exit": 0,
+    "target": [
+      "34218  241    b  4       sun.nio.ch.NioSocketImpl$2::write (11 bytes)"
+    ],
+    "errors": []
+  },
+  "production_actions_since_report": "read-only diagnostics and crash-artifact copy; no restart, rebuild, redeploy, parameter or database changes",
+  "current_container": {
+    "image": "cayley_wcs-backend:safe-deletion-20261112",
+    "running": true,
+    "started_at": "2026-11-12T12:18:08.678122093Z",
+    "restart_count": 0,
+    "oom_killed": false
+  },
+  "conclusion": "C2 native compiler crash recurred after prior bounded acceptance. Same-version replay compiled the target successfully and did not reproduce the crash; unique trigger remains unproven."
+}

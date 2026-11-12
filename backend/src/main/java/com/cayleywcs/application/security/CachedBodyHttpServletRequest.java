@@ -27,6 +27,12 @@ public class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
     }
 
     @Override
+    public int getContentLength() { return body.length; }
+
+    @Override
+    public long getContentLengthLong() { return body.length; }
+
+    @Override
     public ServletInputStream getInputStream() {
         ByteArrayInputStream in = new ByteArrayInputStream(body);
         return new ServletInputStream() {

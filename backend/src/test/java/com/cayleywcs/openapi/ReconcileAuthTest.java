@@ -34,6 +34,19 @@ class ReconcileAuthTest {
     @Autowired
     private TaskService taskService;
 
+    @Autowired private com.cayleywcs.protocol.ProtocolService fixtureProtocols;
+    @Autowired private com.cayleywcs.binding.BindingService fixtureBindings;
+
+    @org.junit.jupiter.api.BeforeEach void publishedBindings() {
+        var admin=new com.cayleywcs.auth.JwtUser(1L,"admin","admin","admin",1L,1L);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(admin,null,java.util.List.of()));
+        var up=byCode("WMS-MAIN"); var down=byCode("STACKER01");
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,applicationMapper,up.getId(),"none");
+        com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,applicationMapper,down.getId(),"stacker");
+        fixtureBindings.grant(up.getId(),java.util.List.of(down.getId()),"dispatch");
+    }
+    @org.junit.jupiter.api.AfterEach void clearFixtureUser() {org.springframework.security.core.context.SecurityContextHolder.clearContext();}
+
     private ApplicationEntity byCode(String appCode) {
         return applicationService.listAll().stream()
                 .filter(a -> appCode.equals(a.getApp_code()))
@@ -90,7 +103,7 @@ class ReconcileAuthTest {
         TaskEntity visible = new TaskEntity();
         visible.setApp_id(stacker.getId());
         visible.setTask_no("AUTH-VISIBLE-1");
-        visible.setTask_type("1");
+        visible.setPayload(com.cayleywcs.support.PublishedDeviceFixtures.stackerPayload());
         taskService.create(visible);
 
         // 新建一个未授权给 WMS-MAIN 的下位应用（V7 整批授权只覆盖当时存量）。
@@ -100,7 +113,8 @@ class ReconcileAuthTest {
         stranger.setApp_name("未授权设备");
         stranger.setApp_key("ak_auth_stranger_test");
         stranger.setApp_secret("test-secret");
-        stranger.setProtocol_id(stacker.getProtocol_id());
+        stranger.setConfiguration_epoch(0L);
+        stranger.setConfiguration_state("active");
         stranger.setDirection("downstream");
         stranger.setDevice_type("stacker");
         stranger.setEnabled(true);
@@ -111,16 +125,17 @@ class ReconcileAuthTest {
         stranger.setIs_valid(true);
         stranger.setTenant_id(1L);
         applicationMapper.insert(stranger);
+        stranger=com.cayleywcs.support.PublishedDeviceFixtures.ensure(fixtureProtocols,applicationMapper,stranger.getId(),"stacker");
         TaskEntity hidden = new TaskEntity();
         hidden.setApp_id(stranger.getId());
         hidden.setTask_no("AUTH-HIDDEN-1");
-        hidden.setTask_type("1");
+        hidden.setPayload(com.cayleywcs.support.PublishedDeviceFixtures.stackerPayload());
         taskService.create(hidden);
 
         var resp = controller.queryTasks(
                 new OpenReconcileController.ReconcileQuery(null, 0, 500), as(wms));
         assertThat(resp.success()).isTrue();
-        var taskNos = resp.data().rows().stream().map(TaskEntity::getTask_no).toList();
+        var taskNos = resp.data().rows().stream().map(row -> row.get("task_no")).toList();
         assertThat(taskNos).contains("AUTH-VISIBLE-1");
         assertThat(taskNos).as("appId 缺省不得全量吐出未授权应用的任务").doesNotContain("AUTH-HIDDEN-1");
     }
